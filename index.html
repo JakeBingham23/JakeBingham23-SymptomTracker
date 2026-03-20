@@ -1,0 +1,3659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Structure Tracker</title>
+
+<!-- PWA: theme and mobile chrome -->
+<meta name="theme-color" content="#0f0f0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tracker">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- PWA: inline manifest via data URI -->
+<link rel="manifest" id="manifestLink">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+  /* ── Dark theme (default) ── */
+  :root {
+    --bg: #0f0f0f;
+    --bg2: #161616;
+    --bg3: #1e1e1e;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #e8e8e8;
+    --text2: #888;
+    --text3: #555;
+    --accent: #c8a96e;
+    --accent2: #8fb8d4;
+    --danger: #c0392b;
+    --danger-bg: rgba(192,57,43,0.12);
+    --success: #4a9e6b;
+    --success-bg: rgba(74,158,107,0.12);
+    --warning: #c8a96e;
+    --warning-bg: rgba(200,169,110,0.1);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --radius: 6px;
+    --radius-lg: 10px;
+  }
+
+  /* ── Light theme ── */
+  :root[data-theme="light"] {
+    --bg: #f5f4f0;
+    --bg2: #eeede8;
+    --bg3: #e5e4de;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1a1a;
+    --text2: #555;
+    --text3: #999;
+    --accent: #9a6f2e;
+    --accent2: #3a7a9e;
+    --danger: #b03020;
+    --danger-bg: rgba(176,48,32,0.08);
+    --success: #2e7a4e;
+    --success-bg: rgba(46,122,78,0.1);
+    --warning: #9a6f2e;
+    --warning-bg: rgba(154,111,46,0.1);
+  }
+
+  /* ── System dark preference (when no override stored) ── */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]):not([data-theme="light"]) {
+      --bg: #f5f4f0;
+      --bg2: #eeede8;
+      --bg3: #e5e4de;
+      --border: rgba(0,0,0,0.08);
+      --border2: rgba(0,0,0,0.18);
+      --text: #1a1a1a;
+      --text2: #555;
+      --text3: #999;
+      --accent: #9a6f2e;
+      --accent2: #3a7a9e;
+      --danger: #b03020;
+      --danger-bg: rgba(176,48,32,0.08);
+      --success: #2e7a4e;
+      --success-bg: rgba(46,122,78,0.1);
+      --warning: #9a6f2e;
+      --warning-bg: rgba(154,111,46,0.1);
+    }
+  }
+
+  /* ── High contrast mode ── */
+  @media (prefers-contrast: more) {
+    :root {
+      --bg: #000000;
+      --bg2: #0a0a0a;
+      --bg3: #111111;
+      --border: rgba(255,255,255,0.4);
+      --border2: rgba(255,255,255,0.7);
+      --text: #ffffff;
+      --text2: #dddddd;
+      --text3: #aaaaaa;
+      --accent: #ffd080;
+      --accent2: #80ccff;
+      --danger: #ff6060;
+      --danger-bg: rgba(255,96,96,0.2);
+      --success: #60dd90;
+      --warning: #ffd080;
+    }
+    :root[data-theme="light"] {
+      --bg: #ffffff;
+      --bg2: #f0f0f0;
+      --bg3: #e0e0e0;
+      --border: rgba(0,0,0,0.5);
+      --border2: rgba(0,0,0,0.8);
+      --text: #000000;
+      --text2: #222222;
+      --text3: #444444;
+      --accent: #7a4800;
+      --danger: #cc0000;
+      --success: #006600;
+    }
+  }
+
+  /* ── Skip to main content ── */
+  .skip-link {
+    position: absolute;
+    top: -100px;
+    left: 1rem;
+    background: var(--accent);
+    color: var(--bg);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    z-index: 9999;
+    text-decoration: none;
+    transition: top 0.1s;
+  }
+  .skip-link:focus { top: 8px; }
+
+  /* ── Minimum 44px tap targets ── */
+  button, [role="button"], input[type="checkbox"],
+  input[type="radio"], .nav-tab, .task, .mood-btn,
+  .sym-btn, .btn, .add-btn, .ctimer-btn, .appt-btn,
+  .del-btn, .nav-theme-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Override for inline chips that intentionally stay small */
+  .sym-edit-chip button { min-height: 24px; min-width: 24px; }
+
+  /* ── Screen reader only utility ── */
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding-top: 0;
+  }
+
+  /* ── Top nav bar ── */
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg2);
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    padding: 0 1rem;
+    height: 52px;
+  }
+
+  .navbar-brand {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+    margin-right: 1rem;
+  }
+
+  .navbar-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .nav-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0 14px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+
+  .nav-tab .tab-icon { font-size: 15px; line-height: 1; }
+
+  .nav-tab:hover { color: var(--text2); }
+
+  .nav-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ── Navbar theme toggle ── */
+  .nav-theme-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0 12px;
+    background: transparent;
+    border: none;
+    border-left: 0.5px solid var(--border);
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: color 0.15s;
+    flex-shrink: 0;
+    margin-left: 4px;
+  }
+  .nav-theme-btn:hover { color: var(--accent); }
+  .nav-theme-btn .tab-icon { font-size: 17px; line-height: 1; }
+  /* High-contrast focus ring for keyboard/screen-reader users */
+  .nav-theme-btn:focus-visible,
+  .nav-tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  /* ── Page views ── */
+  .page { display: none; padding: 1.5rem 1rem 3rem; }
+  .page.active { display: block; }
+
+  .container { max-width: 580px; margin: 0 auto; }
+
+  .header { margin-bottom: 1.5rem; border-bottom: 0.5px solid var(--border); padding-bottom: 1.25rem; }
+
+  .header-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+
+  .date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .nag-banner {
+    background: var(--danger-bg);
+    border: 0.5px solid var(--danger);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+
+  .nag-banner.visible { display: block; }
+
+  .nag-banner p {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--danger);
+    font-weight: 500;
+  }
+
+  .nag-banner span {
+    font-size: 11px;
+    color: var(--danger);
+    opacity: 0.7;
+    display: block;
+    margin-top: 3px;
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--text);
+    display: block;
+  }
+
+  .stat-num.accent { color: var(--accent); }
+  .stat-num.danger { color: var(--danger); }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+    display: block;
+  }
+
+  .section { margin-bottom: 1.5rem; }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .task {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+  }
+
+  .task:hover { border-color: var(--border2); background: var(--bg3); }
+  .task { cursor: pointer; -webkit-tap-highlight-color: rgba(200,169,110,0.2); }
+
+  .task.done { opacity: 0.4; }
+
+  .task.critical { border-left: 2px solid var(--accent); }
+
+  /* ── Progress ring wrapper ── */
+  .ring-wrap {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+  .ring-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 28px; height: 28px;
+    transform: rotate(-90deg);
+    pointer-events: none;
+  }
+  .ring-track { fill: none; stroke: var(--border); stroke-width: 2; }
+  .ring-fill  { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.3s; }
+  .ring-fill.overdue  { stroke: var(--danger); }
+  .ring-fill.soon     { stroke: var(--warning); }
+  .ring-fill.complete { stroke: var(--success); }
+
+  .check {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    background: var(--bg2);
+  }
+
+  .check.checked {
+    background: var(--success);
+    border-color: var(--success);
+  }
+
+  .check.checked::after {
+    content: '';
+    display: block;
+    width: 5px;
+    height: 8px;
+    border: 1.5px solid white;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+
+  /* ── Task timer label ── */
+  .task-timer {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 3px;
+  }
+  .task-timer.overdue { color: var(--danger); }
+  .task-timer.soon    { color: var(--warning); }
+
+  /* ── Daily window timer ── */
+  .window-timer {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+  .window-timer.soon   { color: var(--warning); }
+  .window-timer.closed { color: var(--danger); }
+
+  /* ── Custom timers widget ── */
+  .custom-timers { margin-bottom: 1.5rem; }
+  .ctimer {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ctimer-ring { flex-shrink: 0; }
+  .ctimer-info { flex: 1; }
+  .ctimer-name { font-size: 13px; color: var(--text); }
+  .ctimer-countdown { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-top: 2px; }
+  .ctimer-countdown.done { color: var(--success); }
+  .ctimer-countdown.overdue { color: var(--danger); }
+  .ctimer-actions { display: flex; gap: 6px; }
+  .ctimer-btn {
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .ctimer-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ctimer-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  .task-name {
+    font-size: 14px;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .task-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 2px;
+    font-family: var(--mono);
+  }
+
+  .symptom-block {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 1.5rem;
+  }
+
+  .symptom-header {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  .mood-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .mood-type {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    width: 44px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .mood-opts { display: flex; gap: 4px; flex-wrap: wrap; }
+
+  .mood-btn {
+    padding: 4px 10px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text2);
+    font-size: 11px;
+    font-family: var(--mono);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+
+  .mood-btn:hover { border-color: var(--border2); color: var(--text); }
+
+  .mood-btn.active {
+    background: var(--warning-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .divider { border: none; border-top: 0.5px solid var(--border); margin: 14px 0; }
+
+  .flag-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  .symptom-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .sym-btn {
+    padding: 6px 10px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text3);
+    font-size: 11px;
+    font-family: var(--mono);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.1s;
+  }
+
+  .sym-btn:hover { border-color: var(--border2); color: var(--text2); }
+
+  .sym-btn.active {
+    background: var(--danger-bg);
+    border-color: var(--danger);
+    color: #e07070;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px 12px;
+    resize: none;
+    outline: none;
+    margin-bottom: 10px;
+  }
+
+  textarea:focus { border-color: var(--border2); }
+  textarea::placeholder { color: var(--text3); }
+
+  .btn-row { display: flex; gap: 8px; }
+
+  .btn {
+    flex: 1;
+    padding: 10px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .btn:hover { background: var(--bg3); color: var(--text); border-color: var(--accent); }
+
+  .btn.primary { border-color: var(--accent); color: var(--accent); }
+  .btn.primary:hover { background: var(--warning-bg); }
+
+  .confirm {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--success);
+    margin-top: 8px;
+    display: none;
+  }
+
+  .btn.loading {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* ── Screenshot preview modal ── */
+  .preview-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    gap: 16px;
+  }
+  .preview-overlay.hidden { display: none; }
+  .preview-img {
+    max-width: 100%;
+    max-height: 55vh;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .preview-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+  }
+  .preview-btns {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .preview-btns .btn {
+    min-width: 130px;
+  }
+
+  .history-section { margin-top: 2rem; border-top: 0.5px solid var(--border); padding-top: 1.5rem; }
+
+  .history-entry {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .history-date { color: var(--accent); }
+  .history-flags { color: var(--danger); font-size: 10px; }
+
+  .footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 0.5px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-align: center;
+  }
+
+  /* ── Settings segments ── */
+  .settings-segment {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 16px;
+    margin-bottom: 12px;
+  }
+
+  .settings-segment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 0.5px solid var(--border);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .settings-segment-header h2 {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0;
+  }
+
+  /* Notification toggle row */
+  .notif-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .notif-toggle-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    flex: 1;
+  }
+
+  .notif-toggle-label span {
+    display: block;
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+
+  /* iOS-style toggle switch */
+  .toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 26px;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--bg3);
+    border: 0.5px solid var(--border2);
+    border-radius: 13px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--text3);
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  .toggle-switch input:checked + .toggle-track {
+    background: var(--success);
+    border-color: var(--success);
+  }
+
+  .toggle-switch input:checked + .toggle-track::after {
+    transform: translateX(18px);
+    background: white;
+  }
+
+  .toggle-switch input:focus-visible + .toggle-track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Vibration pattern picker */
+  .vibration-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+
+  .vibration-row label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+  }
+
+  .vibration-pill {
+    display: flex;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    border-radius: 16px;
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .vibration-opt {
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 28px;
+  }
+
+  .vibration-opt.active {
+    background: var(--bg2);
+    color: var(--accent);
+    border: 0.5px solid var(--border2);
+  }
+
+  /* Section divider */
+  .settings-divider {
+    height: 0.5px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  /* History section headers */
+  .history-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 1.5rem 0 10px;
+  }
+
+  .history-section-header h2 {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0;
+  }
+
+  .history-section-header::after {
+    content: '';
+    flex: 1;
+    height: 0.5px;
+    background: var(--border);
+  }
+
+  /* ── Onboarding overlay ── */
+  .onboarding {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .onboarding.hidden { display: none; }
+  .onboarding-card { max-width: 420px; width: 100%; }
+  .onboarding-card h2 {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .onboarding-card p {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+  .onboarding-card label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .onboarding-card input[type="text"] {
+    width: 100%;
+    background: var(--bg3);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    margin-bottom: 20px;
+  }
+  .onboarding-card input[type="text"]:focus { border-color: var(--accent); }
+
+  /* ── Settings panel ── */
+  .settings-panel {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+  .settings-panel.open { display: block; }
+  .settings-section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 10px;
+    margin-top: 16px;
+  }
+  .settings-section-title:first-child { margin-top: 0; }
+  .settings-task-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .settings-task-row input[type="text"] {
+    flex: 1;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    outline: none;
+  }
+  .settings-task-row input[type="text"]:focus { border-color: var(--border2); }
+  .settings-task-row input.sub-input { font-size: 11px; color: var(--text3); max-width: 160px; }
+  .del-btn {
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-size: 14px;
+    width: 28px; height: 28px;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.1s;
+  }
+  .del-btn:hover { border-color: var(--danger); color: var(--danger); }
+  .add-btn {
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: all 0.1s;
+  }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sym-edit-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .sym-edit-chip {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .sym-edit-chip button {
+    background: none; border: none; color: var(--text3);
+    cursor: pointer; font-size: 13px; padding: 0; line-height: 1;
+  }
+  .sym-edit-chip button:hover { color: var(--danger); }
+  .sym-add-row { display: flex; gap: 8px; margin-top: 4px; }
+  .sym-add-row input[type="text"] {
+    flex: 1;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    outline: none;
+  }
+  /* stats view */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 16px;
+    text-align: center;
+  }
+  .stat-card .stat-num { font-family: var(--mono); font-size: 36px; font-weight: 500; color: var(--text); display: block; }
+  .stat-card .stat-num.accent { color: var(--accent); }
+  .stat-card .stat-num.danger { color: var(--danger); }
+  .stat-card .stat-num.success { color: var(--success); }
+  .stat-card .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; display: block; }
+  .stat-card .stat-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 6px; display: block; }
+
+  /* ── Appointments ── */
+  .appt-section-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 1.2rem 0 8px;
+  }
+  .appt-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    margin-bottom: 8px;
+  }
+  .appt-card.next { border-color: var(--accent); }
+  .appt-card.overdue { border-color: var(--danger); opacity: 0.7; }
+  .appt-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .appt-title { font-size: 14px; color: var(--text); font-weight: 500; }
+  .appt-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .appt-btn {
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .appt-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .appt-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+  .appt-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 4px;
+  }
+  .appt-countdown {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .appt-countdown.soon { color: var(--warning); }
+  .appt-countdown.overdue { color: var(--danger); }
+  .appt-notes {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .appt-summary-btn {
+    margin-top: 8px;
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.1s;
+    width: 100%;
+    text-align: left;
+  }
+  .appt-summary-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Appointment form modal */
+  .appt-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .appt-modal-overlay.hidden { display: none; }
+  .appt-modal {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .appt-modal h3 {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .appt-field { margin-bottom: 12px; }
+  .appt-field label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 5px;
+  }
+  .appt-field input, .appt-field textarea, .appt-field select {
+    width: 100%;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+  }
+  .appt-field input:focus, .appt-field textarea:focus { border-color: var(--border2); }
+  .appt-field textarea { resize: none; }
+  .appt-reminder-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 12px;
+  }
+  .appt-reminder-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+
+  /* Summary modal */
+  .summary-modal {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .summary-modal h3 {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .summary-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    background: var(--bg3);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  /* Next appointment banner */
+  .next-appt-banner {
+    background: var(--warning-bg);
+    border: 0.5px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 1.5rem;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    display: none;
+  }
+  .next-appt-banner.visible { display: block; }
+  .next-appt-banner span { color: var(--text3); font-size: 10px; display: block; margin-top: 2px; }
+
+  /* history view */
+  .history-entry {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .history-entry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .history-date { color: var(--accent); font-size: 12px; }
+  .history-flags { color: var(--danger); }
+  .history-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 10px; color: var(--text3); }
+
+  /* ── Theme toggle pill ── */
+  .theme-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+  .theme-pill {
+    display: flex;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    border-radius: 20px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .theme-opt {
+    padding: 4px 14px;
+    border-radius: 16px;
+    border: none;
+    background: transparent;
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .theme-opt.active {
+    background: var(--bg2);
+    color: var(--accent);
+    border: 0.5px solid var(--border2);
+  }
+</style>
+</head>
+<body>
+
+<!-- Skip to main content (screen readers / keyboard users) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<!-- ARIA live regions — screen readers announce changes here without focus moving -->
+<div id="ariaStatus"   role="status"   aria-live="polite"   aria-atomic="true" class="sr-only">&#8203;</div>
+<div id="ariaAlert"    role="alert"    aria-live="assertive" aria-atomic="true" class="sr-only">&#8203;</div>
+
+<!-- First-run onboarding -->
+<div class="onboarding hidden" id="onboarding" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+  <div class="onboarding-card">
+    <h2 id="onboardingTitle">daily structure tracker</h2>
+    <p>This app helps you track non-negotiables, log symptoms, and build structure. It stays on your device — nothing leaves it.</p>
+    <label for="nameInput">What should it call you?</label>
+    <input type="text" id="nameInput" placeholder="your name" maxlength="40" autocomplete="off">
+    <button class="btn primary" style="width:100%;margin-top:4px" onclick="completeOnboarding()">get started</button>
+  </div>
+</div>
+
+<!-- Top nav bar -->
+<nav class="navbar" role="navigation" aria-label="Main navigation">
+  <span class="navbar-brand" aria-hidden="true">// tracker</span>
+  <div class="navbar-tabs" role="tablist">
+    <button class="nav-tab active" id="tab-today"    role="tab" aria-selected="true"  aria-controls="page-today"    onclick="switchTab('today')">
+      <span class="tab-icon" aria-hidden="true">◈</span><span>today</span>
+    </button>
+    <button class="nav-tab" id="tab-history" role="tab" aria-selected="false" aria-controls="page-history" onclick="switchTab('history')">
+      <span class="tab-icon" aria-hidden="true">▤</span><span>history</span>
+    </button>
+    <button class="nav-tab" id="tab-stats"   role="tab" aria-selected="false" aria-controls="page-stats"   onclick="switchTab('stats')">
+      <span class="tab-icon" aria-hidden="true">◎</span><span>stats</span>
+    </button>
+    <button class="nav-tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="page-settings" onclick="switchTab('settings')">
+      <span class="tab-icon" aria-hidden="true">⚙</span><span>settings</span>
+    </button>
+  </div>
+  <button class="nav-theme-btn" id="navThemeBtn" onclick="cycleTheme()"
+          aria-label="Toggle colour theme" title="Toggle light / dark theme">
+    <span class="tab-icon" id="navThemeIcon" aria-hidden="true">◑</span>
+    <span id="navThemeLabel">theme</span>
+  </button>
+</nav>
+
+<!-- ── TODAY ── -->
+<div class="page active" id="page-today" role="tabpanel" aria-labelledby="tab-today">
+  <div class="container" id="main-content">
+    <div class="header">
+      <div class="header-top">
+        <h1 id="headerTitle">daily check-in</h1>
+        <span class="date" id="dateDisplay"></span>
+      </div>
+      <div class="window-timer" id="windowTimer" aria-live="polite" aria-atomic="true"></div>
+    </div>
+
+    <div class="nag-banner" id="nagBanner" role="alert" aria-live="assertive" aria-atomic="true">
+      <p id="nagText"></p>
+      <span>these are not optional. do them and come back.</span>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat">
+        <span class="stat-num accent" id="statDone" aria-label="tasks done today: 0">0</span>
+        <span class="stat-label" aria-hidden="true">done today</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="statStreak" aria-label="medication streak: 0 days">0</span>
+        <span class="stat-label" aria-hidden="true">med streak</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num danger" id="statMissed" aria-label="tasks missed: 0">0</span>
+        <span class="stat-label" aria-hidden="true">missed</span>
+      </div>
+    </div>
+
+    <div class="custom-timers" id="customTimersWidget"></div>
+
+    <div class="section">
+      <h2 class="section-label">non-negotiables</h2>
+      <div id="criticalTasks"></div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-label">daily structure</h2>
+      <div id="dailyTasks"></div>
+    </div>
+
+    <div class="symptom-block" id="symptomBlock">
+      <h2 class="symptom-header">symptom check <span class="sr-only">— screenshot this section if something is flagged</span><span aria-hidden="true"> — screenshot this if something's flagged</span></h2>
+
+      <div class="mood-row">
+        <span class="mood-type">energy</span>
+        <div class="mood-opts" id="energyOpts">
+          <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: crashed">crashed</button>
+          <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: low">low</button>
+          <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: ok">ok</button>
+          <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: elevated">elevated</button>
+          <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: racing">racing</button>
+        </div>
+      </div>
+
+      <div class="mood-row">
+        <span class="mood-type">mood</span>
+        <div class="mood-opts" id="moodOpts">
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: dark">dark</button>
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: low">low</button>
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: flat">flat</button>
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: ok">ok</button>
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: good">good</button>
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: high">high</button>
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="flag-label">flag if present</div>
+      <div class="symptom-grid" id="symptomGrid"></div>
+
+      <textarea id="symptomNotes" rows="2" placeholder="anything worth noting today" aria-label="notes for today's check-in"></textarea>
+
+      <div class="btn-row">
+        <button class="btn" onclick="takePhoto()" aria-label="capture and save symptom record image">screenshot record</button>
+        <button class="btn primary" onclick="saveAll()" aria-label="save today's check-in to history">save check-in</button>
+      </div>
+      <div class="confirm" id="saveConfirm" role="status" aria-live="polite">saved.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HISTORY + APPOINTMENTS ── -->
+<div class="page" id="page-history" role="tabpanel" aria-labelledby="tab-history" aria-hidden="true">
+  <div class="container">
+    <div class="header">
+      <div class="header-top">
+        <h1 style="font-family:var(--mono);font-size:14px;color:var(--accent)" id="history-heading">log &amp; appointments</h1>
+        <span class="date" id="historyDateDisplay"></span>
+      </div>
+    </div>
+
+    <!-- Next appointment banner -->
+    <div class="next-appt-banner" id="nextApptBanner">
+      <div id="nextApptBannerText"></div>
+      <span id="nextApptBannerSub"></span>
+    </div>
+
+    <!-- Appointments section -->
+    <div class="history-section-header">
+      <h2>upcoming appointments</h2>
+    </div>
+    <div id="apptList"></div>
+    <button class="add-btn" style="margin-bottom:1.5rem" onclick="openApptModal()"
+            aria-label="Add new appointment">+ add appointment</button>
+
+    <div class="history-section-header">
+      <h2>check-in history</h2>
+    </div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<!-- Appointment form modal -->
+<div class="appt-modal-overlay hidden" id="apptModalOverlay" role="dialog" aria-modal="true" aria-labelledby="apptModalTitle">
+  <div class="appt-modal">
+    <h3 id="apptModalTitle">// new appointment</h3>
+    <input type="hidden" id="apptEditId">
+
+    <div class="appt-field">
+      <label>title</label>
+      <input type="text" id="apptTitle" placeholder="e.g. psychiatrist, therapy, GP" maxlength="60">
+    </div>
+    <div class="appt-field">
+      <label>date &amp; time</label>
+      <input type="datetime-local" id="apptDateTime">
+    </div>
+    <div class="appt-field">
+      <label>location (optional)</label>
+      <input type="text" id="apptLocation" placeholder="clinic name or address" maxlength="80">
+    </div>
+    <div class="appt-field">
+      <label>notes</label>
+      <textarea id="apptNotes" rows="3" placeholder="what to discuss, questions to ask..."></textarea>
+    </div>
+    <div class="appt-reminder-row">
+      <input type="checkbox" id="apptReminder24" checked>
+      <span>remind me 24 hours before</span>
+    </div>
+    <div class="appt-reminder-row">
+      <input type="checkbox" id="apptReminder1" checked>
+      <span>remind me 1 hour before</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn primary" style="flex:1" onclick="saveAppt()">save</button>
+      <button class="btn" style="flex:1" onclick="closeApptModal()">cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary modal -->
+<div class="appt-modal-overlay hidden" id="summaryModalOverlay" role="dialog" aria-modal="true" aria-labelledby="summaryModalHeading">
+  <div class="summary-modal">
+    <h3 id="summaryModalHeading">pre-appointment summary</h3>
+    <div class="summary-text" id="summaryText"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" style="flex:1" onclick="shareSummary()">share</button>
+      <button class="btn" style="flex:1" onclick="closeSummaryModal()">close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATS ── -->
+<div class="page" id="page-stats" role="tabpanel" aria-labelledby="tab-stats" aria-hidden="true">
+  <div class="container">
+    <div class="header">
+      <h1 style="font-family:var(--mono);font-size:14px;color:var(--accent)" id="stats-heading">your stats</h1>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-num accent" id="bigStreak">0</span>
+        <span class="stat-label">med streak</span>
+        <span class="stat-sub">days in a row</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="bigDaysLogged">0</span>
+        <span class="stat-label">days logged</span>
+        <span class="stat-sub">last 14 days</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num success" id="bigAvgDone">—</span>
+        <span class="stat-label">avg tasks done</span>
+        <span class="stat-sub">per logged day</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num danger" id="bigAvgFlags">—</span>
+        <span class="stat-label">avg flags</span>
+        <span class="stat-sub">per logged day</span>
+      </div>
+    </div>
+    <div class="section-label" style="margin-bottom:10px">mood over time</div>
+    <div id="moodTimeline"></div>
+  </div>
+</div>
+
+<!-- ── SETTINGS ── -->
+<div class="page" id="page-settings" role="tabpanel" aria-labelledby="tab-settings" aria-hidden="true">
+  <div class="container">
+    <div class="header">
+      <h1 style="font-family:var(--mono);font-size:14px;color:var(--accent)" id="settings-heading">settings</h1>
+    </div>
+
+    <!-- ── Profile ── -->
+    <section class="settings-segment" aria-labelledby="seg-profile">
+      <div class="settings-segment-header">
+        <h2 id="seg-profile">profile</h2>
+      </div>
+      <div class="settings-task-row" style="margin-bottom:12px">
+        <input type="text" id="settingsName" placeholder="your name" maxlength="40"
+               aria-label="Your display name">
+        <button class="add-btn" onclick="saveName()" aria-label="Save name">save</button>
+      </div>
+      <div class="settings-divider"></div>
+      <div class="settings-segment-header" style="margin-top:12px;margin-bottom:10px;border:none;padding:0">
+        <h2 id="seg-appearance" style="color:var(--text2)">appearance</h2>
+      </div>
+      <div class="theme-row">
+        <div class="theme-pill" role="radiogroup" aria-label="Colour theme">
+          <button class="theme-opt" id="themeOptSystem" onclick="setTheme('system')"
+                  role="radio" aria-checked="true">system</button>
+          <button class="theme-opt" id="themeOptLight"  onclick="setTheme('light')"
+                  role="radio" aria-checked="false">light</button>
+          <button class="theme-opt" id="themeOptDark"   onclick="setTheme('dark')"
+                  role="radio" aria-checked="false">dark</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Tasks ── -->
+    <section class="settings-segment" aria-labelledby="seg-tasks">
+      <div class="settings-segment-header">
+        <h2 id="seg-tasks">tasks &amp; symptoms</h2>
+      </div>
+      <h3 class="settings-section-title" style="margin-top:0">non-negotiables</h3>
+      <div id="settingsCritical"></div>
+      <button class="add-btn" onclick="addTask('critical')" aria-label="Add non-negotiable task">+ add task</button>
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">daily structure</h3>
+      <div id="settingsDaily"></div>
+      <button class="add-btn" onclick="addTask('daily')" aria-label="Add daily structure task">+ add task</button>
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">symptom flags</h3>
+      <div class="sym-edit-grid" id="settingsSymptoms"></div>
+      <div class="sym-add-row">
+        <input type="text" id="newSymInput" placeholder="new symptom" maxlength="30"
+               aria-label="New symptom name">
+        <button class="add-btn" onclick="addSymptom()" aria-label="Add symptom">+ add</button>
+      </div>
+    </section>
+
+    <!-- ── Task Reminders ── -->
+    <section class="settings-segment" aria-labelledby="seg-task-notifs">
+      <div class="settings-segment-header">
+        <h2 id="seg-task-notifs">task reminders</h2>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          browser notifications
+          <span>buzzes when non-negotiables are incomplete</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable browser task reminders">
+          <input type="checkbox" id="notifTaskBrowser" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          telegram reminders
+          <span>sends message to your bot</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable Telegram task reminders">
+          <input type="checkbox" id="notifTaskTelegram" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="vibration-row" role="group" aria-label="Task reminder vibration pattern">
+        <label id="taskVibLabel">vibration</label>
+        <div class="vibration-pill" aria-labelledby="taskVibLabel">
+          <button class="vibration-opt active" id="taskVib-gentle"
+                  onclick="setVibPattern('task','gentle')" aria-pressed="true">gentle</button>
+          <button class="vibration-opt" id="taskVib-firm"
+                  onclick="setVibPattern('task','firm')" aria-pressed="false">firm</button>
+          <button class="vibration-opt" id="taskVib-urgent"
+                  onclick="setVibPattern('task','urgent')" aria-pressed="false">urgent</button>
+        </div>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">reminder interval</h3>
+      <div class="theme-row" style="align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="theme-pill" id="intervalPill" role="radiogroup" aria-label="Reminder interval">
+          <button class="theme-opt" id="interval15"  onclick="setInterval_('15')"
+                  role="radio" aria-checked="false">15 min</button>
+          <button class="theme-opt" id="interval30"  onclick="setInterval_('30')"
+                  role="radio" aria-checked="true">30 min</button>
+          <button class="theme-opt" id="interval60"  onclick="setInterval_('60')"
+                  role="radio" aria-checked="false">1 hr</button>
+          <button class="theme-opt" id="interval120" onclick="setInterval_('120')"
+                  role="radio" aria-checked="false">2 hr</button>
+        </div>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">task deadlines</h3>
+      <p style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.6">
+        Set a daily must-be-done-by time for each non-negotiable.
+      </p>
+      <div id="taskDeadlineSettings"></div>
+    </section>
+
+    <!-- ── Timer Notifications ── -->
+    <section class="settings-segment" aria-labelledby="seg-timer-notifs">
+      <div class="settings-segment-header">
+        <h2 id="seg-timer-notifs">timers &amp; check-in window</h2>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          check-in window alert
+          <span>notifies when daily window closes</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable check-in window alert">
+          <input type="checkbox" id="notifWindowBrowser" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          timer completion alert
+          <span>buzzes when a custom timer finishes</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable timer completion alert">
+          <input type="checkbox" id="notifTimerBrowser" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="vibration-row" role="group" aria-label="Timer vibration pattern">
+        <label id="timerVibLabel">vibration</label>
+        <div class="vibration-pill" aria-labelledby="timerVibLabel">
+          <button class="vibration-opt active" id="timerVib-gentle"
+                  onclick="setVibPattern('timer','gentle')" aria-pressed="true">gentle</button>
+          <button class="vibration-opt" id="timerVib-firm"
+                  onclick="setVibPattern('timer','firm')" aria-pressed="false">firm</button>
+          <button class="vibration-opt" id="timerVib-urgent"
+                  onclick="setVibPattern('timer','urgent')" aria-pressed="false">urgent</button>
+        </div>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">check-in window time</h3>
+      <div class="settings-task-row">
+        <input type="time" id="windowCloseTime"
+               style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:13px;padding:6px 10px;outline:none;flex:1"
+               aria-label="Daily check-in window closing time">
+        <button class="add-btn" onclick="saveWindowTime()" aria-label="Save window time">save</button>
+        <button class="add-btn" onclick="clearWindowTime()" aria-label="Clear window time">clear</button>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">custom timers</h3>
+      <div id="customTimerSettings"></div>
+      <div class="settings-task-row" style="margin-top:8px">
+        <input type="text" id="newTimerName" placeholder="timer name" maxlength="30"
+               style="flex:2" aria-label="New timer name">
+        <input type="number" id="newTimerMins" placeholder="mins" min="1" max="1440"
+               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 10px;outline:none"
+               aria-label="Timer duration in minutes">
+        <button class="add-btn" onclick="addCustomTimer()" aria-label="Add custom timer">+ add</button>
+      </div>
+    </section>
+
+    <!-- ── Appointment Notifications ── -->
+    <section class="settings-segment" aria-labelledby="seg-appt-notifs">
+      <div class="settings-segment-header">
+        <h2 id="seg-appt-notifs">appointment notifications</h2>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          browser notifications
+          <span>24hr and 1hr before appointments</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable browser appointment notifications">
+          <input type="checkbox" id="notifApptBrowser" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          telegram reminders
+          <span>sends appointment reminder to bot</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable Telegram appointment notifications">
+          <input type="checkbox" id="notifApptTelegram" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="vibration-row" role="group" aria-label="Appointment vibration pattern">
+        <label id="apptVibLabel">vibration</label>
+        <div class="vibration-pill" aria-labelledby="apptVibLabel">
+          <button class="vibration-opt active" id="apptVib-gentle"
+                  onclick="setVibPattern('appt','gentle')" aria-pressed="true">gentle</button>
+          <button class="vibration-opt" id="apptVib-firm"
+                  onclick="setVibPattern('appt','firm')" aria-pressed="false">firm</button>
+          <button class="vibration-opt" id="apptVib-urgent"
+                  onclick="setVibPattern('appt','urgent')" aria-pressed="false">urgent</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Telegram ── -->
+    <section class="settings-segment" aria-labelledby="seg-telegram">
+      <div class="settings-segment-header">
+        <h2 id="seg-telegram">telegram setup</h2>
+      </div>
+      <p style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:10px;line-height:1.8">
+        1. Message <strong style="color:var(--text2)">@BotFather</strong> on Telegram → /newbot → copy the token<br>
+        2. Message your new bot once so it can reply to you<br>
+        3. Paste token below and tap connect
+      </p>
+      <div class="settings-task-row" style="margin-bottom:6px">
+        <input type="text" id="tgToken" placeholder="123456789:ABCdef..."
+               style="font-size:11px" autocomplete="off"
+               aria-label="Telegram bot token">
+        <button class="add-btn" onclick="connectTelegram()" aria-label="Connect Telegram bot">connect</button>
+      </div>
+      <div id="tgStatus" role="status" aria-live="polite"
+           style="font-family:var(--mono);font-size:10px;margin-bottom:8px"></div>
+      <div class="settings-task-row">
+        <input type="text" id="tgTestMsg" placeholder="test message (optional)"
+               style="font-size:11px" aria-label="Optional test message">
+        <button class="add-btn" onclick="sendTelegramTest()" aria-label="Send test message">send test</button>
+      </div>
+    </section>
+
+    <!-- ── Data ── -->
+    <section class="settings-segment" aria-labelledby="seg-data">
+      <div class="settings-segment-header">
+        <h2 id="seg-data">data &amp; storage</h2>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="add-btn" onclick="changeSaveFolder()"
+                aria-label="Set or change screenshot save folder">📁 set save folder</button>
+        <button class="add-btn" onclick="exportCSV()"
+                aria-label="Export check-in history as CSV file">↓ export CSV</button>
+      </div>
+      <p style="font-family:var(--mono);font-size:10px;color:var(--text3);line-height:1.5">
+        Save folder: Chrome/Edge only. DDG uses long-press method.
+      </p>
+    </section>
+
+    <div style="padding-bottom:1rem">
+      <button class="btn primary" style="width:100%" onclick="saveSettings()"
+              aria-label="Save all settings">save settings</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer" style="text-align:center;padding:1rem;font-family:var(--mono);font-size:10px;color:var(--text3)">
+  daily structure tracker &mdash; v2.8 &mdash; add to home screen to install
+</div>
+
+<!-- Screenshot preview modal -->
+<div class="preview-overlay hidden" id="previewOverlay" role="dialog" aria-modal="true" aria-label="Screenshot preview">
+  <div class="preview-label">preview — looks right? save it.</div>
+  <img class="preview-img" id="previewImg" src="" alt="Symptom record preview">
+  <div class="preview-label" id="previewFilename"></div>
+  <div class="preview-btns">
+    <button class="btn primary" onclick="savePreviewImage()">save to gallery</button>
+    <button class="btn" onclick="closePreview()">cancel</button>
+  </div>
+</div>
+
+<script>
+// ── PWA: inject manifest dynamically ──────────────────────────────────────
+(function() {
+  const manifest = {
+    name: 'Daily Structure Tracker',
+    short_name: 'Tracker',
+    description: 'AuDHD daily task and symptom tracker',
+    start_url: './',
+    display: 'standalone',
+    background_color: '#0f0f0f',
+    theme_color: '#0f0f0f',
+    orientation: 'portrait',
+    icons: [
+      {
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230f0f0f'/%3E%3Crect x='24' y='24' width='144' height='144' rx='18' fill='%231e1e1e' stroke='%23c8a96e' stroke-width='3'/%3E%3Ctext x='96' y='120' font-family='monospace' font-size='72' text-anchor='middle' fill='%23c8a96e'%3E✓%3C/text%3E%3C/svg%3E",
+        sizes: '192x192',
+        type: 'image/svg+xml',
+        purpose: 'any maskable'
+      },
+      {
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230f0f0f'/%3E%3Crect x='48' y='48' width='416' height='416' rx='48' fill='%231e1e1e' stroke='%23c8a96e' stroke-width='6'/%3E%3Ctext x='256' y='330' font-family='monospace' font-size='200' text-anchor='middle' fill='%23c8a96e'%3E✓%3C/text%3E%3C/svg%3E",
+        sizes: '512x512',
+        type: 'image/svg+xml',
+        purpose: 'any maskable'
+      }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  document.getElementById('manifestLink').setAttribute('href', url);
+})();
+
+// ── PWA: service worker (offline cache) via blob URL ──────────────────────
+// Note: service workers require HTTPS or localhost — won't register from file://
+(function() {
+  if (!('serviceWorker' in navigator)) return;
+
+  const swCode = `
+const CACHE = 'tracker-v3';
+
+self.addEventListener('install', e => {
+  e.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  e.respondWith(
+    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => cached))
+  );
+});
+
+// ── Push / scheduled alarm messages from the main thread ──
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'NOTIFY') {
+    const { title, body, tag, requireInteraction, badge } = e.data;
+    self.registration.showNotification(title, {
+      body,
+      tag:               tag || 'tracker-reminder',
+      requireInteraction: requireInteraction !== false, // stays until dismissed
+      renotify:          true,   // buzz again even if same tag
+      silent:            false,
+      vibrate:           [300, 100, 300, 100, 600], // buzz pattern
+      icon:              'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22><rect width=%22192%22 height=%22192%22 fill=%22%230f0f0f%22/><text x=%2296%22 y=%22130%22 font-size=%2290%22 text-anchor=%22middle%22 fill=%22%23c8a96e%22>%E2%9C%93</text></svg>',
+      badge:             badge || undefined,
+      actions: [
+        { action: 'done',   title: 'Mark done' },
+        { action: 'snooze', title: 'Snooze 10m' }
+      ]
+    });
+  }
+
+  if (e.data && e.data.type === 'SCHEDULE') {
+    // Schedule a future notification using setTimeout inside the SW
+    const { delay, title, body, tag } = e.data;
+    setTimeout(() => {
+      self.registration.showNotification(title, {
+        body,
+        tag:               tag || 'tracker-scheduled',
+        requireInteraction: true,
+        renotify:          true,
+        silent:            false,
+        vibrate:           [400, 200, 400, 200, 800],
+        icon:              'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22><rect width=%22192%22 height=%22192%22 fill=%22%230f0f0f%22/><text x=%2296%22 y=%22130%22 font-size=%2290%22 text-anchor=%22middle%22 fill=%22%23c8a96e%22>%E2%9C%93</text></svg>',
+        actions: [
+          { action: 'done',   title: 'Mark done' },
+          { action: 'snooze', title: 'Snooze 10m' }
+        ]
+      });
+    }, delay);
+  }
+});
+
+// ── Notification action handler ──
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  if (e.action === 'snooze') {
+    // Re-notify in 10 minutes
+    setTimeout(() => {
+      self.registration.showNotification(e.notification.title, {
+        body:              'snoozed reminder: ' + e.notification.body,
+        tag:               'tracker-snooze',
+        requireInteraction: true,
+        renotify:          true,
+        vibrate:           [500, 200, 500],
+        silent:            false
+      });
+    }, 10 * 60 * 1000);
+  }
+  // Focus or open the app on tap
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      if (list.length > 0) return list[0].focus();
+      return clients.openWindow('/');
+    })
+  );
+});
+  `;
+
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+
+  navigator.serviceWorker.register(swUrl, { scope: './' })
+    .then(() => console.log('[PWA] Service worker registered'))
+    .catch(err => console.warn('[PWA] SW registration failed (expected on file://):', err.message));
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
+const TODAY = new Date().toISOString().split('T')[0];
+
+// ── Default config (overridden by user settings in localStorage) ──────────
+const DEFAULT_CRITICAL = [
+  { id:'meds',   name:'take meds',      sub:'non-negotiable. no excuses.' },
+  { id:'shower', name:'shower',         sub:'yes, this one counts too' },
+  { id:'eat1',   name:'eat something',  sub:'first meal' },
+];
+const DEFAULT_DAILY = [
+  { id:'water', name:'drink water',  sub:'not just coffee' },
+  { id:'eat2',  name:'second meal',  sub:'' },
+  { id:'meds2', name:'evening meds', sub:'if applicable' },
+  { id:'wind',  name:'wind down',    sub:'phones down' },
+];
+const DEFAULT_SYMPTOMS = [
+  "dissociation","intrusive thoughts","paranoia","sensory overload",
+  "can't initiate","rage","shutdown","impulsivity",
+  "insomnia","hypersomnia","appetite gone","appetite excessive"
+];
+
+// ── User config ───────────────────────────────────────────────────────────
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem('tracker-config');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
+function saveConfig(cfg) {
+  try { localStorage.setItem('tracker-config', JSON.stringify(cfg)); } catch(e) {}
+}
+
+let cfg = loadConfig() || {
+  name: '',
+  critical: DEFAULT_CRITICAL,
+  daily: DEFAULT_DAILY,
+  symptoms: DEFAULT_SYMPTOMS,
+  reminderInterval: '30',
+  tgToken: '',
+  tgChatId: '',
+  windowCloseTime: '',
+  taskDeadlines: {},
+  customTimers: []
+};
+// Ensure older saved configs get new keys
+if (!cfg.reminderInterval)  cfg.reminderInterval = '30';
+if (!cfg.tgToken)            cfg.tgToken = '';
+if (!cfg.tgChatId)           cfg.tgChatId = '';
+if (!cfg.windowCloseTime)    cfg.windowCloseTime = '';
+if (!cfg.taskDeadlines)      cfg.taskDeadlines = {};
+if (!cfg.customTimers)       cfg.customTimers = [];
+if (!cfg.notifPrefs) cfg.notifPrefs = {
+  taskBrowser: true,   taskTelegram: true,   taskVib: 'gentle',
+  timerBrowser: true,  windowBrowser: true,  timerVib: 'gentle',
+  apptBrowser: true,   apptTelegram: true,   apptVib: 'gentle'
+};
+if (!cfg.vibPatterns) cfg.vibPatterns = {
+  gentle: [50, 30, 80],
+  firm:   [100, 50, 200],
+  urgent: [300, 100, 300, 100, 600]
+};
+
+// Live arrays (used throughout)
+let CRITICAL  = cfg.critical;
+let DAILY     = cfg.daily;
+let SYMPTOMS  = cfg.symptoms;
+
+// ── Theme ─────────────────────────────────────────────────────────────────
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'light') {
+    root.setAttribute('data-theme', 'light');
+    document.querySelector('meta[name=theme-color]').setAttribute('content', '#f5f4f0');
+  } else if (theme === 'dark') {
+    root.setAttribute('data-theme', 'dark');
+    document.querySelector('meta[name=theme-color]').setAttribute('content', '#0f0f0f');
+  } else {
+    root.removeAttribute('data-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.querySelector('meta[name=theme-color]').setAttribute('content', prefersDark ? '#0f0f0f' : '#f5f4f0');
+  }
+}
+
+function setTheme(theme) {
+  cfg.theme = theme;
+  saveConfig(cfg);
+  applyTheme(theme);
+  updateThemePill(theme);
+  updateNavThemeBtn(theme);
+}
+
+function cycleTheme() {
+  const order = ['system', 'light', 'dark'];
+  const current = cfg.theme || 'system';
+  const next = order[(order.indexOf(current) + 1) % order.length];
+  setTheme(next);
+}
+
+function updateNavThemeBtn(theme) {
+  const icons  = { system: '◑', light: '○', dark: '●' };
+  const labels = { system: 'auto', light: 'light', dark: 'dark' };
+  const t = theme || 'system';
+  const iconEl  = document.getElementById('navThemeIcon');
+  const labelEl = document.getElementById('navThemeLabel');
+  if (iconEl)  iconEl.textContent  = icons[t]  || '◑';
+  if (labelEl) labelEl.textContent = labels[t] || 'auto';
+  const btn = document.getElementById('navThemeBtn');
+  if (btn) btn.setAttribute('aria-label', 'Colour theme: ' + (labels[t] || 'auto') + '. Click to cycle.');
+}
+
+function updateThemePill(theme) {
+  ['system','light','dark'].forEach(t => {
+    const el = document.getElementById('themeOpt' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el) el.classList.toggle('active', t === (theme || 'system'));
+  });
+}
+
+// Apply theme immediately on load (before paint)
+applyTheme(cfg.theme || 'system');
+
+// ── Onboarding ────────────────────────────────────────────────────────────
+// ── Modal keyboard trap (Escape closes, Tab stays inside) ────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (!document.getElementById('previewOverlay').classList.contains('hidden'))     { closePreview(); return; }
+    if (!document.getElementById('apptModalOverlay').classList.contains('hidden'))   { closeApptModal(); return; }
+    if (!document.getElementById('summaryModalOverlay').classList.contains('hidden')){ closeSummaryModal(); return; }
+    const ddg = document.getElementById('ddgImageOverlay');
+    if (ddg && ddg.style.display !== 'none') { ddg.remove(); return; }
+  }
+});
+
+function initOnboarding() {
+  applyTheme(cfg.theme || 'system');
+  updateNavThemeBtn(cfg.theme || 'system');
+  updateIntervalPill(cfg.reminderInterval || '30');
+  updateWindowTimer();
+  syncNotifPrefsUI();
+  if (!cfg.name) {
+    document.getElementById('onboarding').classList.remove('hidden');
+    setTimeout(() => document.getElementById('nameInput').focus(), 100);
+  } else {
+    applyName(cfg.name);
+    loadState();
+    renderCustomTimersWidget();
+    updateNextApptBanner();
+  }
+}
+
+function completeOnboarding() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) { document.getElementById('nameInput').focus(); return; }
+  cfg.name = name;
+  saveConfig(cfg);
+  document.getElementById('onboarding').classList.add('hidden');
+  applyName(name);
+  loadState();
+}
+
+function applyName(name) {
+  document.getElementById('headerTitle').textContent = name ? name + ' — daily check-in' : 'daily check-in';
+}
+
+// ── Settings panel ────────────────────────────────────────────────────────
+// ── Tab navigation ────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const tabNames = { today: 'Today', history: 'Log and appointments', stats: 'Stats', settings: 'Settings' };
+  ['today','history','stats','settings'].forEach(t => {
+    const tabEl  = document.getElementById('tab-' + t);
+    const pageEl = document.getElementById('page-' + t);
+    const active = t === tab;
+    tabEl.classList.toggle('active', active);
+    tabEl.setAttribute('aria-selected', active ? 'true' : 'false');
+    pageEl.classList.toggle('active', active);
+    pageEl.setAttribute('aria-hidden', active ? 'false' : 'true');
+  });
+  announce(tabNames[tab] + ' tab.');
+  if (tab === 'history')  renderHistory();
+  if (tab === 'stats')    renderStats();
+  if (tab === 'settings') renderSettingsPanel();
+}
+
+// ── Appointments data ────────────────────────────────────────────────────
+function loadAppts() {
+  try { return JSON.parse(localStorage.getItem('tracker-appts') || '[]'); } catch(e) { return []; }
+}
+function saveAppts(appts) {
+  try { localStorage.setItem('tracker-appts', JSON.stringify(appts)); } catch(e) {}
+}
+
+function openApptModal(id) {
+  const overlay = document.getElementById('apptModalOverlay');
+  document.getElementById('apptModalTitle').textContent = id ? '// edit appointment' : '// new appointment';
+  document.getElementById('apptEditId').value = id || '';
+  if (id) {
+    const appt = loadAppts().find(a => a.id === id);
+    if (appt) {
+      document.getElementById('apptTitle').value    = appt.title || '';
+      document.getElementById('apptDateTime').value = appt.datetime || '';
+      document.getElementById('apptLocation').value = appt.location || '';
+      document.getElementById('apptNotes').value    = appt.notes || '';
+      document.getElementById('apptReminder24').checked = appt.remind24 !== false;
+      document.getElementById('apptReminder1').checked  = appt.remind1  !== false;
+    }
+  } else {
+    document.getElementById('apptTitle').value    = '';
+    document.getElementById('apptDateTime').value = '';
+    document.getElementById('apptLocation').value = '';
+    document.getElementById('apptNotes').value    = '';
+    document.getElementById('apptReminder24').checked = true;
+    document.getElementById('apptReminder1').checked  = true;
+  }
+  overlay.classList.remove('hidden');
+  // Focus first input for keyboard/VoiceOver users
+  setTimeout(() => {
+    const firstInput = document.getElementById('apptTitle');
+    if (firstInput) firstInput.focus();
+  }, 100);
+}
+
+function closeApptModal() {
+  document.getElementById('apptModalOverlay').classList.add('hidden');
+  // Return focus to the trigger element
+  const addBtn = document.querySelector('button[onclick="openApptModal()"]');
+  if (addBtn) addBtn.focus();
+}
+
+function saveAppt() {
+  const title    = document.getElementById('apptTitle').value.trim();
+  const datetime = document.getElementById('apptDateTime').value;
+  if (!title || !datetime) { showToast('title and date/time required'); return; }
+  const appts = loadAppts();
+  const editId = document.getElementById('apptEditId').value;
+  const appt = {
+    id:       editId || 'appt_' + Date.now(),
+    title,
+    datetime,
+    location: document.getElementById('apptLocation').value.trim(),
+    notes:    document.getElementById('apptNotes').value.trim(),
+    remind24: document.getElementById('apptReminder24').checked,
+    remind1:  document.getElementById('apptReminder1').checked,
+    created:  new Date().toISOString()
+  };
+  if (editId) {
+    const idx = appts.findIndex(a => a.id === editId);
+    if (idx > -1) appts[idx] = appt; else appts.push(appt);
+  } else {
+    appts.push(appt);
+  }
+  // Sort by datetime
+  appts.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+  saveAppts(appts);
+  closeApptModal();
+  scheduleApptReminders(appt);
+  renderHistory();
+  updateNextApptBanner();
+}
+
+function deleteAppt(id) {
+  const appts = loadAppts().filter(a => a.id !== id);
+  saveAppts(appts);
+  renderHistory();
+  updateNextApptBanner();
+}
+
+function apptCountdown(datetime) {
+  const diff = new Date(datetime) - new Date();
+  if (diff < 0) return { label: 'past', cls: 'overdue' };
+  const days  = Math.floor(diff / 86400000);
+  const hrs   = Math.floor((diff % 86400000) / 3600000);
+  const mins  = Math.floor((diff % 3600000) / 60000);
+  let label;
+  if (days > 1)      label = 'in ' + days + ' days';
+  else if (days === 1) label = 'tomorrow, ' + hrs + 'h away';
+  else if (hrs > 0)  label = 'in ' + hrs + 'h ' + mins + 'm';
+  else               label = 'in ' + mins + ' minutes';
+  const cls = diff < 3600000 ? 'soon' : '';
+  return { label, cls };
+}
+
+function updateNextApptBanner() {
+  const banner  = document.getElementById('nextApptBanner');
+  const textEl  = document.getElementById('nextApptBannerText');
+  const subEl   = document.getElementById('nextApptBannerSub');
+  if (!banner) return;
+  const upcoming = loadAppts().filter(a => new Date(a.datetime) > new Date());
+  if (upcoming.length === 0) { banner.classList.remove('visible'); return; }
+  const next = upcoming[0];
+  const cd   = apptCountdown(next.datetime);
+  textEl.textContent = next.title + ' — ' + cd.label;
+  const dt = new Date(next.datetime);
+  subEl.textContent  = dt.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
+    + ' at ' + dt.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  banner.classList.add('visible');
+}
+
+function scheduleApptReminders(appt) {
+  const prefs = cfg.notifPrefs || {};
+  const dt    = new Date(appt.datetime);
+  const now   = new Date();
+  const name  = cfg.name || 'hey';
+
+  if (appt.remind24 && prefs.apptBrowser !== false) {
+    const delay24 = dt - now - 86400000;
+    if (delay24 > 0) swSchedule(delay24,
+      name + ' — appointment tomorrow',
+      appt.title + (appt.location ? ' at ' + appt.location : '') + ' is tomorrow.',
+      'appt-24-' + appt.id
+    );
+  }
+  if (appt.remind1 && prefs.apptBrowser !== false) {
+    const delay1 = dt - now - 3600000;
+    if (delay1 > 0) swSchedule(delay1,
+      name + ' — appointment in 1 hour',
+      appt.title + (appt.location ? ' at ' + appt.location : '') + ' is in 1 hour.',
+      'appt-1-' + appt.id
+    );
+  }
+  if (prefs.apptTelegram !== false && cfg.tgToken && cfg.tgChatId) {
+    if (appt.remind24 && dt - now - 86400000 > 0) {
+      setTimeout(() => sendTelegramMessage(
+        '📅 Reminder: ' + appt.title + ' is tomorrow at ' +
+        new Date(appt.datetime).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })
+      ), Math.max(0, dt - now - 86400000));
+    }
+  }
+}
+
+// ── Pre-appointment summary ───────────────────────────────────────────────
+function generateSummary(apptTitle) {
+  const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+  const last7   = history.slice(0, 7);
+  const name    = cfg.name || 'Patient';
+  const today   = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+
+  if (last7.length === 0) return 'No check-in data available yet.\nStart logging daily check-ins to generate a summary.';
+
+  const avgDone  = last7.length > 0
+    ? (last7.reduce((s,e) => s + (e.done / (e.total || 1)), 0) / last7.length * 100).toFixed(0) : '—';
+  const moods    = last7.map(e => e.mood).filter(Boolean);
+  const energies = last7.map(e => e.energy).filter(Boolean);
+  const totalFlags = last7.reduce((s, e) => s + (e.flags || 0), 0);
+
+  // Pull symptom flags from individual day states
+  const flagCounts = {};
+  last7.forEach(e => {
+    try {
+      const day = JSON.parse(localStorage.getItem('tracker-' + e.date) || '{}');
+      (day.symptoms || []).forEach(s => { flagCounts[s] = (flagCounts[s] || 0) + 1; });
+    } catch(_) {}
+  });
+  const topFlags = Object.entries(flagCounts)
+    .sort((a,b) => b[1]-a[1]).slice(0,5)
+    .map(([s,n]) => s + ' (' + n + 'x)').join(', ');
+
+  const moodSummary    = moods.length    ? moods.join(', ')    : 'not recorded';
+  const energySummary  = energies.length ? energies.join(', ') : 'not recorded';
+
+  const dailyLines = last7.map(e =>
+    e.date + ' - ' + e.done + '/' + e.total + ' tasks' +
+    ', mood: ' + (e.mood || '-') +
+    ', energy: ' + (e.energy || '-') +
+    (e.flags > 0 ? ', flags: ' + e.flags : '')
+  ).join('\n');
+
+  return [
+    'PRE-APPOINTMENT SUMMARY',
+    'Generated: ' + today,
+    'Patient: ' + name,
+    'Appointment: ' + apptTitle,
+    '',
+    'LAST ' + last7.length + ' DAYS',
+    '',
+    'Task completion: ' + avgDone + '% average',
+    'Mood (recent): ' + moodSummary,
+    'Energy (recent): ' + energySummary,
+    'Total symptom flags: ' + totalFlags + ' across ' + last7.length + ' days',
+    topFlags ? 'Most frequent symptoms: ' + topFlags : '',
+    '',
+    'DAILY LOG',
+    dailyLines,
+    '',
+    '---',
+    'Generated by Daily Structure Tracker'
+  ].join('\n');
+}
+
+function showSummary(apptId) {
+  const appt = loadAppts().find(a => a.id === apptId);
+  const text = generateSummary(appt ? appt.title : 'appointment');
+  document.getElementById('summaryText').textContent = text;
+  document.getElementById('summaryModalOverlay').classList.remove('hidden');
+}
+
+function closeSummaryModal() {
+  document.getElementById('summaryModalOverlay').classList.add('hidden');
+}
+
+async function shareSummary() {
+  const text = document.getElementById('summaryText').textContent;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Pre-appointment summary', text });
+      return;
+    } catch(e) {}
+  }
+  // Fallback: copy to clipboard
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('summary copied to clipboard');
+  } catch(e) {
+    showToast('select all text and copy manually');
+  }
+}
+
+// ── renderHistory — now includes appointments ─────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  document.getElementById('historyDateDisplay').textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+  });
+
+  // Render appointments
+  const apptEl   = document.getElementById('apptList');
+  const appts    = loadAppts();
+  const upcoming = appts.filter(a => new Date(a.datetime) >= new Date());
+  const past     = appts.filter(a => new Date(a.datetime) <  new Date());
+
+  apptEl.innerHTML = upcoming.length === 0
+    ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px">no upcoming appointments</div>`
+    : upcoming.map((a, i) => {
+        const cd = apptCountdown(a.datetime);
+        const dt = new Date(a.datetime);
+        const dtStr = dt.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
+          + ' ' + dt.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+        return `<div class="appt-card ${i === 0 ? 'next' : ''}">
+          <div class="appt-top">
+            <div class="appt-title">${escHtml(a.title)}</div>
+            <div class="appt-actions">
+              <button class="appt-btn" onclick="openApptModal('${a.id}')">edit</button>
+              <button class="appt-btn danger" onclick="deleteAppt('${a.id}')">✕</button>
+            </div>
+          </div>
+          <div class="appt-meta">${dtStr}${a.location ? ' · ' + escHtml(a.location) : ''}</div>
+          <div class="appt-countdown ${cd.cls}">${cd.label}</div>
+          ${a.notes ? `<div class="appt-notes">${escHtml(a.notes)}</div>` : ''}
+          <button class="appt-summary-btn" onclick="showSummary('${a.id}')">📋 generate pre-appointment summary</button>
+        </div>`;
+      }).join('');
+
+  // Render check-in history
+  try {
+    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+    el.innerHTML = history.length === 0
+      ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 0">no entries yet — save a check-in on the today tab</div>`
+      : history.map(e => `
+        <div class="history-entry">
+          <div class="history-entry-top">
+            <span class="history-date">${e.date}</span>
+            <span>${e.done}/${e.total} tasks</span>
+            ${e.flags > 0 ? `<span class="history-flags">⚑ ${e.flags} flag${e.flags > 1 ? 's' : ''}</span>` : ''}
+          </div>
+          <div class="history-meta">
+            <span>mood: ${e.mood || '—'}</span>
+            <span>energy: ${e.energy || '—'}</span>
+          </div>
+        </div>
+      `).join('');
+  } catch(e) { el.textContent = 'error loading history'; }
+}
+
+function renderStats() {
+  document.getElementById('bigStreak').textContent = state.medStreak || 0;
+  try {
+    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+    document.getElementById('bigDaysLogged').textContent = history.length;
+    if (history.length > 0) {
+      const avgDone  = (history.reduce((s,e) => s + (e.done / (e.total || 1)), 0) / history.length * 100).toFixed(0);
+      const avgFlags = (history.reduce((s,e) => s + e.flags, 0) / history.length).toFixed(1);
+      document.getElementById('bigAvgDone').textContent  = avgDone + '%';
+      document.getElementById('bigAvgFlags').textContent = avgFlags;
+    }
+    // Mood timeline — last 14 entries as a simple text chart
+    const moodMap = { dark:-3, low:-2, flat:-1, ok:0, good:1, high:2 };
+    const timeline = document.getElementById('moodTimeline');
+    timeline.innerHTML = history.slice(0,14).reverse().map(e => {
+      const score = moodMap[e.mood] ?? null;
+      const bar = score === null ? '·' : score >= 1 ? '▮' : score === 0 ? '▯' : '▮';
+      const col = score === null ? 'var(--text3)' : score >= 1 ? 'var(--success)' : score === 0 ? 'var(--accent)' : 'var(--danger)';
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;font-family:var(--mono);font-size:11px">
+        <span style="color:var(--text3);width:80px;flex-shrink:0">${e.date.slice(5)}</span>
+        <span style="color:${col};font-size:16px;letter-spacing:1px">${bar}</span>
+        <span style="color:var(--text3)">${e.mood || '—'} / ${e.energy || '—'}</span>
+      </div>`;
+    }).join('') || '<div style="font-family:var(--mono);font-size:11px;color:var(--text3)">no data yet</div>';
+  } catch(err) {}
+}
+
+function renderSettingsPanel() {
+  document.getElementById('settingsName').value = cfg.name || '';
+  updateThemePill(cfg.theme || 'system');
+  updateIntervalPill(cfg.reminderInterval || '30');
+  // Telegram fields
+  const tgTokenEl = document.getElementById('tgToken');
+  if (tgTokenEl) tgTokenEl.value = cfg.tgToken || '';
+  if (cfg.tgChatId) tgStatusMsg('connected ✓ chat ID: ' + cfg.tgChatId, 'var(--success)');
+  // Timer fields
+  const wct = document.getElementById('windowCloseTime');
+  if (wct) wct.value = cfg.windowCloseTime || '';
+  renderTaskDeadlineSettings();
+  renderCustomTimerSettings();
+  syncNotifPrefsUI();
+
+  function taskRows(list, containerId) {
+    document.getElementById(containerId).innerHTML = list.map((t, i) => `
+      <div class="settings-task-row">
+        <input type="text" value="${escHtml(t.name)}" placeholder="task name"
+               onchange="updateTask('${containerId}', ${i}, 'name', this.value)">
+        <input type="text" class="sub-input" value="${escHtml(t.sub || '')}" placeholder="subtitle (optional)"
+               onchange="updateTask('${containerId}', ${i}, 'sub', this.value)">
+        <button class="del-btn" onclick="removeTask('${containerId}', ${i})">×</button>
+      </div>
+    `).join('');
+  }
+
+  taskRows(CRITICAL, 'settingsCritical');
+  taskRows(DAILY,    'settingsDaily');
+
+  document.getElementById('settingsSymptoms').innerHTML = SYMPTOMS.map((s, i) => `
+    <div class="sym-edit-chip">
+      <span>${escHtml(s)}</span>
+      <button onclick="removeSymptom(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Screen reader announcements ───────────────────────────────────────────
+// ── Notification preferences ─────────────────────────────────────────────
+function saveNotifPrefs() {
+  cfg.notifPrefs = {
+    taskBrowser:   document.getElementById('notifTaskBrowser')?.checked   ?? true,
+    taskTelegram:  document.getElementById('notifTaskTelegram')?.checked  ?? true,
+    taskVib:       cfg.notifPrefs?.taskVib   || 'gentle',
+    timerBrowser:  document.getElementById('notifTimerBrowser')?.checked  ?? true,
+    windowBrowser: document.getElementById('notifWindowBrowser')?.checked ?? true,
+    timerVib:      cfg.notifPrefs?.timerVib  || 'gentle',
+    apptBrowser:   document.getElementById('notifApptBrowser')?.checked   ?? true,
+    apptTelegram:  document.getElementById('notifApptTelegram')?.checked  ?? true,
+    apptVib:       cfg.notifPrefs?.apptVib   || 'gentle',
+  };
+  saveConfig(cfg);
+  announce('Notification preferences saved.');
+}
+
+function setVibPattern(type, pattern) {
+  if (!cfg.notifPrefs) cfg.notifPrefs = {};
+  cfg.notifPrefs[type + 'Vib'] = pattern;
+  saveConfig(cfg);
+  // Update pill UI
+  ['gentle','firm','urgent'].forEach(p => {
+    const el = document.getElementById(type + 'Vib-' + p);
+    if (el) {
+      el.classList.toggle('active', p === pattern);
+      el.setAttribute('aria-pressed', p === pattern ? 'true' : 'false');
+    }
+  });
+  // Preview the haptic
+  const patterns = cfg.vibPatterns || { gentle:[50,30,80], firm:[100,50,200], urgent:[300,100,300,100,600] };
+  if (navigator.vibrate) navigator.vibrate(patterns[pattern] || patterns.gentle);
+  announce(type + ' vibration set to ' + pattern + '.');
+}
+
+function getVibPattern(type) {
+  const key = (cfg.notifPrefs?.[type + 'Vib']) || 'gentle';
+  return (cfg.vibPatterns || {})[key] || [50, 30, 80];
+}
+
+function syncNotifPrefsUI() {
+  const p = cfg.notifPrefs || {};
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val !== false; };
+  set('notifTaskBrowser',   p.taskBrowser);
+  set('notifTaskTelegram',  p.taskTelegram);
+  set('notifTimerBrowser',  p.timerBrowser);
+  set('notifWindowBrowser', p.windowBrowser);
+  set('notifApptBrowser',   p.apptBrowser);
+  set('notifApptTelegram',  p.apptTelegram);
+  ['task','timer','appt'].forEach(type => {
+    const pat = p[type + 'Vib'] || 'gentle';
+    ['gentle','firm','urgent'].forEach(p2 => {
+      const el = document.getElementById(type + 'Vib-' + p2);
+      if (el) {
+        el.classList.toggle('active', p2 === pat);
+        el.setAttribute('aria-pressed', p2 === pat ? 'true' : 'false');
+      }
+    });
+  });
+}
+
+function announce(msg, assertive) {
+  const id = assertive ? 'ariaAlert' : 'ariaStatus';
+  const el = document.getElementById(id);
+  if (!el) return;
+  // iOS VoiceOver needs a brief delay between clear and set
+  el.textContent = '';
+  el.setAttribute('aria-hidden', 'true');
+  setTimeout(() => {
+    el.setAttribute('aria-hidden', 'false');
+    el.textContent = msg;
+  }, 50);
+}
+
+function updateTask(containerId, idx, field, val) {
+  const list = containerId === 'settingsCritical' ? CRITICAL : DAILY;
+  list[idx][field] = val.trim();
+}
+
+function removeTask(containerId, idx) {
+  const list = containerId === 'settingsCritical' ? CRITICAL : DAILY;
+  list.splice(idx, 1);
+  renderSettingsPanel();
+}
+
+function addTask(type) {
+  const id = 'task_' + Date.now();
+  if (type === 'critical') CRITICAL.push({ id, name: 'new task', sub: '' });
+  else DAILY.push({ id, name: 'new task', sub: '' });
+  renderSettingsPanel();
+}
+
+function removeSymptom(idx) {
+  SYMPTOMS.splice(idx, 1);
+  renderSettingsPanel();
+}
+
+function addSymptom() {
+  const inp = document.getElementById('newSymInput');
+  const val = inp.value.trim().toLowerCase();
+  if (!val) return;
+  SYMPTOMS.push(val);
+  inp.value = '';
+  renderSettingsPanel();
+}
+
+function saveName() {
+  const name = document.getElementById('settingsName').value.trim();
+  if (!name) {
+    announce('Please enter a name first.', true);
+    document.getElementById('settingsName').focus();
+    return;
+  }
+  cfg.name = name;
+  saveConfig(cfg);
+  applyName(name);
+  announce('Name saved: ' + name + '.');
+  showToast('name saved ✓');
+}
+
+function saveSettings() {
+  // Flush any typed-but-not-changed inputs from settings panel
+  document.querySelectorAll('#settingsCritical input[type=text]').forEach((inp, i) => {
+    const field = inp.classList.contains('sub-input') ? null : 'name';
+    // handled via onchange already; just sync name
+  });
+  cfg.name     = document.getElementById('settingsName').value.trim() || cfg.name;
+  cfg.critical = CRITICAL;
+  cfg.daily    = DAILY;
+  cfg.symptoms = SYMPTOMS;
+  // interval + telegram are saved immediately on interaction, but sync here too
+  const tgTokenEl = document.getElementById('tgToken');
+  if (tgTokenEl && tgTokenEl.value.trim()) cfg.tgToken = tgTokenEl.value.trim();
+  saveConfig(cfg);
+  applyName(cfg.name);
+  // Show brief confirmation
+  const btn = document.querySelector('#page-settings .btn.primary');
+  if (btn) { const orig = btn.textContent; btn.textContent = 'saved ✓'; setTimeout(() => btn.textContent = orig, 2000); }
+  render();
+}
+
+// ── App state ─────────────────────────────────────────────────────────────
+let state = {
+  tasks: {},
+  mood: { energy: '', mood: '' },
+  symptoms: [],
+  notes: '',
+  medStreak: 0
+};
+
+function getKey(date) { return 'tracker-' + date; }
+function getStreakKey() { return 'tracker-med-streak'; }
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(getKey(TODAY));
+    if (raw) Object.assign(state, JSON.parse(raw));
+    const streak = localStorage.getItem(getStreakKey());
+    if (streak) state.medStreak = parseInt(streak) || 0;
+  } catch(e) {}
+  render();
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(getKey(TODAY), JSON.stringify(state));
+    // persist streak against any meds task
+    const hasMeds = CRITICAL.some(t => t.id === 'meds');
+    if (hasMeds) localStorage.setItem(getStreakKey(), String(state.medStreak));
+  } catch(e) {}
+}
+
+function toggleTask(id) {
+  state.tasks[id] = !state.tasks[id];
+  const done = state.tasks[id];
+  // Find task name for announcement
+  const task = [...CRITICAL, ...DAILY].find(t => t.id === id);
+  const name = task ? task.name : id;
+  if (id === 'meds') {
+    state.medStreak = done
+      ? (state.medStreak || 0) + 1
+      : Math.max(0, (state.medStreak || 0) - 1);
+    if (done) announce(name + ' marked done. Medication streak: ' + state.medStreak + ' days.');
+    else      announce(name + ' unmarked. Medication streak reset to ' + state.medStreak + '.');
+  } else {
+    announce(name + (done ? ' marked done.' : ' unmarked.'));
+  }
+  // Check if all critical tasks done
+  const allCritDone = CRITICAL.every(t => state.tasks[t.id]);
+  if (allCritDone && done) announce('All non-negotiables complete. Great work.', false);
+  saveState();
+  render();
+  // Update aria-pressed on the toggled element
+  const taskEls = document.querySelectorAll('.task');
+  taskEls.forEach(el => {
+    const onclick = el.getAttribute('onclick') || '';
+    if (onclick.includes(id)) {
+      el.setAttribute('aria-pressed', done ? 'true' : 'false');
+    }
+  });
+}
+
+function setMood(type, btn) {
+  const val = btn.textContent;
+  state.mood[type] = val;
+  announce(type + ' set to ' + val + '.');
+  // Update aria-pressed on all buttons in this group
+  const opts = document.querySelectorAll('#' + type + 'Opts .mood-btn');
+  opts.forEach(b => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
+  saveState();
+  render();
+}
+
+function toggleSymptom(s) {
+  const i = state.symptoms.indexOf(s);
+  if (i > -1) {
+    state.symptoms.splice(i, 1);
+    announce(s + ' symptom flag removed.');
+  } else {
+    state.symptoms.push(s);
+    announce(s + ' symptom flagged.');
+  }
+  saveState();
+  render();
+}
+
+function saveAll() {
+  state.notes = document.getElementById('symptomNotes').value;
+  saveState();
+  saveHistoryEntry();
+  const c = document.getElementById('saveConfirm');
+  c.style.display = 'block';
+  setTimeout(() => { c.style.display = 'none'; }, 2500);
+  const all  = [...CRITICAL, ...DAILY];
+  const done = all.filter(t => state.tasks[t.id]).length;
+  announce('Check-in saved. ' + done + ' of ' + all.length + ' tasks completed today. Mood: ' + (state.mood.mood || 'not set') + '. Energy: ' + (state.mood.energy || 'not set') + '.');
+}
+
+function saveHistoryEntry() {
+  const all = [...CRITICAL, ...DAILY];
+  const done = all.filter(t => state.tasks[t.id]).length;
+  const entry = {
+    date: TODAY, done, total: all.length,
+    mood: state.mood.mood, energy: state.mood.energy,
+    flags: state.symptoms.length
+  };
+  try {
+    const existing = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+    const filtered = existing.filter(e => e.date !== TODAY);
+    filtered.unshift(entry);
+    localStorage.setItem('tracker-history', JSON.stringify(filtered.slice(0, 14)));
+  } catch(e) {}
+}
+
+// Holds the blob + filename while preview is open
+let _pendingScreenshot = null;
+
+async function takePhoto() {
+  const btn = document.querySelector('button[onclick="takePhoto()"]');
+  const target = document.getElementById('symptomBlock');
+
+  if (btn) { btn.textContent = 'capturing…'; btn.classList.add('loading'); }
+
+  try {
+    // Resolve the actual background colour so canvas isn't transparent
+    const bgColor = getComputedStyle(document.body).backgroundColor || '#0f0f0f';
+
+    const canvas = await html2canvas(target, {
+      backgroundColor: bgColor,
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      imageTimeout: 0,
+      removeContainer: true
+    });
+
+    resetBtn(btn);
+
+    const filename = 'tracker-checkin-' + TODAY + '.png';
+    const dataUrl  = canvas.toDataURL('image/png');
+
+    // Show preview so user can confirm it looks right before saving
+    canvas.toBlob(blob => {
+      _pendingScreenshot = { blob, filename, dataUrl };
+      document.getElementById('previewImg').src = dataUrl;
+      document.getElementById('previewFilename').textContent = filename;
+      document.getElementById('previewOverlay').classList.remove('hidden');
+      setTimeout(() => {
+        const saveBtn = document.querySelector('#previewOverlay .btn.primary');
+        if (saveBtn) saveBtn.focus();
+      }, 100);
+    }, 'image/png');
+
+  } catch (err) {
+    console.error('Capture failed:', err);
+    if (btn) { btn.textContent = 'failed — try again'; btn.classList.remove('loading'); }
+    setTimeout(() => resetBtn(btn), 3000);
+  }
+}
+
+function closePreview() {
+  document.getElementById('previewOverlay').classList.add('hidden');
+  _pendingScreenshot = null;
+  // Return focus to screenshot button
+  const btn = document.querySelector('button[onclick="takePhoto()"]');
+  if (btn) btn.focus();
+}
+
+// Persisted folder handle for direct gallery saves
+// ── Persistent folder handle (survives page reloads via IndexedDB) ────────
+let _galleryDirHandle = null;
+const IDB_NAME    = 'tracker-fs';
+const IDB_STORE   = 'handles';
+const IDB_KEY     = 'gallery-folder';
+
+function openIDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+async function saveFolderHandle(handle) {
+  try {
+    const db    = await openIDB();
+    const tx    = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(handle, IDB_KEY);
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch(e) { console.warn('Could not persist folder handle:', e); }
+}
+
+async function loadFolderHandle() {
+  try {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const handle = await new Promise((res, rej) => {
+      const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = () => res(req.result);
+      req.onerror   = () => rej(req.error);
+    });
+    db.close();
+    return handle || null;
+  } catch(e) { return null; }
+}
+
+async function getGalleryFolder(forceNew) {
+  // 1. Try cached in-memory handle
+  if (!forceNew && _galleryDirHandle) {
+    try {
+      const perm = await _galleryDirHandle.queryPermission({ mode: 'readwrite' });
+      if (perm === 'granted') return _galleryDirHandle;
+      // Permission lapsed — re-request
+      const req = await _galleryDirHandle.requestPermission({ mode: 'readwrite' });
+      if (req === 'granted') return _galleryDirHandle;
+    } catch(e) { _galleryDirHandle = null; }
+  }
+
+  // 2. Try persisted handle from IndexedDB
+  if (!forceNew) {
+    const saved = await loadFolderHandle();
+    if (saved) {
+      try {
+        const perm = await saved.queryPermission({ mode: 'readwrite' });
+        if (perm === 'granted') { _galleryDirHandle = saved; return saved; }
+        const req = await saved.requestPermission({ mode: 'readwrite' });
+        if (req === 'granted') { _galleryDirHandle = saved; return saved; }
+      } catch(e) {}
+    }
+  }
+
+  // 3. Show folder picker — guide user to create/select SymptomTracker folder
+  try {
+    showToast('select or create a "SymptomTracker" folder in Pictures');
+    const handle = await window.showDirectoryPicker({
+      startIn: 'pictures',
+      mode:    'readwrite',
+      id:      'symptom-tracker'
+    });
+    _galleryDirHandle = handle;
+    await saveFolderHandle(handle);
+    showToast('folder set: ' + handle.name + ' — saves will go here automatically');
+    return handle;
+  } catch(e) {
+    if (e.name !== 'AbortError') console.warn('Folder picker failed:', e);
+    return null;
+  }
+}
+
+// ── Haptic feedback helper ────────────────────────────────────────────────
+function hapticSuccess() {
+  // Short double-buzz — confirms save completed
+  if (navigator.vibrate) navigator.vibrate([50, 30, 80]);
+}
+
+function hapticError() {
+  // Long single buzz — something went wrong
+  if (navigator.vibrate) navigator.vibrate([300]);
+}
+
+async function savePreviewImage() {
+  if (!_pendingScreenshot) return;
+  const { blob, filename, dataUrl } = _pendingScreenshot;
+  const isIOS    = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isDDG    = /DuckDuckGo/i.test(navigator.userAgent);
+
+  closePreview();
+
+  // ── iOS: Web Share → Save to Photos ──────────────────────────────────────
+  if (isIOS) {
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], filename, { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'Symptom record ' + TODAY
+          });
+          // Share sheet completed — haptic fires when user taps Save to Photos
+          // We can't know exactly when that happens, so fire on share sheet open
+          hapticSuccess();
+          announce('Image shared. Use Save to Photos in the share sheet.');
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return;
+          hapticError();
+        }
+      }
+    }
+    // iOS fallback — show in-page overlay same as DDG
+    showImageTab(dataUrl, filename);
+    return;
+  }
+
+  // ── DDG: in-page long-press overlay ──────────────────────────────────────
+  if (isDDG) {
+    showImageTab(dataUrl, filename);
+    // Haptic fires when overlay opens so user knows image is ready
+    hapticSuccess();
+    return;
+  }
+
+  // ── Chrome/Edge: File System Access with persistent folder ────────────────
+  if (window.showDirectoryPicker) {
+    const dir = await getGalleryFolder();
+    if (dir) {
+      try {
+        let targetDir = dir;
+        if (dir.name.toLowerCase() === 'pictures' || dir.name.toLowerCase() === 'dcim') {
+          try {
+            targetDir = await dir.getDirectoryHandle('SymptomTracker', { create: true });
+            _galleryDirHandle = targetDir;
+            await saveFolderHandle(targetDir);
+          } catch(e) { targetDir = dir; }
+        }
+        const fileHandle = await targetDir.getFileHandle(filename, { create: true });
+        const writable   = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        // File fully written — haptic fires NOW in sync with save completion
+        hapticSuccess();
+        showToast('saved to ' + targetDir.name + ' ✓');
+        announce('Image saved to ' + targetDir.name + '.');
+        return;
+      } catch(e) {
+        _galleryDirHandle = null;
+        hapticError();
+        console.warn('Folder write failed:', e);
+      }
+    }
+  }
+
+  // ── Universal fallback: download ──────────────────────────────────────────
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = URL.createObjectURL(blob);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 15000);
+  // Download triggers immediately — haptic fires right after click
+  hapticSuccess();
+  showToast('saved to Downloads — check your Gallery');
+  announce('Image downloading to Downloads folder.');
+}
+
+// Allow user to reset/change the save folder from settings
+async function changeSaveFolder() {
+  _galleryDirHandle = null;
+  const dir = await getGalleryFolder(true);
+  if (dir) showToast('save folder updated: ' + dir.name);
+}
+
+function showImageTab(dataUrl, filename) {
+  // DDG blocks window.open() — show image in a full-screen in-page overlay instead
+  // User long-presses the image directly to get Android's "Save image" option
+  let overlay = document.getElementById('ddgImageOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'ddgImageOverlay';
+    overlay.style.cssText = `
+      position:fixed; inset:0; z-index:9999;
+      background:rgba(0,0,0,0.96);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:16px; padding:20px;
+      touch-action:manipulation;
+    `;
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Save symptom record image');
+    overlay.innerHTML = `
+      <p id="ddgInstructions" style="color:#c8a96e;font-family:monospace;font-size:13px;text-align:center;line-height:1.6">
+        hold your finger on the image<br>then tap <strong>Save image</strong>
+      </p>
+      <img id="ddgSaveImg"
+           style="max-width:100%;max-height:60vh;border-radius:8px;border:1px solid rgba(255,255,255,0.15)"
+           alt="Symptom record for ${TODAY}. Hold to save to gallery."
+           aria-describedby="ddgInstructions"
+           tabindex="0">
+      <p style="color:#555;font-family:monospace;font-size:11px;text-align:center" id="ddgFilename"></p>
+      <button onclick="document.getElementById('ddgImageOverlay').remove()"
+        aria-label="Close save image overlay"
+        style="background:transparent;border:0.5px solid rgba(255,255,255,0.2);border-radius:6px;
+               color:#888;font-family:monospace;font-size:12px;padding:10px 24px;
+               cursor:pointer;min-height:44px">
+        close
+      </button>
+    `;
+    document.body.appendChild(overlay);
+  }
+  document.getElementById('ddgSaveImg').src     = dataUrl;
+  document.getElementById('ddgFilename').textContent = filename;
+  overlay.style.display = 'flex';
+  announce('Save image overlay open. ' + filename + '. Hold your finger on the image then tap Save image to save to your gallery.', true);
+  // Focus the image element so VoiceOver reads alt text + instructions
+  setTimeout(() => {
+    const img = document.getElementById('ddgSaveImg');
+    if (img) img.focus();
+  }, 150);
+}
+
+function showToast(msg) {
+  announce(msg);
+  let toast = document.getElementById('appToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.style.cssText = `
+      position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+      background:var(--bg3); border:0.5px solid var(--border2);
+      color:var(--text); font-family:var(--mono); font-size:12px;
+      padding:10px 18px; border-radius:20px; z-index:999;
+      white-space:nowrap; box-shadow:0 4px 16px rgba(0,0,0,0.4);
+      opacity:0; transition:opacity 0.2s;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+}
+
+function resetBtn(btn) {
+  if (!btn) return;
+  btn.classList.remove('loading');
+  btn.textContent = 'screenshot record';
+}
+
+function render() {
+  document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+  });
+
+  const all = [...CRITICAL, ...DAILY];
+  const done   = all.filter(t =>  state.tasks[t.id]).length;
+  const missed = all.filter(t => !state.tasks[t.id]).length;
+  document.getElementById('statDone').textContent   = done;
+  document.getElementById('statMissed').textContent = missed;
+  document.getElementById('statStreak').textContent = state.medStreak || 0;
+  document.getElementById('statDone').setAttribute('aria-label',    'tasks done today: ' + done);
+  document.getElementById('statMissed').setAttribute('aria-label',  'tasks missed: ' + missed);
+  document.getElementById('statStreak').setAttribute('aria-label',  'medication streak: ' + (state.medStreak || 0) + ' days');
+
+  const nagItems = CRITICAL.filter(t => !state.tasks[t.id]);
+  const banner   = document.getElementById('nagBanner');
+  if (nagItems.length > 0) {
+    banner.classList.add('visible');
+    const name = cfg.name || 'hey';
+    document.getElementById('nagText').textContent =
+      name + '. ' + nagItems.map(t => t.name).join(', ') + '. Right now.';
+  } else {
+    banner.classList.remove('visible');
+  }
+
+  function renderList(list, containerId, critical) {
+    document.getElementById(containerId).innerHTML = list.map(t => {
+      const deadline     = critical && cfg.taskDeadlines[t.id];
+      const ringData     = deadline ? getRingData(deadline, !!state.tasks[t.id]) : null;
+      const ringClass    = ringData ? ringData.cls : '';
+      const circumference = 2 * Math.PI * 12;
+      const dashOffset   = ringData ? circumference * (1 - ringData.pct) : 0;
+      const isDone       = !!state.tasks[t.id];
+      const descId       = t.sub ? 'desc-' + t.id : '';
+      const timerDescId  = ringData ? 'timer-' + t.id : '';
+      const describedBy  = [descId, timerDescId].filter(Boolean).join(' ');
+      return `
+        <div class="task ${isDone ? 'done' : ''} ${critical ? 'critical' : ''}"
+             role="button"
+             tabindex="0"
+             aria-pressed="${isDone}"
+             aria-label="${escHtml(t.name)}${isDone ? ' — completed' : ' — not done'}"
+             ${describedBy ? 'aria-describedby="' + describedBy + '"' : ''}
+             onclick="toggleTask('${t.id}')"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTask('${t.id}')}">
+          <div class="ring-wrap">
+            ${deadline ? `<svg class="ring-svg" viewBox="0 0 28 28" aria-hidden="true">
+              <circle class="ring-track" cx="14" cy="14" r="12"/>
+              <circle class="ring-fill ${ringClass}" cx="14" cy="14" r="12"
+                data-ring-id="${t.id}"
+                stroke-dasharray="${circumference}"
+                stroke-dashoffset="${dashOffset}"/>
+            </svg>` : ''}
+            <div class="check ${isDone ? 'checked' : ''}" aria-hidden="true"></div>
+          </div>
+          <div>
+            <div class="task-name" aria-hidden="true">${escHtml(t.name)}</div>
+            ${t.sub ? `<div class="task-sub" id="${descId}">${escHtml(t.sub)}</div>` : ''}
+            ${ringData ? `<div class="task-timer ${ringClass}" id="${timerDescId}" data-timer-id="${t.id}" aria-live="polite">${ringData.label}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  renderList(CRITICAL, 'criticalTasks', true);
+  renderList(DAILY,    'dailyTasks',    false);
+
+  document.getElementById('symptomGrid').innerHTML = SYMPTOMS.map(s => {
+    const active = state.symptoms.includes(s);
+    return `<button class="sym-btn ${active ? 'active' : ''}"
+            role="checkbox"
+            aria-checked="${active}"
+            aria-label="symptom flag: ${escHtml(s)}"
+            onclick="toggleSymptom(${JSON.stringify(s)})">${escHtml(s)}</button>`;
+  }).join('');
+
+  ['energy', 'mood'].forEach(type => {
+    document.querySelectorAll(`#${type}Opts .mood-btn`).forEach(btn => {
+      const active = btn.textContent === state.mood[type];
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  });
+
+  document.getElementById('symptomNotes').value = state.notes || '';
+
+  try {
+    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+    document.getElementById('historyList').innerHTML = history.length === 0
+      ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text3)">no entries yet</div>`
+      : history.slice(0, 7).map(e => `
+        <div class="history-entry">
+          <span class="history-date">${e.date}</span>
+          <span>${e.done}/${e.total} tasks</span>
+          <span>mood: ${e.mood || '—'} / energy: ${e.energy || '—'}</span>
+          ${e.flags > 0 ? `<span class="history-flags">${e.flags} flag${e.flags > 1 ? 's' : ''}</span>` : ''}
+        </div>
+      `).join('');
+  } catch(e) {}
+}
+
+initOnboarding();
+
+// ── Timer utilities ──────────────────────────────────────────────────────
+
+// Returns minutes until a HH:MM time string today (negative = overdue)
+function minsUntil(timeStr) {
+  if (!timeStr) return null;
+  const now  = new Date();
+  const [h, m] = timeStr.split(':').map(Number);
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+  return (target - now) / 60000;
+}
+
+function formatCountdown(mins, deadlineStr) {
+  if (mins === null) return '';
+  const abs = Math.abs(mins);
+  const h = Math.floor(abs / 60);
+  const m = Math.floor(abs % 60);
+  const str = h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+  const atTime = deadlineStr ? ' (at ' + formatTime12h(deadlineStr) + ')' : '';
+  if (mins < 0)   return 'overdue by ' + str + atTime;
+  if (mins === 0) return 'due now' + atTime;
+  return 'due in ' + str + atTime;
+}
+
+function getRingData(timeStr, done) {
+  if (done) return { pct: 1, cls: 'complete', label: 'done ✓' };
+  const mins = minsUntil(timeStr);
+  if (mins === null) return null;
+  // Ring fills over a 4-hour window before deadline
+  const windowMins = 240;
+  const pct = Math.min(1, Math.max(0, 1 - (mins / windowMins)));
+  let cls = '';
+  if (mins < 0)   cls = 'overdue';
+  else if (mins < 30) cls = 'soon';
+  return { pct, cls, label: formatCountdown(mins, timeStr) };
+}
+
+// ── Window close timer ────────────────────────────────────────────────────
+function formatTime12h(timeStr) {
+  // Convert HH:MM to 12-hour format e.g. "22:00" → "10:00 PM"
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const ampm  = h >= 12 ? 'PM' : 'AM';
+  const hour  = h % 12 || 12;
+  return hour + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+}
+
+function updateWindowTimer() {
+  const el = document.getElementById('windowTimer');
+  if (!el) return;
+  if (!cfg.windowCloseTime) {
+    el.textContent = '';
+    el.className = 'window-timer';
+    return;
+  }
+  const mins    = minsUntil(cfg.windowCloseTime);
+  const timeStr = formatTime12h(cfg.windowCloseTime);
+  if (mins === null) return;
+
+  if (mins < 0) {
+    el.textContent = 'check-in window closed at ' + timeStr;
+    el.className   = 'window-timer closed';
+  } else if (mins < 60) {
+    const h = Math.floor(mins / 60);
+    const m = Math.floor(mins % 60);
+    const remaining = h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+    el.textContent = 'check-in window closes in ' + remaining + ' (at ' + timeStr + ')';
+    el.className   = 'window-timer soon';
+  } else {
+    el.textContent = 'check-in window closes at ' + timeStr;
+    el.className   = 'window-timer';
+  }
+}
+
+// ── Custom timers ─────────────────────────────────────────────────────────
+// Each custom timer: { id, name, durationMins, startedAt (ISO) | null }
+
+function renderCustomTimersWidget() {
+  const el = document.getElementById('customTimersWidget');
+  if (!el) return;
+  const timers = cfg.customTimers || [];
+  if (timers.length === 0) { el.innerHTML = ''; return; }
+  const circumference = 2 * Math.PI * 12;
+  el.innerHTML = timers.map(t => {
+    let pct = 0, countdown = '', cls = '', canStart = !t.startedAt;
+    if (t.startedAt) {
+      const elapsed = (Date.now() - new Date(t.startedAt)) / 60000;
+      const remaining = t.durationMins - elapsed;
+      pct = Math.min(1, elapsed / t.durationMins);
+      if (remaining <= 0) {
+        countdown = "time's up!"; cls = 'overdue'; pct = 1;
+      } else {
+        const h = Math.floor(remaining / 60), m = Math.ceil(remaining % 60);
+        countdown = h > 0 ? h + 'h ' + m + 'm left' : m + 'm left';
+        if (remaining < 5) cls = 'overdue';
+        else if (remaining < 15) cls = 'soon';
+      }
+    } else {
+      countdown = t.durationMins >= 60
+        ? Math.floor(t.durationMins/60) + 'h ' + (t.durationMins%60||'') + (t.durationMins%60?'m':'')
+        : t.durationMins + 'm';
+      countdown = countdown.trim() + ' — tap start';
+    }
+    const dashOffset = circumference * (1 - pct);
+    return `<div class="ctimer">
+      <div class="ctimer-ring">
+        <svg width="28" height="28" viewBox="0 0 28 28" style="transform:rotate(-90deg)">
+          <circle class="ring-track" cx="14" cy="14" r="12"/>
+          <circle class="ring-fill ${cls}" cx="14" cy="14" r="12"
+            stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}"/>
+        </svg>
+      </div>
+      <div class="ctimer-info">
+        <div class="ctimer-name">${escHtml(t.name)}</div>
+        <div class="ctimer-countdown ${cls}">${countdown}</div>
+      </div>
+      <div class="ctimer-actions">
+        ${canStart
+          ? `<button class="ctimer-btn" onclick="startCustomTimer('${t.id}')">start</button>`
+          : `<button class="ctimer-btn" onclick="resetCustomTimer('${t.id}')">reset</button>`}
+        <button class="ctimer-btn danger" onclick="deleteCustomTimer('${t.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addCustomTimer() {
+  const name = document.getElementById('newTimerName').value.trim();
+  const mins = parseInt(document.getElementById('newTimerMins').value, 10);
+  if (!name || !mins || mins < 1) return;
+  const id = 'ct_' + Date.now();
+  cfg.customTimers.push({ id, name, durationMins: mins, startedAt: null });
+  saveConfig(cfg);
+  document.getElementById('newTimerName').value = '';
+  document.getElementById('newTimerMins').value = '';
+  renderCustomTimerSettings();
+  renderCustomTimersWidget();
+}
+
+function startCustomTimer(id) {
+  const t = cfg.customTimers.find(x => x.id === id);
+  if (t) { t.startedAt = new Date().toISOString(); saveConfig(cfg); renderCustomTimersWidget(); }
+}
+
+function resetCustomTimer(id) {
+  const t = cfg.customTimers.find(x => x.id === id);
+  if (t) { t.startedAt = null; saveConfig(cfg); renderCustomTimersWidget(); }
+}
+
+function deleteCustomTimer(id) {
+  cfg.customTimers = cfg.customTimers.filter(x => x.id !== id);
+  saveConfig(cfg);
+  renderCustomTimerSettings();
+  renderCustomTimersWidget();
+}
+
+// ── Settings panel timer helpers ──────────────────────────────────────────
+function saveWindowTime() {
+  cfg.windowCloseTime = document.getElementById('windowCloseTime').value;
+  saveConfig(cfg);
+  updateWindowTimer();
+}
+
+function clearWindowTime() {
+  cfg.windowCloseTime = '';
+  document.getElementById('windowCloseTime').value = '';
+  saveConfig(cfg);
+  updateWindowTimer();
+}
+
+function renderTaskDeadlineSettings() {
+  const el = document.getElementById('taskDeadlineSettings');
+  if (!el) return;
+  el.innerHTML = CRITICAL.map(t => `
+    <div class="settings-task-row" style="margin-bottom:6px">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--text2);flex:1">${escHtml(t.name)}</span>
+      <input type="time" data-task-id="${t.id}"
+        value="${cfg.taskDeadlines[t.id] || ''}"
+        onchange="setTaskDeadline('${t.id}', this.value)"
+        style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;outline:none">
+    </div>
+  `).join('');
+}
+
+function setTaskDeadline(taskId, timeVal) {
+  cfg.taskDeadlines[taskId] = timeVal;
+  saveConfig(cfg);
+  render();
+}
+
+function renderCustomTimerSettings() {
+  const el = document.getElementById('customTimerSettings');
+  if (!el) return;
+  const timers = cfg.customTimers || [];
+  el.innerHTML = timers.length === 0
+    ? `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:6px">no custom timers yet</div>`
+    : timers.map(t => `
+      <div class="settings-task-row" style="margin-bottom:6px">
+        <span style="font-family:var(--mono);font-size:12px;color:var(--text2);flex:1">${escHtml(t.name)} (${t.durationMins}m)</span>
+        <button class="del-btn" onclick="deleteCustomTimer('${t.id}')">×</button>
+      </div>
+    `).join('');
+}
+
+// ── Configurable reminder interval ───────────────────────────────────────
+// ── SW helper — send notification via service worker (works backgrounded) ──
+function swNotify(title, body, tag, requireInteraction) {
+  if (!('serviceWorker' in navigator)) return fallbackNotify(title, body);
+  navigator.serviceWorker.ready.then(reg => {
+    reg.active && reg.active.postMessage({
+      type: 'NOTIFY', title, body,
+      tag: tag || 'tracker-reminder',
+      requireInteraction: requireInteraction !== false
+    });
+  }).catch(() => fallbackNotify(title, body));
+}
+
+function swSchedule(delayMs, title, body, tag) {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(reg => {
+    reg.active && reg.active.postMessage({
+      type: 'SCHEDULE', delay: delayMs, title, body,
+      tag: tag || 'tracker-scheduled'
+    });
+  });
+}
+
+function fallbackNotify(title, body) {
+  // Foreground fallback — buzz + in-page toast
+  if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 600]);
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, silent: false });
+  }
+}
+
+// ── Aggressive nag: repeat 3 times, 30 seconds apart ─────────────────────
+function nagUser(name, nagItems) {
+  const prefs = cfg.notifPrefs || {};
+  const title = name + ' — do this now';
+  const body  = nagItems.map(t => t.name).join(', ') + '. Right now. Not later.';
+  const vib   = getVibPattern('task');
+
+  if (prefs.taskBrowser !== false) {
+    swNotify(title, body, 'tracker-nag', true);
+    if (navigator.vibrate) navigator.vibrate(vib);
+    swSchedule(30000,  title, body, 'tracker-nag-2');
+    swSchedule(90000, name + ' — STILL waiting', body + ' Still not done.', 'tracker-nag-3');
+  }
+  if (prefs.taskTelegram !== false && cfg.tgToken && cfg.tgChatId) {
+    sendTelegramMessage('⚠️ ' + title + '\n' + body);
+  }
+}
+
+// ── Configurable reminder interval ───────────────────────────────────────
+let _reminderTimer = null;
+
+function startReminderTimer() {
+  if (_reminderTimer) clearInterval(_reminderTimer);
+  const mins = parseInt(cfg.reminderInterval || '30', 10);
+  _reminderTimer = setInterval(() => {
+    const nagItems = CRITICAL.filter(t => !state.tasks[t.id]);
+    if (nagItems.length === 0) return;
+    const name = cfg.name || 'hey';
+    nagUser(name, nagItems);
+  }, mins * 60 * 1000);
+}
+
+// Also check task deadlines every minute and nag if overdue
+setInterval(() => {
+  if (!cfg.taskDeadlines) return;
+  const overdueItems = CRITICAL.filter(t => {
+    if (state.tasks[t.id]) return false; // already done
+    const dl = cfg.taskDeadlines[t.id];
+    if (!dl) return false;
+    return minsUntil(dl) < 0; // past deadline
+  });
+  if (overdueItems.length > 0) {
+    const prefs = cfg.notifPrefs || {};
+    const name  = cfg.name || 'hey';
+    if (prefs.taskBrowser !== false) {
+      swNotify(name + ' — overdue',
+        overdueItems.map(t => t.name).join(', ') + ' is overdue.',
+        'tracker-overdue', true);
+      if (navigator.vibrate) navigator.vibrate(getVibPattern('task'));
+    }
+    if (prefs.taskTelegram !== false && cfg.tgToken && cfg.tgChatId) {
+      sendTelegramMessage('🚨 OVERDUE: ' + overdueItems.map(t => t.name).join(', '));
+    }
+  }
+}, 60000);
+
+// Check window close time
+setInterval(() => {
+  if (!cfg.windowCloseTime) return;
+  const mins = minsUntil(cfg.windowCloseTime);
+  if (mins === null) return;
+  // Warn at 30 mins
+  if (mins > 0 && mins <= 30 && Math.floor(mins) % 10 === 0) {
+    const prefs = cfg.notifPrefs || {};
+    const name  = cfg.name || 'hey';
+    if (prefs.windowBrowser !== false) {
+      swNotify(name + ' — check-in closing soon',
+        'Check-in window closes in ' + Math.floor(mins) + ' minutes.',
+        'tracker-window', false);
+      if (navigator.vibrate) navigator.vibrate(getVibPattern('timer'));
+    }
+    if (prefs.taskTelegram !== false && cfg.tgToken && cfg.tgChatId) {
+      sendTelegramMessage('⏰ Check-in window closes in ' + Math.floor(mins) + ' minutes.');
+    }
+  }
+  // Nag at exactly closed
+  if (mins <= 0 && mins > -1) {
+    const name = cfg.name || 'hey';
+    nagUser(name, CRITICAL.filter(t => !state.tasks[t.id]));
+  }
+}, 60000);
+
+function setInterval_(val) {
+  cfg.reminderInterval = val;
+  saveConfig(cfg);
+  updateIntervalPill(val);
+  startReminderTimer();
+}
+
+// ── 1-second tick for live timer updates ─────────────────────────────────
+setInterval(() => {
+  updateWindowTimer();
+  renderCustomTimersWidget();
+  updateNextApptBanner();
+  if (Object.keys(cfg.taskDeadlines || {}).length > 0) {
+    const todayPage = document.getElementById('page-today');
+    if (todayPage && todayPage.classList.contains('active')) {
+      const circumference = 2 * Math.PI * 12;
+      CRITICAL.forEach(t => {
+        const deadline = cfg.taskDeadlines[t.id];
+        if (!deadline) return;
+        const ringFill  = document.querySelector(`[data-ring-id="${t.id}"]`);
+        const timerLabel = document.querySelector(`[data-timer-id="${t.id}"]`);
+        if (!ringFill && !timerLabel) return;
+        const rd = getRingData(deadline, !!state.tasks[t.id]);
+        if (!rd) return;
+        if (ringFill) {
+          ringFill.setAttribute('stroke-dashoffset', circumference * (1 - rd.pct));
+          ringFill.className.baseVal = 'ring-fill ' + rd.cls;
+        }
+        if (timerLabel) {
+          timerLabel.textContent = rd.label;
+          timerLabel.className   = 'task-timer ' + rd.cls;
+        }
+      });
+    }
+  }
+}, 1000);
+
+function updateIntervalPill(val) {
+  ['15','30','60','120'].forEach(v => {
+    const el = document.getElementById('interval' + v);
+    if (el) el.classList.toggle('active', v === (val || '30'));
+  });
+}
+
+// Request notification permission aggressively on load
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    const result = await Notification.requestPermission();
+    if (result === 'granted') {
+      swNotify('Notifications enabled', 'You will be nagged until tasks are done.', 'tracker-welcome', false);
+    }
+  }
+}
+
+requestNotificationPermission();
+startReminderTimer();
+
+// Re-schedule any saved appointment reminders on load
+(function() {
+  const appts = loadAppts();
+  appts.forEach(a => scheduleApptReminders(a));
+})();
+
+// ── Telegram ─────────────────────────────────────────────────────────────
+async function sendTelegramMessage(text) {
+  if (!cfg.tgToken || !cfg.tgChatId) return;
+  try {
+    await fetch('https://api.telegram.org/bot' + cfg.tgToken + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: cfg.tgChatId, text })
+    });
+  } catch(e) { console.warn('Telegram send failed:', e); }
+}
+
+async function connectTelegram() {
+  const token = document.getElementById('tgToken').value.trim();
+  const statusEl = document.getElementById('tgStatus');
+  if (!token) { tgStatusMsg('enter a token first', 'var(--danger)'); return; }
+  tgStatusMsg('connecting…', 'var(--text3)');
+  try {
+    // getUpdates to find the chat_id from the most recent message to the bot
+    const res  = await fetch('https://api.telegram.org/bot' + token + '/getUpdates');
+    const data = await res.json();
+    if (!data.ok) { tgStatusMsg('invalid token — check and retry', 'var(--danger)'); return; }
+    const updates = data.result;
+    if (!updates || updates.length === 0) {
+      tgStatusMsg('no messages found — send your bot a message first, then retry', 'var(--warning)');
+      return;
+    }
+    const chatId = updates[updates.length - 1].message?.chat?.id;
+    if (!chatId) { tgStatusMsg('could not find chat ID — message your bot and retry', 'var(--warning)'); return; }
+    cfg.tgToken  = token;
+    cfg.tgChatId = String(chatId);
+    saveConfig(cfg);
+    tgStatusMsg('connected ✓ chat ID: ' + chatId, 'var(--success)');
+  } catch(e) {
+    tgStatusMsg('connection failed — check network', 'var(--danger)');
+  }
+}
+
+function tgStatusMsg(msg, color) {
+  const el = document.getElementById('tgStatus');
+  if (el) { el.textContent = msg; el.style.color = color; }
+}
+
+async function sendTelegramTest() {
+  if (!cfg.tgToken || !cfg.tgChatId) {
+    tgStatusMsg('connect first', 'var(--danger)'); return;
+  }
+  const msg = document.getElementById('tgTestMsg').value.trim()
+    || 'test from daily tracker — ' + TODAY;
+  await sendTelegramMessage(msg);
+  tgStatusMsg('test sent ✓', 'var(--success)');
+  setTimeout(() => tgStatusMsg('', ''), 3000);
+}
+
+// ── CSV Export ───────────────────────────────────────────────────────────
+function exportCSV() {
+  try {
+    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+    if (history.length === 0) {
+      alert('No history to export yet — save a check-in first.');
+      return;
+    }
+    const headers = ['date','tasks_done','tasks_total','pct_done','mood','energy','flags','notes'];
+    const rows = history.map(e => {
+      // Pull notes from the day's full state if available
+      let notes = '';
+      try {
+        const dayRaw = localStorage.getItem('tracker-' + e.date);
+        if (dayRaw) notes = JSON.parse(dayRaw).notes || '';
+      } catch(_) {}
+      const pct = e.total > 0 ? ((e.done / e.total) * 100).toFixed(0) + '%' : '—';
+      return [
+        e.date,
+        e.done,
+        e.total,
+        pct,
+        e.mood  || '',
+        e.energy || '',
+        e.flags,
+        '"' + notes.replace(/"/g, '""') + '"'
+      ].join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const filename = 'tracker-history-' + TODAY + '.csv';
+
+    // Share on mobile, download on desktop
+    const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isMobile && navigator.share && navigator.canShare) {
+      const file = new File([blob], filename, { type: 'text/csv' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ title: 'Tracker history', files: [file] }).catch(() => downloadBlob(blob, filename));
+        return;
+      }
+    }
+    downloadBlob(blob, filename);
+  } catch(e) {
+    alert('Export failed: ' + e.message);
+  }
+}
+
+function downloadBlob(blob, filename) {
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+}
+</script>
+</body>
+</html>
