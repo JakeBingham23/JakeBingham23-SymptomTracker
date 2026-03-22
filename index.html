@@ -26,18 +26,35 @@
 
   /* ── Text scale — applied to html element so rem cascades correctly ── */
   /* Default: inherit from OS (Android/iOS accessibility settings respected) */
-  html { font-size: 100%; }
+  html {
+    font-size: 100%;
+    transition: font-size 0.3s ease;
+  }
   html[data-text-size="small"]  { font-size: 87.5%; }
   html[data-text-size="large"]  { font-size: 112.5%; }
   html[data-text-size="xl"]     { font-size: 130%; }
 
-  /* ── Reduce motion ── */
+  /* ── Reduce motion — OS preference ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    /* Preserve font-size transition — it's a layout change not a decorative animation */
+    html { transition: font-size 0.3s ease !important; }
+  }
+  /* ── Reduce motion — in-app toggle ── */
   :root[data-reduce-motion="true"] *,
   :root[data-reduce-motion="true"] *::before,
   :root[data-reduce-motion="true"] *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+  /* Preserve font-size transition even with in-app reduce motion */
+  :root[data-reduce-motion="true"] html {
+    transition: font-size 0.3s ease !important;
   }
 
   /* ── Design system tokens ── */
@@ -182,28 +199,6 @@
     }
   }
 
-  /* ── Large touch targets option ── */
-  :root[data-large-targets="true"] button,
-  :root[data-large-targets="true"] [role="button"],
-  :root[data-large-targets="true"] .nav-tab,
-  :root[data-large-targets="true"] .task,
-  :root[data-large-targets="true"] .mood-btn,
-  :root[data-large-targets="true"] .sym-btn,
-  :root[data-large-targets="true"] .btn,
-  :root[data-large-targets="true"] .add-btn,
-  :root[data-large-targets="true"] .toggle-switch,
-  :root[data-large-targets="true"] .theme-opt,
-  :root[data-large-targets="true"] .vibration-opt,
-  :root[data-large-targets="true"] .audio-opt {
-    min-height: 56px !important;
-    min-width: 56px !important;
-  }
-  :root[data-large-targets="true"] .nav-tab {
-    padding: 0 1.2rem !important;
-  }
-  :root[data-large-targets="true"] .task {
-    padding: 1rem !important;
-  }
 
   /* ── Skip to main content ── */
   .skip-link {
@@ -251,8 +246,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-body);
-    /* Allow OS text size to work — no fixed px on root */
-    font-size: 1rem;
+    /* font-size inherits from html element — do not set explicitly */
     min-height: 100vh;
     padding-top: 0;
     -webkit-font-smoothing: antialiased;
@@ -295,7 +289,7 @@
   }
 
   /* ── Top nav bar ── */
-  /* ── Two-row navbar ── */
+  /* ── Single-row navbar ── */
   .navbar {
     position: sticky;
     top: 0;
@@ -311,15 +305,213 @@
     align-items: stretch;
     height: 52px;
     padding: 0 var(--sp-3);
+    border-bottom: 0.5px solid var(--border);
   }
 
-  .navbar-row2 {
+  /* Row 2 removed — replaced by hamburger menu */
+
+  /* ── Hamburger button ── */
+  .hamburger-btn {
+    background: transparent;
+    border: none;
+    border-left: 0.5px solid var(--border);
+    color: var(--text3);
+    font-size: 1.1rem;
+    padding: 0;
+    cursor: pointer;
     display: flex;
-    align-items: stretch;
-    height: 32px;
-    border-top: 0.5px solid var(--border);
-    padding: 0 var(--sp-3);
-    background: var(--bg3);
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    min-height: 44px;
+    flex-shrink: 0; /* never shrinks — always visible */
+    transition: color 0.15s;
+  }
+  .hamburger-btn:hover { color: var(--accent); }
+  .hamburger-btn:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  /* ── Full screen menu overlay ── */
+  .menu-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 8000;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .menu-overlay.hidden { display: none; }
+
+  .menu-overlay-inner {
+    padding: var(--sp-4) var(--sp-4) var(--sp-7);
+    max-width: 580px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .menu-overlay-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-4) 0 var(--sp-5);
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: var(--sp-5);
+  }
+
+  .menu-overlay-header h2 {
+    font-family: var(--font-mono);
+    font-size: var(--text-lg);
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+
+  .menu-close-btn {
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-size: var(--text-lg);
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .menu-close-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .menu-close-btn:focus-visible { outline: 3px solid var(--accent); }
+
+  .menu-section {
+    margin-bottom: var(--sp-6);
+  }
+
+  .menu-section-title {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: var(--sp-3);
+    padding-bottom: var(--sp-2);
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .menu-settings-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
+    padding: var(--sp-3) var(--sp-4);
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    min-height: 48px;
+    transition: all 0.15s;
+  }
+  .menu-settings-item:hover { border-color: var(--accent); color: var(--accent); }
+  .menu-settings-item:focus-visible { outline: 3px solid var(--accent); }
+
+  /* Sub-page slide animation */
+  .menu-subpage {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 8100;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .menu-subpage.active {
+    transform: translateX(0);
+  }
+  :root[data-reduce-motion="true"] .menu-subpage {
+    transition: none;
+  }
+  .menu-subpage-inner {
+    padding: var(--sp-4);
+    max-width: 580px;
+    margin: 0 auto;
+    padding-bottom: var(--sp-7);
+  }
+  .menu-subpage-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-4) 0 var(--sp-5);
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: var(--sp-5);
+  }
+  .menu-back-btn {
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-size: var(--text-lg);
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .menu-back-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .menu-subpage-title {
+    font-family: var(--font-mono);
+    font-size: var(--text-lg);
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+
+  .menu-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-3);
+    flex-wrap: wrap;
+  }
+
+  .menu-row-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
+    color: var(--text2);
+    flex-shrink: 0;
+  }
+
+  .menu-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+  }
+
+  .menu-toggle-info { flex: 1; }
+
+  .menu-toggle-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
+    color: var(--text2);
+    display: block;
+  }
+
+  .menu-toggle-sub {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text3);
+    display: block;
+    margin-top: 2px;
   }
 
   .navbar-brand {
@@ -340,6 +532,8 @@
     align-items: stretch;
     flex: 1;
     gap: 0;
+    min-width: 0; /* allow shrinking */
+    overflow: hidden;
   }
 
   /* Accessibility toolbar (row 2) */
@@ -384,23 +578,25 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    padding: 0 var(--sp-3);
+    gap: 2px;
+    padding: 0 4px;
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
     color: var(--text3);
     font-family: var(--font-mono);
-    font-size: var(--text-xs);
+    font-size: 0.5rem; /* fixed small size so 5 tabs + hamburger fit */
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.06em;
     cursor: pointer;
     transition: color 0.15s, border-color 0.15s;
     white-space: nowrap;
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
   }
 
-  .nav-tab .tab-icon { font-size: var(--text-xl); line-height: 1; }
+  .nav-tab .tab-icon { font-size: 0.875rem; line-height: 1; }
 
   .nav-tab:hover { color: var(--text2); background: var(--bg3); }
 
@@ -569,7 +765,6 @@
   }
 
   .task:hover { border-color: var(--border2); background: var(--bg3); }
-  .task { cursor: pointer; -webkit-tap-highlight-color: rgba(200,169,110,0.2); }
 
   .task.done { opacity: 0.4; }
 
@@ -1173,6 +1368,217 @@
   }
   .friction-notice.visible { display: block; }
 
+  /* ── Journal ── */
+  .journal-composer-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-4);
+    box-shadow: var(--shadow);
+  }
+  .journal-composer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-3);
+    padding-bottom: var(--sp-3);
+    border-bottom: 0.5px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .journal-composer-date {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .journal-composer-meta {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text3);
+    margin-top: 3px;
+  }
+  .journal-action-btn {
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    padding: 4px 10px;
+    cursor: pointer;
+    min-height: 36px;
+    transition: all 0.1s;
+  }
+  .journal-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .journal-action-btn.recording { border-color: var(--danger); color: var(--danger); }
+
+  /* Writing prompt */
+  .journal-prompt {
+    background: var(--accent-dim);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: var(--sp-3) var(--sp-4);
+    margin-bottom: var(--sp-3);
+    display: none;
+  }
+  .journal-prompt.visible { display: block; }
+  .journal-prompt p {
+    font-size: var(--text-base);
+    color: var(--text2);
+    line-height: 1.6;
+    font-style: italic;
+    margin-bottom: var(--sp-2);
+  }
+  .journal-prompt-dismiss {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  /* Entry cards */
+  .journal-entry-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-4);
+    margin-bottom: var(--sp-3);
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.15s;
+    cursor: pointer;
+  }
+  .journal-entry-card:hover { border-color: var(--border2); }
+  .journal-entry-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--sp-2);
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+  }
+  .journal-entry-date {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .journal-entry-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .journal-tag {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text3);
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-pill);
+    padding: 1px 8px;
+  }
+  .journal-entry-preview {
+    font-size: var(--text-base);
+    color: var(--text2);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: pre-wrap;
+  }
+  .journal-entry-preview.expanded {
+    -webkit-line-clamp: unset;
+    display: block;
+  }
+  .journal-entry-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--sp-3);
+    padding-top: var(--sp-2);
+    border-top: 0.5px solid var(--border);
+  }
+  .journal-word-count {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text3);
+  }
+  .journal-entry-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .journal-entry-btn {
+    background: transparent;
+    border: none;
+    color: var(--text3);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    padding: 2px 6px;
+    min-height: 28px;
+    transition: color 0.1s;
+  }
+  .journal-entry-btn:hover { color: var(--accent); }
+  .journal-entry-btn.danger:hover { color: var(--danger); }
+
+  /* Voice recording indicator */
+  @keyframes pulse-red {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+  }
+  .recording-indicator {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--danger);
+    animation: pulse-red 1s ease-in-out infinite;
+    margin-left: var(--sp-2);
+  }
+  /* Stop animation when reduce motion active */
+  @media (prefers-reduced-motion: reduce) {
+    .recording-indicator { animation: none; }
+    .quote-loading        { animation: none; opacity: 0.6; }
+  }
+  :root[data-reduce-motion="true"] .recording-indicator,
+  :root[data-reduce-motion="true"] .quote-loading { animation: none !important; }
+
+/* ── Large touch targets option ── */
+  :root[data-large-targets="true"] button,
+  :root[data-large-targets="true"] [role="button"],
+  :root[data-large-targets="true"] .nav-tab,
+  :root[data-large-targets="true"] .task,
+  :root[data-large-targets="true"] .mood-btn,
+  :root[data-large-targets="true"] .sym-btn,
+  :root[data-large-targets="true"] .btn,
+  :root[data-large-targets="true"] .add-btn,
+  :root[data-large-targets="true"] .theme-opt,
+  :root[data-large-targets="true"] .vibration-opt,
+  :root[data-large-targets="true"] .audio-opt {
+    min-height: 56px !important;
+    min-width: 44px !important;
+  }
+  /* Toggle switches keep their own dimensions — enlarging them breaks layout */
+  :root[data-large-targets="true"] .toggle-switch {
+    width: 44px !important;
+    height: 26px !important;
+    min-height: unset !important;
+    min-width: unset !important;
+    flex-shrink: 0 !important;
+  }
+  :root[data-large-targets="true"] .nav-tab {
+    padding: 0 1.2rem !important;
+  }
+  :root[data-large-targets="true"] .task {
+    padding: var(--sp-4) var(--sp-4) !important;
+    min-height: 56px !important;
+  }
+
   /* ── Confetti canvas ── */
   #confettiCanvas {
     position: fixed;
@@ -1337,7 +1743,7 @@
     justify-content: space-between;
     margin-bottom: 10px;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap; /* keep toggle on same line as label */
   }
 
   .notif-toggle-label {
@@ -1360,6 +1766,10 @@
     width: 44px;
     height: 26px;
     flex-shrink: 0;
+    flex-grow: 0; /* never stretches */
+    min-width: 44px;
+    max-width: 44px;
+    align-self: center;
   }
 
   .toggle-switch input {
@@ -2050,40 +2460,175 @@
       <button class="nav-tab" id="tab-stats"   role="tab" aria-selected="false" aria-controls="page-stats"   onclick="switchTab('stats')">
         <span class="tab-icon" aria-hidden="true">◎</span><span>stats</span>
       </button>
-      <button class="nav-tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="page-settings" onclick="switchTab('settings')">
-        <span class="tab-icon" aria-hidden="true">⚙</span><span>settings</span>
-      </button>
       <button class="nav-tab" id="tab-budget" role="tab" aria-selected="false" aria-controls="page-budget" onclick="switchTab('budget')">
         <span class="tab-icon" aria-hidden="true">$</span><span>budget</span>
       </button>
-    </div>
-  </div>
-  <!-- Row 2: accessibility toolbar -->
-  <div class="navbar-row2" role="toolbar" aria-label="Accessibility controls">
-    <div class="navbar-a11y">
-      <button class="nav-a11y-btn" id="navThemeBtn" onclick="cycleTheme()"
-              aria-label="Toggle colour theme">
-        <span class="a11y-icon" id="navThemeIcon" aria-hidden="true">◑</span>
-        <span id="navThemeLabel">theme</span>
-      </button>
-      <button class="nav-a11y-btn" id="navContrastBtn" onclick="toggleHighContrast()"
-              aria-label="Toggle high contrast" aria-pressed="false">
-        <span class="a11y-icon" aria-hidden="true">◐</span>
-        <span>contrast</span>
-      </button>
-      <button class="nav-a11y-btn" id="navTextSizeBtn" onclick="cycleTextSize()"
-              aria-label="Cycle text size">
-        <span class="a11y-icon" id="navTextSizeIcon" aria-hidden="true">A</span>
-        <span id="navTextSizeLabel">text</span>
-      </button>
-      <button class="nav-a11y-btn" id="navMotionBtn" onclick="toggleReduceMotion()"
-              aria-label="Toggle reduce motion" aria-pressed="false">
-        <span class="a11y-icon" aria-hidden="true">⏸</span>
-        <span>motion</span>
+      <button class="nav-tab" id="tab-journal" role="tab" aria-selected="false" aria-controls="page-journal" onclick="switchTab('journal')">
+        <span class="tab-icon" aria-hidden="true">✎</span><span>journal</span>
       </button>
     </div>
+    <button class="hamburger-btn" onclick="openMenu()"
+            aria-label="Open menu" aria-haspopup="dialog"
+            aria-controls="menuOverlay">
+      <span aria-hidden="true">☰</span>
+    </button>
   </div>
 </nav>
+
+<!-- ── Accessibility / menu overlay ── -->
+<div class="menu-overlay hidden" id="menuOverlay"
+     role="dialog" aria-modal="true" aria-labelledby="menuOverlayTitle">
+  <div class="menu-overlay-inner">
+    <div class="menu-overlay-header">
+      <h2 id="menuOverlayTitle">// menu</h2>
+      <button class="menu-close-btn" onclick="closeMenu()"
+              aria-label="Close menu">✕</button>
+    </div>
+
+    <!-- Appearance -->
+    <div class="menu-section">
+      <div class="menu-section-title">appearance</div>
+      <div class="menu-row">
+        <span class="menu-row-label">theme</span>
+        <div class="theme-pill" role="radiogroup" aria-label="Colour theme" style="gap:2px">
+          <button class="theme-opt" id="menuThemeSystem" onclick="setTheme('system');updateMenuThemeUI()"
+                  role="radio" aria-checked="true">system</button>
+          <button class="theme-opt" id="menuThemeLight"  onclick="setTheme('light');updateMenuThemeUI()"
+                  role="radio" aria-checked="false">light</button>
+          <button class="theme-opt" id="menuThemeDark"   onclick="setTheme('dark');updateMenuThemeUI()"
+                  role="radio" aria-checked="false">dark</button>
+        </div>
+      </div>
+      <div class="menu-row">
+        <span class="menu-row-label">text size</span>
+        <div class="theme-pill" role="radiogroup" aria-label="Text size" style="gap:2px">
+          <button class="theme-opt" id="menuSizeSmall"  onclick="setTextSize('small')"
+                  role="radio" aria-checked="false">S</button>
+          <button class="theme-opt active" id="menuSizeNormal" onclick="setTextSize('normal')"
+                  role="radio" aria-checked="true">A</button>
+          <button class="theme-opt" id="menuSizeLarge"  onclick="setTextSize('large')"
+                  role="radio" aria-checked="false">A+</button>
+          <button class="theme-opt" id="menuSizeXL"     onclick="setTextSize('xl')"
+                  role="radio" aria-checked="false">A++</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accessibility -->
+    <div class="menu-section">
+      <div class="menu-section-title">accessibility</div>
+      <div class="menu-toggle-row">
+        <div class="menu-toggle-info">
+          <span class="menu-toggle-label">high contrast</span>
+          <span class="menu-toggle-sub">stronger colours for low vision</span>
+        </div>
+        <label class="toggle-switch" aria-label="High contrast">
+          <input type="checkbox" id="menuHighContrast"
+                 onchange="setHighContrast(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="menu-toggle-row">
+        <div class="menu-toggle-info">
+          <span class="menu-toggle-label">reduce motion</span>
+          <span class="menu-toggle-sub">disables animations and confetti</span>
+        </div>
+        <label class="toggle-switch" aria-label="Reduce motion">
+          <input type="checkbox" id="menuReduceMotion"
+                 onchange="toggleReduceMotion(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="menu-toggle-row">
+        <div class="menu-toggle-info">
+          <span class="menu-toggle-label">larger touch targets</span>
+          <span class="menu-toggle-sub">56px minimum tap area</span>
+        </div>
+        <label class="toggle-switch" aria-label="Larger touch targets">
+          <input type="checkbox" id="menuLargeTargets"
+                 onchange="setLargeTouchTargets(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="menu-toggle-row">
+        <div class="menu-toggle-info">
+          <span class="menu-toggle-label">do not disturb</span>
+          <span class="menu-toggle-sub">silence all notifications now</span>
+        </div>
+        <label class="toggle-switch" aria-label="Do not disturb">
+          <input type="checkbox" id="menuDND"
+                 onchange="saveDND()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Quick nav -->
+    <div class="menu-section">
+      <div class="menu-section-title">go to</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="add-btn" onclick="closeMenu();switchTab('today')"
+                aria-label="Go to Today tab">today</button>
+        <button class="add-btn" onclick="closeMenu();switchTab('history')"
+                aria-label="Go to History tab">history</button>
+        <button class="add-btn" onclick="closeMenu();switchTab('stats')"
+                aria-label="Go to Stats tab">stats</button>
+        <button class="add-btn" onclick="closeMenu();switchTab('budget')"
+                aria-label="Go to Budget tab">budget</button>
+        <button class="add-btn" onclick="closeMenu();switchTab('journal')"
+                aria-label="Go to Journal tab">journal</button>
+      </div>
+    </div>
+
+    <!-- Settings navigation -->
+    <div class="menu-section">
+      <div class="menu-section-title">settings</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <button class="menu-settings-item" onclick="openMenuSubPage('tasks')"
+                aria-label="Tasks and symptoms settings">
+          <span>tasks &amp; symptoms</span><span aria-hidden="true">›</span>
+        </button>
+        <button class="menu-settings-item" onclick="openMenuSubPage('notifications')"
+                aria-label="Notification settings">
+          <span>notifications</span><span aria-hidden="true">›</span>
+        </button>
+        <button class="menu-settings-item" onclick="openMenuSubPage('timers')"
+                aria-label="Timers and schedule settings">
+          <span>timers &amp; schedule</span><span aria-hidden="true">›</span>
+        </button>
+        <button class="menu-settings-item" onclick="openMenuSubPage('integrations')"
+                aria-label="Integrations settings">
+          <span>integrations</span><span aria-hidden="true">›</span>
+        </button>
+        <button class="menu-settings-item" onclick="openMenuSubPage('data')"
+                aria-label="Data and backup">
+          <span>data &amp; backup</span><span aria-hidden="true">›</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Font picker -->
+    <div class="menu-section">
+      <div class="menu-section-title">font</div>
+      <div class="theme-pill" role="radiogroup" aria-label="Font"
+           style="flex-wrap:wrap;height:auto;padding:4px;gap:3px">
+        <button class="theme-opt active" id="menuFontDefault"
+                onclick="setFont('default')" role="radio" aria-checked="true">system</button>
+        <button class="theme-opt" id="menuFontIbmplexmono"
+                onclick="setFont('ibmplexmono')" role="radio" aria-checked="false"
+                style="font-family:'IBM Plex Mono',monospace">ibm mono</button>
+        <button class="theme-opt" id="menuFontAtkinson"
+                onclick="setFont('atkinson')" role="radio" aria-checked="false">atkinson ↓</button>
+        <button class="theme-opt" id="menuFontOpendyslexic"
+                onclick="setFont('opendyslexic')" role="radio" aria-checked="false">opendyslexic ↓</button>
+        <button class="theme-opt" id="menuFontComic"
+                onclick="setFont('comic')" role="radio" aria-checked="false"
+                style="font-family:'Comic Sans MS',cursive">comic sans</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- ── TODAY ── -->
 <div class="page active" id="page-today" role="tabpanel" aria-labelledby="tab-today">
@@ -2216,7 +2761,7 @@
   <div class="container">
     <div class="header">
       <div class="header-top">
-        <h1 style="font-family:var(--font-mono);font-size:14px;color:var(--accent)" id="history-heading">log &amp; appointments</h1>
+        <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="history-heading">log &amp; appointments</h1>
         <span class="date" id="historyDateDisplay"></span>
       </div>
     </div>
@@ -2295,7 +2840,7 @@
 <div class="page" id="page-stats" role="tabpanel" aria-labelledby="tab-stats" aria-hidden="true">
   <div class="container">
     <div class="header">
-      <h1 style="font-family:var(--font-mono);font-size:14px;color:var(--accent)" id="stats-heading">your stats</h1>
+      <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="stats-heading">your stats</h1>
     </div>
 
     <!-- Points banner -->
@@ -2305,8 +2850,8 @@
         <div class="points-label">total points</div>
       </div>
       <div style="text-align:right">
-        <div style="font-family:var(--font-mono);font-size:12px;color:var(--text2)" id="pointsMultiplier">×1 multiplier</div>
-        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text3)">streak bonus</div>
+        <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text2)" id="pointsMultiplier">×1 multiplier</div>
+        <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">streak bonus</div>
       </div>
     </div>
 
@@ -2363,7 +2908,7 @@
 <div class="page" id="page-settings" role="tabpanel" aria-labelledby="tab-settings" aria-hidden="true">
   <div class="container">
     <div class="header">
-      <h1 style="font-family:var(--font-mono);font-size:14px;color:var(--accent)" id="settings-heading">settings</h1>
+      <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="settings-heading">settings</h1>
     </div>
 
     <!-- ── Profile ── -->
@@ -2621,7 +3166,7 @@
 
       <div class="settings-divider"></div>
       <h3 class="settings-section-title">task deadlines</h3>
-      <p style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.6">
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px;line-height:1.6">
         Set a daily must-be-done-by time for each non-negotiable.
       </p>
       <div id="taskDeadlineSettings"></div>
@@ -2705,7 +3250,7 @@
       <h3 class="settings-section-title">check-in window time</h3>
       <div class="settings-task-row">
         <input type="time" id="windowCloseTime"
-               style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:6px 10px;outline:none;flex:1"
+               style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:6px 10px;outline:none;flex:1"
                aria-label="Daily check-in window closing time">
         <button class="add-btn" onclick="saveWindowTime()" aria-label="Save window time">save</button>
         <button class="add-btn" onclick="clearWindowTime()" aria-label="Clear window time">clear</button>
@@ -2718,7 +3263,7 @@
         <input type="text" id="newTimerName" placeholder="timer name" maxlength="30"
                style="flex:2" aria-label="New timer name">
         <input type="number" id="newTimerMins" placeholder="mins" min="1" max="1440"
-               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:6px 10px;outline:none"
+               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:6px 10px;outline:none"
                aria-label="Timer duration in minutes">
         <button class="add-btn" onclick="addCustomTimer()" aria-label="Add custom timer">+ add</button>
       </div>
@@ -2835,22 +3380,22 @@
       <div class="settings-segment-header">
         <h2 id="seg-telegram">telegram setup</h2>
       </div>
-      <p style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:10px;line-height:1.8">
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
         1. Message <strong style="color:var(--text2)">@BotFather</strong> on Telegram → /newbot → copy the token<br>
         2. Message your new bot once so it can reply to you<br>
         3. Paste token below and tap connect
       </p>
       <div class="settings-task-row" style="margin-bottom:6px">
         <input type="text" id="tgToken" placeholder="123456789:ABCdef..."
-               style="font-size:11px" autocomplete="off"
+               style="font-size:0.6875rem" autocomplete="off"
                aria-label="Telegram bot token">
         <button class="add-btn" onclick="connectTelegram()" aria-label="Connect Telegram bot">connect</button>
       </div>
       <div id="tgStatus" role="status" aria-live="polite"
-           style="font-family:var(--font-mono);font-size:10px;margin-bottom:8px"></div>
+           style="font-family:var(--font-mono);font-size:0.625rem;margin-bottom:8px"></div>
       <div class="settings-task-row">
         <input type="text" id="tgTestMsg" placeholder="test message (optional)"
-               style="font-size:11px" aria-label="Optional test message">
+               style="font-size:0.6875rem" aria-label="Optional test message">
         <button class="add-btn" onclick="sendTelegramTest()" aria-label="Send test message">send test</button>
       </div>
     </section>
@@ -3042,8 +3587,150 @@
   </div>
 </div>
 
-<div class="footer" style="text-align:center;padding:1rem;font-family:var(--font-mono);font-size:10px;color:var(--text3)">
-  daily structure tracker &mdash; v3.7 &mdash; add to home screen to install
+<!-- ── JOURNAL ── -->
+<div class="page" id="page-journal" role="tabpanel" aria-labelledby="tab-journal" aria-hidden="true">
+  <div class="container">
+    <div class="header">
+      <div class="header-top">
+        <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="journal-heading">journal</h1>
+        <button class="add-btn" onclick="newJournalEntry()"
+                aria-label="Write a new journal entry">+ new entry</button>
+      </div>
+      <!-- Search -->
+      <div style="margin-top:var(--sp-3);position:relative">
+        <input type="search" id="journalSearch" placeholder="search entries..."
+               style="width:100%;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:8px 12px;outline:none"
+               aria-label="Search journal entries"
+               oninput="filterJournalEntries(this.value)">
+      </div>
+    </div>
+
+    <!-- Writing area (shown when composing) -->
+    <div id="journalComposer" style="display:none;margin-bottom:var(--sp-5)">
+      <div class="journal-composer-card">
+        <div class="journal-composer-header">
+          <div>
+            <div class="journal-composer-date" id="composerDate"></div>
+            <div class="journal-composer-meta" id="composerMeta"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="journal-action-btn" id="voiceBtn"
+                    onclick="toggleVoiceInput()"
+                    aria-label="Start voice input"
+                    title="Voice to text">🎤</button>
+            <button class="journal-action-btn" onclick="saveJournalEntry()"
+                    aria-label="Save entry">save</button>
+            <button class="journal-action-btn" onclick="closeJournalComposer()"
+                    aria-label="Discard entry">✕</button>
+          </div>
+        </div>
+
+        <!-- Writing prompt (shown if no text yet) -->
+        <div class="journal-prompt" id="journalPrompt">
+          <p id="journalPromptText"></p>
+          <button class="journal-prompt-dismiss" onclick="dismissPrompt()"
+                  aria-label="Dismiss writing prompt">use this prompt ↓</button>
+        </div>
+
+        <textarea id="journalTextarea"
+                  placeholder="write anything..."
+                  rows="8"
+                  style="width:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-body);font-size:var(--text-lg);line-height:1.8;resize:none;outline:none;padding:var(--sp-3) 0"
+                  aria-label="Journal entry text"
+                  oninput="autoSaveDraft(this.value)"></textarea>
+
+        <div style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text3);text-align:right;margin-top:4px"
+             id="journalWordCount">0 words</div>
+      </div>
+    </div>
+
+    <!-- Entry list -->
+    <div id="journalList" aria-label="Journal entries" role="list"></div>
+  </div>
+</div>
+
+<!-- ── MENU SUB-PAGES ── -->
+
+<!-- Tasks & Symptoms sub-page -->
+<div class="menu-subpage" id="subpage-tasks" aria-label="Tasks and symptoms settings">
+  <div class="menu-subpage-inner">
+    <div class="menu-subpage-header">
+      <button class="menu-back-btn" onclick="closeMenuSubPage('tasks')" aria-label="Back to menu">‹</button>
+      <h2 class="menu-subpage-title">// tasks &amp; symptoms</h2>
+    </div>
+    <div class="settings-segment" style="margin-bottom:var(--sp-4)">
+      <h3 class="settings-section-title" style="margin-top:0">your name</h3>
+      <div class="settings-task-row">
+        <input type="text" id="settingsName2" placeholder="your name" maxlength="40" aria-label="Display name">
+        <button class="add-btn" onclick="saveName2()">save</button>
+      </div>
+    </div>
+    <div class="settings-segment" style="margin-bottom:var(--sp-4)">
+      <h3 class="settings-section-title" style="margin-top:0">non-negotiables</h3>
+      <div id="subTasksCritical"></div>
+      <button class="add-btn" onclick="addTask('critical');renderSubpageTasks()">+ add task</button>
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">daily structure</h3>
+      <div id="subTasksDaily"></div>
+      <button class="add-btn" onclick="addTask('daily');renderSubpageTasks()">+ add task</button>
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">symptom flags</h3>
+      <div class="sym-edit-grid" id="subTasksSymptoms"></div>
+      <div class="sym-add-row">
+        <input type="text" id="subNewSymInput" placeholder="new symptom" maxlength="30" aria-label="New symptom">
+        <button class="add-btn" onclick="addSymptomFromSub()">+ add</button>
+      </div>
+    </div>
+    <button class="btn primary" style="width:100%" onclick="saveSettings();showToast('saved ✓')">save all</button>
+  </div>
+</div>
+
+<!-- Notifications sub-page -->
+<div class="menu-subpage" id="subpage-notifications" aria-label="Notification settings">
+  <div class="menu-subpage-inner">
+    <div class="menu-subpage-header">
+      <button class="menu-back-btn" onclick="closeMenuSubPage('notifications')" aria-label="Back">‹</button>
+      <h2 class="menu-subpage-title">// notifications</h2>
+    </div>
+    <div id="subNotifContent"></div>
+  </div>
+</div>
+
+<!-- Timers sub-page -->
+<div class="menu-subpage" id="subpage-timers" aria-label="Timers and schedule settings">
+  <div class="menu-subpage-inner">
+    <div class="menu-subpage-header">
+      <button class="menu-back-btn" onclick="closeMenuSubPage('timers')" aria-label="Back">‹</button>
+      <h2 class="menu-subpage-title">// timers &amp; schedule</h2>
+    </div>
+    <div id="subTimersContent"></div>
+  </div>
+</div>
+
+<!-- Integrations sub-page -->
+<div class="menu-subpage" id="subpage-integrations" aria-label="Integration settings">
+  <div class="menu-subpage-inner">
+    <div class="menu-subpage-header">
+      <button class="menu-back-btn" onclick="closeMenuSubPage('integrations')" aria-label="Back">‹</button>
+      <h2 class="menu-subpage-title">// integrations</h2>
+    </div>
+    <div id="subIntegrationsContent"></div>
+  </div>
+</div>
+
+<!-- Data sub-page -->
+<div class="menu-subpage" id="subpage-data" aria-label="Data and backup">
+  <div class="menu-subpage-inner">
+    <div class="menu-subpage-header">
+      <button class="menu-back-btn" onclick="closeMenuSubPage('data')" aria-label="Back">‹</button>
+      <h2 class="menu-subpage-title">// data &amp; backup</h2>
+    </div>
+    <div id="subDataContent"></div>
+  </div>
+</div>
+
+<div class="footer" style="text-align:center;padding:1rem;font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">
+  daily structure tracker &mdash; v3.8 &mdash; add to home screen to install
 </div>
 
 <!-- Screenshot preview modal -->
@@ -3119,6 +3806,7 @@ self.addEventListener('fetch', e => {
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'NOTIFY') {
     const { title, body, tag, requireInteraction, badge } = e.data;
+    const ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAAVUlEQVR42u3WUQoAEBAFQAdw/+tyAaQUu5n3K5nQa0sNlgIE9AGoTbJeOt8LBAQEpKk1NRAQkKZWjNunhrghICAgI+yVJxvm5R8CAgJKOaBpaqDcoA5EXN4e5Unw9wAAAABJRU5ErkJggg==";
     self.registration.showNotification(title, {
       body,
       tag:               tag || 'tracker-reminder',
@@ -3367,8 +4055,8 @@ function applyName(name) {
 // ── Settings panel ────────────────────────────────────────────────────────
 // ── Tab navigation ────────────────────────────────────────────────────────
 function switchTab(tab) {
-  const tabNames = { today: 'Today', history: 'Log and appointments', stats: 'Stats', settings: 'Settings', budget: 'Budget' };
-  ['today','history','stats','settings','budget'].forEach(t => {
+  const tabNames = { today: 'Today', history: 'Log and appointments', stats: 'Stats', budget: 'Budget', journal: 'Journal' };
+  ['today','history','stats','budget','journal'].forEach(t => {
     const tabEl  = document.getElementById('tab-' + t);
     const pageEl = document.getElementById('page-' + t);
     if (!tabEl || !pageEl) return;
@@ -3382,7 +4070,7 @@ function switchTab(tab) {
   if (tab === 'history')  renderHistory();
   if (tab === 'stats')    renderStats();
   if (tab === 'budget')   renderBudgetTab();
-  if (tab === 'settings') renderSettingsPanel();
+  if (tab === 'journal')  renderJournalList();
 }
 
 // ── Appointments data ────────────────────────────────────────────────────
@@ -3638,7 +4326,7 @@ function renderHistory() {
   const past     = appts.filter(a => new Date(a.datetime) <  new Date());
 
   apptEl.innerHTML = upcoming.length === 0
-    ? `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:8px">no upcoming appointments</div>`
+    ? `<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:8px">no upcoming appointments</div>`
     : upcoming.map((a, i) => {
         const cd = apptCountdown(a.datetime);
         const dt = new Date(a.datetime);
@@ -3664,7 +4352,7 @@ function renderHistory() {
     if (!el) return;
     const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     el.innerHTML = history.length === 0
-      ? `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);padding:8px 0">no entries yet — save a check-in on the today tab</div>`
+      ? `<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);padding:8px 0">no entries yet — save a check-in on the today tab</div>`
       : history.map(e => `
         <div class="history-entry">
           <div class="history-entry-top">
@@ -3705,12 +4393,12 @@ function renderStats() {
       const score = moodMap[e.mood] ?? null;
       const bar = score === null ? '·' : score >= 1 ? '▮' : score === 0 ? '▯' : '▮';
       const col = score === null ? 'var(--text3)' : score >= 1 ? 'var(--success)' : score === 0 ? 'var(--accent)' : 'var(--danger)';
-      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;font-family:var(--font-mono);font-size:11px">
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;font-family:var(--font-mono);font-size:0.6875rem">
         <span style="color:var(--text3);width:80px;flex-shrink:0">${e.date.slice(5)}</span>
-        <span style="color:${col};font-size:16px;letter-spacing:1px">${bar}</span>
+        <span style="color:${col};font-size:1rem;letter-spacing:1px">${bar}</span>
         <span style="color:var(--text3)">${e.mood || '—'} / ${e.energy || '—'}</span>
       </div>`;
-    }).join('') || '<div style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">no data yet</div>';
+    }).join('') || '<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3)">no data yet</div>';
   } catch(err) {}
 }
 
@@ -4008,7 +4696,9 @@ function checkBadges() {
 
 // ── Confetti ──────────────────────────────────────────────────────────────
 function fireConfetti(duration) {
+  // Respect both OS setting and in-app toggle
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if ((cfg.a11y || {}).reduceMotion) return;
   const canvas = document.getElementById('confettiCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -4230,8 +4920,9 @@ function celebrateTask(taskId, taskName, isNonNeg) {
   // Screen reader: announce points earned
   announce(taskName + ' done. +' + earned + ' points' + (mult > 1 ? ' (×' + mult + ' streak bonus)' : '') + '. Total: ' + total.toLocaleString() + '.', false);
 
-  // Flash task element (visual only)
-  if (!(cfg.a11y || {}).reduceMotion) {
+  // Flash task element (visual only — skip if reduce motion)
+  const rm = (cfg.a11y || {}).reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!rm) {
     setTimeout(() => {
       document.querySelectorAll('.task').forEach(el => {
         if ((el.getAttribute('onclick') || '').includes(taskId)) {
@@ -4946,6 +5637,7 @@ function collectAllData() {
     quoteBlocked: localStorage.getItem('tracker-quote-blocked'),
     weeklySummary:  localStorage.getItem('tracker-weekly-summary'),
     monthlySummary: localStorage.getItem('tracker-monthly-summary'),
+    journal:        localStorage.getItem('tracker-journal'),
     days: {}
   };
 
@@ -4977,6 +5669,7 @@ function restoreAllData(data) {
     quoteBlocked:  'tracker-quote-blocked',
     weeklySummary: 'tracker-weekly-summary',
     monthlySummary:'tracker-monthly-summary',
+    journal:       'tracker-journal',
   };
 
   Object.entries(keyMap).forEach(([prop, key]) => {
@@ -5888,6 +6581,647 @@ function saveBigSpendThreshold() {
   announce('Big purchase flag set to $' + val.toFixed(0));
 }
 
+// ── Hamburger menu overlay ────────────────────────────────────────────────
+let _menuPrevFocus = null;
+
+function openMenu() {
+  _menuPrevFocus = document.activeElement;
+  const overlay = document.getElementById('menuOverlay');
+  overlay.classList.remove('hidden');
+  syncMenuUI();
+  // Focus close button
+  setTimeout(() => {
+    const close = overlay.querySelector('.menu-close-btn');
+    if (close) close.focus();
+  }, 50);
+  announce('Menu opened.');
+}
+
+function closeMenu() {
+  document.getElementById('menuOverlay').classList.add('hidden');
+  if (_menuPrevFocus) _menuPrevFocus.focus();
+  announce('Menu closed.');
+}
+
+function syncMenuUI() {
+  const a11y  = cfg.a11y || {};
+  const theme = cfg.theme || 'system';
+  const dnd   = getDNDConfig();
+
+  // Theme
+  ['system','light','dark'].forEach(t => {
+    const el = document.getElementById('menuTheme' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el) { el.classList.toggle('active', t === theme); el.setAttribute('aria-checked', t === theme ? 'true' : 'false'); }
+  });
+
+  // Text size
+  const size = a11y.textSize || 'normal';
+  ['Small','Normal','Large','XL'].forEach(s => {
+    const el = document.getElementById('menuSize' + s);
+    const key = s.toLowerCase();
+    if (el) { el.classList.toggle('active', key === size); el.setAttribute('aria-checked', key === size ? 'true' : 'false'); }
+  });
+
+  // Toggles
+  const hcEl = document.getElementById('menuHighContrast');
+  if (hcEl) hcEl.checked = !!a11y.highContrast;
+
+  const rmEl = document.getElementById('menuReduceMotion');
+  if (rmEl) rmEl.checked = !!a11y.reduceMotion;
+
+  const ltEl = document.getElementById('menuLargeTargets');
+  if (ltEl) ltEl.checked = !!a11y.largeTouchTargets;
+
+  const dndEl = document.getElementById('menuDND');
+  if (dndEl) dndEl.checked = dnd.enabled;
+
+  // Font
+  const font = a11y.font || 'default';
+  ['Default','Ibmplexmono','Atkinson','Opendyslexic','Comic'].forEach(f => {
+    const el = document.getElementById('menuFont' + f);
+    const key = f.toLowerCase();
+    if (el) { el.classList.toggle('active', key === font); el.setAttribute('aria-checked', key === font ? 'true' : 'false'); }
+  });
+}
+
+function updateMenuThemeUI() {
+  const theme = cfg.theme || 'system';
+  ['system','light','dark'].forEach(t => {
+    const el = document.getElementById('menuTheme' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el) { el.classList.toggle('active', t === theme); el.setAttribute('aria-checked', t === theme ? 'true' : 'false'); }
+  });
+  // Also sync settings panel theme buttons
+  ['System','Light','Dark'].forEach(t => {
+    const el = document.getElementById('themeOpt' + t);
+    if (el) { el.classList.toggle('active', t.toLowerCase() === theme); el.setAttribute('aria-checked', t.toLowerCase() === theme ? 'true' : 'false'); }
+  });
+}
+
+// Close menu on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const menuEl = document.getElementById('menuOverlay');
+    if (menuEl && !menuEl.classList.contains('hidden')) closeMenu();
+  }
+});
+
+// Also sync menu when opened — override setTextSize to keep menu in sync
+const _origSetTextSize = setTextSize;
+// Note: setTextSize is already defined above, menu syncs on open
+
+// ── Journal system ────────────────────────────────────────────────────────
+
+const JOURNAL_KEY  = 'tracker-journal';
+const JOURNAL_DRAFT_KEY = 'tracker-journal-draft';
+
+const JOURNAL_PROMPTS = [
+  "What's actually on your mind right now?",
+  "What made today harder than it needed to be?",
+  "What's one thing your body did well today?",
+  "If you could tell your care team one thing about this week, what would it be?",
+  "What are you avoiding thinking about?",
+  "What felt manageable today, even if nothing else did?",
+  "What do you wish people understood about how your brain works?",
+  "What's draining you right now that you haven't said out loud?",
+  "What would a good day look like from here?",
+  "What are you grateful for, even if everything else is hard?",
+  "What's one small thing you did for yourself today?",
+  "What's been looping in your head that you haven't written down yet?",
+];
+
+function getJournalEntries() {
+  try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+
+function saveJournalEntries(entries) {
+  localStorage.setItem(JOURNAL_KEY, JSON.stringify(entries));
+}
+
+// ── Composer ──────────────────────────────────────────────────────────────
+let _editingEntryId = null;
+let _draftTimer = null;
+let _voiceRecognition = null;
+
+function newJournalEntry() {
+  _editingEntryId = null;
+  openJournalComposer('');
+}
+
+function openJournalComposer(text, entryId) {
+  _editingEntryId = entryId || null;
+  const composer = document.getElementById('journalComposer');
+  const textarea = document.getElementById('journalTextarea');
+  const dateEl   = document.getElementById('composerDate');
+  const metaEl   = document.getElementById('composerMeta');
+  const wordEl   = document.getElementById('journalWordCount');
+
+  if (textarea)  textarea.value = text || '';
+  if (wordEl)    wordEl.textContent = countWords(text || '') + ' words';
+  if (dateEl)    dateEl.textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric'
+  });
+
+  // Build meta from today's check-in
+  const mood   = state.mood?.mood   || null;
+  const energy = state.mood?.energy || null;
+  const all    = [...CRITICAL, ...DAILY];
+  const done   = all.filter(t => state.tasks[t.id]).length;
+  const parts  = [];
+  if (mood)   parts.push('mood: ' + mood);
+  if (energy) parts.push('energy: ' + energy);
+  parts.push(done + '/' + all.length + ' tasks');
+  if (metaEl) metaEl.textContent = parts.join(' · ');
+
+  // Show prompt if new entry and textarea empty
+  if (!text) showWritingPrompt();
+  else        hideWritingPrompt();
+
+  if (composer) composer.style.display = 'block';
+  setTimeout(() => { if (textarea) textarea.focus(); }, 100);
+  announce('Journal composer opened. ' + (text ? 'Editing existing entry.' : 'New entry.'));
+}
+
+function closeJournalComposer() {
+  const composer = document.getElementById('journalComposer');
+  if (composer) composer.style.display = 'none';
+  stopVoiceInput();
+  localStorage.removeItem(JOURNAL_DRAFT_KEY);
+  _editingEntryId = null;
+}
+
+function autoSaveDraft(text) {
+  // Update word count
+  const wordEl = document.getElementById('journalWordCount');
+  if (wordEl) wordEl.textContent = countWords(text) + ' words';
+  // Show/hide prompt
+  if (text.trim().length > 0) hideWritingPrompt();
+  // Autosave draft
+  clearTimeout(_draftTimer);
+  _draftTimer = setTimeout(() => {
+    localStorage.setItem(JOURNAL_DRAFT_KEY, text);
+  }, 1000);
+}
+
+function countWords(text) {
+  return text.trim() ? text.trim().split(/\s+/).length : 0;
+}
+
+function saveJournalEntry() {
+  const textarea = document.getElementById('journalTextarea');
+  const text = textarea?.value?.trim() || '';
+  if (!text) { showToast('write something first'); return; }
+
+  const entries = getJournalEntries();
+  const entry = {
+    id:     _editingEntryId || 'j_' + Date.now(),
+    date:   TODAY,
+    text,
+    mood:   state.mood?.mood   || null,
+    energy: state.mood?.energy || null,
+    tasks:  { done: [...CRITICAL,...DAILY].filter(t => state.tasks[t.id]).length,
+              total: [...CRITICAL,...DAILY].length },
+    words:  countWords(text),
+    created: _editingEntryId ? undefined : new Date().toISOString(),
+    updated: new Date().toISOString(),
+  };
+
+  if (_editingEntryId) {
+    const idx = entries.findIndex(e => e.id === _editingEntryId);
+    if (idx > -1) entries[idx] = { ...entries[idx], ...entry };
+    else entries.unshift(entry);
+  } else {
+    entries.unshift(entry);
+  }
+
+  saveJournalEntries(entries);
+  closeJournalComposer();
+  renderJournalList();
+  announce('Journal entry saved. ' + countWords(text) + ' words.');
+  hap('task');
+  playSuccess();
+}
+
+function deleteJournalEntry(id) {
+  if (!confirm('Delete this journal entry?')) return;
+  saveJournalEntries(getJournalEntries().filter(e => e.id !== id));
+  renderJournalList();
+  announce('Journal entry deleted.');
+}
+
+function editJournalEntry(id) {
+  const entry = getJournalEntries().find(e => e.id === id);
+  if (!entry) return;
+  openJournalComposer(entry.text, id);
+  document.getElementById('journalComposer')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Writing prompts ────────────────────────────────────────────────────────
+function showWritingPrompt() {
+  const el    = document.getElementById('journalPrompt');
+  const textEl = document.getElementById('journalPromptText');
+  if (!el || !textEl) return;
+  const prompt = JOURNAL_PROMPTS[Math.floor(Math.random() * JOURNAL_PROMPTS.length)];
+  textEl.textContent = prompt;
+  el.classList.add('visible');
+}
+
+function hideWritingPrompt() {
+  const el = document.getElementById('journalPrompt');
+  if (el) el.classList.remove('visible');
+}
+
+function dismissPrompt() {
+  const textarea = document.getElementById('journalTextarea');
+  const promptEl = document.getElementById('journalPromptText');
+  if (textarea && promptEl) {
+    // Copy prompt text to textarea as a starting point
+    if (!textarea.value.trim()) {
+      textarea.value = promptEl.textContent + '\n\n';
+      autoSaveDraft(textarea.value);
+    }
+    textarea.focus();
+    // Put cursor at end
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  }
+  hideWritingPrompt();
+}
+
+// ── Voice input ────────────────────────────────────────────────────────────
+function toggleVoiceInput() {
+  if (_voiceRecognition) { stopVoiceInput(); return; }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast('voice input not supported on this browser');
+    announce('Voice input is not supported on this browser.');
+    return;
+  }
+
+  const btn = document.getElementById('voiceBtn');
+  _voiceRecognition = new SpeechRecognition();
+  _voiceRecognition.continuous    = true;
+  _voiceRecognition.interimResults = true;
+  _voiceRecognition.lang           = 'en-US';
+
+  let finalText = document.getElementById('journalTextarea')?.value || '';
+  let interimText = '';
+
+  _voiceRecognition.onstart = () => {
+    if (btn) btn.classList.add('recording');
+    if (btn) btn.textContent = '⏹';
+    announce('Voice input started. Speak now.');
+  };
+
+  _voiceRecognition.onresult = (e) => {
+    interimText = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        finalText += e.results[i][0].transcript + ' ';
+      } else {
+        interimText += e.results[i][0].transcript;
+      }
+    }
+    const textarea = document.getElementById('journalTextarea');
+    if (textarea) {
+      textarea.value = finalText + interimText;
+      autoSaveDraft(textarea.value);
+    }
+  };
+
+  _voiceRecognition.onerror = (e) => {
+    stopVoiceInput();
+    if (e.error !== 'aborted') showToast('voice error: ' + e.error);
+  };
+
+  _voiceRecognition.onend = () => stopVoiceInput();
+
+  _voiceRecognition.start();
+}
+
+function stopVoiceInput() {
+  if (_voiceRecognition) {
+    _voiceRecognition.stop();
+    _voiceRecognition = null;
+  }
+  const btn = document.getElementById('voiceBtn');
+  if (btn) { btn.classList.remove('recording'); btn.textContent = '🎤'; }
+  announce('Voice input stopped.');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+let _journalFilter = '';
+
+function filterJournalEntries(query) {
+  _journalFilter = query.toLowerCase().trim();
+  renderJournalList();
+}
+
+function renderJournalList() {
+  const el = document.getElementById('journalList');
+  if (!el) return;
+
+  let entries = getJournalEntries();
+
+  if (_journalFilter) {
+    entries = entries.filter(e =>
+      e.text.toLowerCase().includes(_journalFilter) ||
+      (e.mood    || '').toLowerCase().includes(_journalFilter) ||
+      (e.energy  || '').toLowerCase().includes(_journalFilter) ||
+      e.date.includes(_journalFilter)
+    );
+  }
+
+  if (entries.length === 0) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:3rem var(--sp-4)">
+        <p style="font-family:var(--font-mono);font-size:var(--text-base);color:var(--text3);margin-bottom:var(--sp-3)">
+          ${_journalFilter ? 'no entries match "' + escHtml(_journalFilter) + '"' : 'nothing written yet'}
+        </p>
+        ${!_journalFilter ? `<button class="add-btn" onclick="newJournalEntry()">write your first entry</button>` : ''}
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = entries.map(entry => {
+    const tags = [];
+    if (entry.mood)   tags.push(entry.mood);
+    if (entry.energy) tags.push(entry.energy);
+    if (entry.tasks)  tags.push(entry.tasks.done + '/' + entry.tasks.total + ' tasks');
+
+    const dateStr = new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric'
+    });
+
+    // Highlight search term
+    let preview = escHtml(entry.text);
+    if (_journalFilter) {
+      const regex = new RegExp('(' + _journalFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      preview = preview.replace(regex, '<mark style="background:var(--accent-dim);color:var(--accent)">$1</mark>');
+    }
+
+    return `
+    <div class="journal-entry-card" role="listitem"
+         aria-label="Journal entry from ${dateStr}, ${entry.words || 0} words">
+      <div class="journal-entry-header">
+        <span class="journal-entry-date">${dateStr}</span>
+        <div class="journal-entry-tags" aria-hidden="true">
+          ${tags.map(t => `<span class="journal-tag">${escHtml(t)}</span>`).join('')}
+        </div>
+      </div>
+      <div class="journal-entry-preview" id="preview_${entry.id}">${preview}</div>
+      <div class="journal-entry-footer">
+        <span class="journal-word-count">${entry.words || countWords(entry.text)} words</span>
+        <div class="journal-entry-actions">
+          <button class="journal-entry-btn" onclick="toggleEntryExpand('${entry.id}')"
+                  aria-label="Expand or collapse entry">expand</button>
+          <button class="journal-entry-btn" onclick="editJournalEntry('${entry.id}')"
+                  aria-label="Edit this entry">edit</button>
+          <button class="journal-entry-btn danger" onclick="deleteJournalEntry('${entry.id}')"
+                  aria-label="Delete this entry">delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleEntryExpand(id) {
+  const el = document.getElementById('preview_' + id);
+  if (!el) return;
+  const expanded = el.classList.toggle('expanded');
+  const btn = el.closest('.journal-entry-card')?.querySelector('.journal-entry-btn');
+  if (btn) btn.textContent = expanded ? 'collapse' : 'expand';
+  announce(expanded ? 'Entry expanded.' : 'Entry collapsed.');
+}
+
+// ── Journal in pre-appointment summary ────────────────────────────────────
+function getRecentJournalForSummary() {
+  const entries = getJournalEntries();
+  const last3   = entries.slice(0, 3);
+  if (last3.length === 0) return '';
+  return '\n\nrecent journal entries:\n' + last3.map(e => {
+    const d = new Date(e.date + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const preview = e.text.length > 200 ? e.text.slice(0, 200) + '...' : e.text;
+    return `[${d}] ${preview}`;
+  }).join('\n\n');
+}
+
+// ── Menu sub-page navigation ─────────────────────────────────────────────
+let _activeSubPage = null;
+
+function openMenuSubPage(name) {
+  const el = document.getElementById('subpage-' + name);
+  if (!el) return;
+  _activeSubPage = name;
+
+  // Push menu left, slide sub-page in from right
+  const rm2 = (cfg.a11y||{}).reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const menu = document.getElementById('menuOverlay');
+  if (menu && !rm2) {
+    menu.style.transform = 'translateX(-30%)';
+    menu.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+  }
+
+  // Populate sub-page content
+  populateSubPage(name);
+
+  el.classList.add('active');
+  setTimeout(() => {
+    const back = el.querySelector('.menu-back-btn');
+    if (back) back.focus();
+  }, 50);
+  announce(name + ' settings opened.');
+}
+
+function closeMenuSubPage(name) {
+  const el = document.getElementById('subpage-' + name);
+  if (!el) return;
+
+  el.classList.remove('active');
+
+  // Restore menu
+  const menu = document.getElementById('menuOverlay');
+  if (menu) {
+    menu.style.transform = '';
+    menu.style.transition = '';
+  }
+  _activeSubPage = null;
+  // Return focus to the menu item that opened this
+  announce('Returned to menu.');
+}
+
+function populateSubPage(name) {
+  if (name === 'tasks') {
+    renderSubpageTasks();
+  }
+  if (name === 'notifications') {
+    renderSubpageNotifications();
+  }
+  if (name === 'timers') {
+    renderSubpageTimers();
+  }
+  if (name === 'integrations') {
+    renderSubpageIntegrations();
+  }
+  if (name === 'data') {
+    renderSubpageData();
+  }
+}
+
+function renderSubpageTasks() {
+  // Sync name field
+  const nameEl = document.getElementById('settingsName2');
+  if (nameEl) nameEl.value = cfg.name || '';
+  // Reuse existing render functions
+  const critEl = document.getElementById('subTasksCritical');
+  const dailyEl = document.getElementById('subTasksDaily');
+  const symEl  = document.getElementById('subTasksSymptoms');
+  if (critEl)  critEl.innerHTML  = document.getElementById('settingsCritical')?.innerHTML || '';
+  if (dailyEl) dailyEl.innerHTML = document.getElementById('settingsDaily')?.innerHTML    || '';
+  if (symEl)   symEl.innerHTML   = document.getElementById('settingsSymptoms')?.innerHTML || '';
+}
+
+function saveName2() {
+  const val = document.getElementById('settingsName2')?.value?.trim();
+  if (val) { cfg.name = val; saveConfig(cfg); applyName(val); announce('Name saved: ' + val); showToast('name saved ✓'); }
+}
+
+function addSymptomFromSub() {
+  const input = document.getElementById('subNewSymInput');
+  if (input) {
+    document.getElementById('newSymInput').value = input.value;
+    addSymptom();
+    input.value = '';
+    renderSubpageTasks();
+  }
+}
+
+function renderSubpageNotifications() {
+  const el = document.getElementById('subNotifContent');
+  if (!el) return;
+  // Clone the notification segments from settings page
+  const segs = ['seg-task-notifs', 'seg-timer-notifs', 'seg-appt-notifs', 'seg-dnd'];
+  el.innerHTML = '';
+  segs.forEach(id => {
+    const orig = document.getElementById(id);
+    if (!orig) return;
+    const section = orig.closest('.settings-segment');
+    if (section) {
+      const clone = section.cloneNode(true);
+      // Re-wire onclick handlers — they reference same functions so work fine
+      el.appendChild(clone);
+    }
+  });
+  syncNotifPrefsUI();
+  syncDNDUI();
+  syncAudioUI();
+}
+
+function renderSubpageTimers() {
+  const el = document.getElementById('subTimersContent');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="settings-segment" style="margin-bottom:var(--sp-4)">
+      <h3 class="settings-section-title" style="margin-top:0">check-in window</h3>
+      <div class="settings-task-row">
+        <input type="time" id="subWindowTime"
+               style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:6px 10px;outline:none;flex:1"
+               aria-label="Daily check-in window closing time">
+        <button class="add-btn" onclick="saveSubWindowTime()">save</button>
+        <button class="add-btn" onclick="clearWindowTime()">clear</button>
+      </div>
+    </div>
+    <div class="settings-segment" style="margin-bottom:var(--sp-4)">
+      <h3 class="settings-section-title" style="margin-top:0">task deadlines</h3>
+      <div id="subTaskDeadlines"></div>
+    </div>
+    <div class="settings-segment" style="margin-bottom:var(--sp-4)">
+      <h3 class="settings-section-title" style="margin-top:0">custom timers</h3>
+      <div id="subCustomTimers"></div>
+      <div class="settings-task-row" style="margin-top:8px">
+        <input type="text" id="subNewTimerName" placeholder="timer name" maxlength="30" style="flex:2" aria-label="Timer name">
+        <input type="number" id="subNewTimerMins" placeholder="mins" min="1" max="1440"
+               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:6px 10px;outline:none"
+               aria-label="Timer duration in minutes">
+        <button class="add-btn" onclick="addSubCustomTimer()">+ add</button>
+      </div>
+    </div>
+    <div class="settings-segment">
+      <h3 class="settings-section-title" style="margin-top:0">do not disturb schedule</h3>
+      <div id="subDNDContent"></div>
+    </div>`;
+
+  // Populate
+  const wct = document.getElementById('subWindowTime');
+  if (wct) wct.value = cfg.windowCloseTime || '';
+  renderTaskDeadlineSettings();
+  // Clone deadline and timer content
+  const dlEl = document.getElementById('subTaskDeadlines');
+  if (dlEl) dlEl.innerHTML = document.getElementById('taskDeadlineSettings')?.innerHTML || '';
+  const ctEl = document.getElementById('subCustomTimers');
+  if (ctEl) ctEl.innerHTML = document.getElementById('customTimerSettings')?.innerHTML || '';
+  // DND
+  const dndEl = document.getElementById('subDNDContent');
+  if (dndEl) {
+    dndEl.innerHTML = document.getElementById('dndWindowsList')?.parentElement?.innerHTML || '';
+  }
+  syncDNDUI();
+}
+
+function saveSubWindowTime() {
+  const val = document.getElementById('subWindowTime')?.value;
+  if (val) { cfg.windowCloseTime = val; saveConfig(cfg); updateWindowTimer(); showToast('window time saved ✓'); }
+}
+
+function addSubCustomTimer() {
+  const name = document.getElementById('subNewTimerName')?.value?.trim();
+  const mins = parseInt(document.getElementById('subNewTimerMins')?.value || '0');
+  if (!name || !mins) { showToast('name and duration required'); return; }
+  document.getElementById('newTimerName').value = name;
+  document.getElementById('newTimerMins').value = mins;
+  addCustomTimer();
+  renderSubpageTimers();
+}
+
+function renderSubpageIntegrations() {
+  const el = document.getElementById('subIntegrationsContent');
+  if (!el) return;
+  // Clone Telegram and AI quotes segments
+  const segs = ['seg-telegram', 'seg-quotes'];
+  el.innerHTML = '';
+  segs.forEach(id => {
+    const orig = document.getElementById(id);
+    if (!orig) return;
+    const section = orig.closest('.settings-segment');
+    if (section) el.appendChild(section.cloneNode(true));
+  });
+  syncQuoteSettingsUI();
+  // Sync Telegram status
+  const storedKey = localStorage.getItem('tracker-anthropic-key');
+  if (storedKey) {
+    const keyEl = el.querySelector('#anthropicKey');
+    if (keyEl) keyEl.value = storedKey;
+  }
+}
+
+function renderSubpageData() {
+  const el = document.getElementById('subDataContent');
+  if (!el) return;
+  const seg = document.getElementById('seg-data');
+  if (seg) {
+    const section = seg.closest('.settings-segment');
+    if (section) el.innerHTML = section.cloneNode(true).innerHTML;
+  }
+  renderBucketLimitSettings();
+}
+
+// Close sub-page on back button / Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && _activeSubPage) {
+    closeMenuSubPage(_activeSubPage);
+  }
+});
+
 // ── Screen reader announcements ───────────────────────────────────────────
 // ── Notification preferences ─────────────────────────────────────────────
 function saveNotifPrefs() {
@@ -6417,7 +7751,7 @@ function showImageTab(dataUrl, filename) {
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-label', 'Save symptom record image');
     overlay.innerHTML = `
-      <p id="ddgInstructions" style="color:#c8a96e;font-family:monospace;font-size:13px;text-align:center;line-height:1.6">
+      <p id="ddgInstructions" style="color:#c8a96e;font-family:monospace;font-size:0.8125rem;text-align:center;line-height:1.6">
         hold your finger on the image<br>then tap <strong>Save image</strong>
       </p>
       <img id="ddgSaveImg"
@@ -6425,11 +7759,11 @@ function showImageTab(dataUrl, filename) {
            alt="Symptom record for ${TODAY}. Hold to save to gallery."
            aria-describedby="ddgInstructions"
            tabindex="0">
-      <p style="color:#555;font-family:monospace;font-size:11px;text-align:center" id="ddgFilename"></p>
+      <p style="color:#555;font-family:monospace;font-size:0.6875rem;text-align:center" id="ddgFilename"></p>
       <button onclick="document.getElementById('ddgImageOverlay').remove()"
         aria-label="Close save image overlay"
         style="background:transparent;border:0.5px solid rgba(255,255,255,0.2);border-radius:6px;
-               color:#888;font-family:monospace;font-size:12px;padding:10px 24px;
+               color:#888;font-family:monospace;font-size:0.75rem;padding:10px 24px;
                cursor:pointer;min-height:44px">
         close
       </button>
@@ -6456,7 +7790,7 @@ function showToast(msg) {
     toast.style.cssText = `
       position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
       background:var(--bg3); border:0.5px solid var(--border2);
-      color:var(--text); font-family:var(--font-mono); font-size:12px;
+      color:var(--text); font-family:var(--font-mono); font-size:0.75rem;
       padding:10px 18px; border-radius:20px; z-index:999;
       white-space:nowrap; box-shadow:0 4px 16px rgba(0,0,0,0.4);
       opacity:0; transition:opacity 0.2s;
@@ -6567,7 +7901,7 @@ function render() {
     const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     const histEl = document.getElementById('historyList');
     if (histEl) histEl.innerHTML = history.length === 0
-      ? `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">no entries yet</div>`
+      ? `<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3)">no entries yet</div>`
       : history.slice(0, 7).map(e => `
         <div class="history-entry">
           <span class="history-date">${e.date}</span>
@@ -6756,11 +8090,11 @@ function renderTaskDeadlineSettings() {
   if (!el) return;
   el.innerHTML = CRITICAL.map(t => `
     <div class="settings-task-row" style="margin-bottom:6px">
-      <span style="font-family:var(--font-mono);font-size:12px;color:var(--text2);flex:1">${escHtml(t.name)}</span>
+      <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text2);flex:1">${escHtml(t.name)}</span>
       <input type="time" data-task-id="${t.id}"
         value="${cfg.taskDeadlines[t.id] || ''}"
         onchange="setTaskDeadline('${t.id}', this.value)"
-        style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:5px 8px;outline:none">
+        style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:5px 8px;outline:none">
     </div>
   `).join('');
 }
@@ -6776,10 +8110,10 @@ function renderCustomTimerSettings() {
   if (!el) return;
   const timers = cfg.customTimers || [];
   el.innerHTML = timers.length === 0
-    ? `<div style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:6px">no custom timers yet</div>`
+    ? `<div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:6px">no custom timers yet</div>`
     : timers.map(t => `
       <div class="settings-task-row" style="margin-bottom:6px">
-        <span style="font-family:var(--font-mono);font-size:12px;color:var(--text2);flex:1">${escHtml(t.name)} (${t.durationMins}m)</span>
+        <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text2);flex:1">${escHtml(t.name)} (${t.durationMins}m)</span>
         <button class="del-btn" onclick="deleteCustomTimer('${t.id}')">×</button>
       </div>
     `).join('');
