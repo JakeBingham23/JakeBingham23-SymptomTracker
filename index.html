@@ -22,17 +22,14 @@
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder@1.3.3/dist/universal-sentence-encoder.min.js"></script>
 <script src="rag-engine.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap');
-  @import url('https://fonts.cdnfonts.com/css/opendyslexic');
+  /* IBM Plex Mono loaded on-demand via JS when selected */
 
-  /* ── Text scale ── */
-  :root {
-    --text-scale: 1;
-    --base-font: calc(1rem * var(--text-scale));
-  }
-  :root[data-text-size="large"] { --text-scale: 1.2; }
-  :root[data-text-size="xl"]    { --text-scale: 1.45; }
-  :root[data-text-size="small"] { --text-scale: 0.85; }
+  /* ── Text scale — applied to html element so rem cascades correctly ── */
+  /* Default: inherit from OS (Android/iOS accessibility settings respected) */
+  html { font-size: 100%; }
+  html[data-text-size="small"]  { font-size: 87.5%; }
+  html[data-text-size="large"]  { font-size: 112.5%; }
+  html[data-text-size="xl"]     { font-size: 130%; }
 
   /* ── Reduce motion ── */
   :root[data-reduce-motion="true"] *,
@@ -93,10 +90,11 @@
     --success-bg:rgba(74,158,107,0.1);
     --warning:   #c8a96e;
     --warning-bg:rgba(200,169,110,0.08);
-    --mono: 'IBM Plex Mono', monospace;
-    --sans: 'IBM Plex Sans', sans-serif;
-    --font-body: var(--sans);
-    --font-mono: var(--mono);
+    /* System fonts — respect Android/iOS accessibility settings */
+    --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
+    /* IBM Plex Mono loaded on demand */
+    --font-ibm-mono: 'IBM Plex Mono', ui-monospace, monospace;
     /* Shadows */
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
     --shadow:    0 2px 8px rgba(0,0,0,0.5);
@@ -214,7 +212,7 @@
     left: 1rem;
     background: var(--accent);
     color: var(--bg);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.8125rem;
     padding: 8px 16px;
     border-radius: var(--radius);
@@ -247,37 +245,53 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow-x: hidden; width: 100%; }
 
   body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-body);
+    /* Allow OS text size to work — no fixed px on root */
+    font-size: 1rem;
     min-height: 100vh;
     padding-top: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* ── Font themes ── */
-  :root[data-font="system"] {
-    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+  /* ── Font themes — all respect Android OS text size ── */
+
+  /* IBM Plex Mono (loaded on demand) */
+  :root[data-font="ibmplexmono"] {
+    --font-body: var(--font-ibm-mono);
+    --font-mono: var(--font-ibm-mono);
   }
+
+  /* Atkinson Hyperlegible (loaded on demand) */
   :root[data-font="atkinson"] {
-    --font-body: 'Atkinson Hyperlegible', sans-serif;
-    --font-mono: 'IBM Plex Mono', monospace;
+    --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+    --font-mono: ui-monospace, monospace;
   }
+
+  /* OpenDyslexic (loaded on demand) */
   :root[data-font="opendyslexic"] {
-    --font-body: 'OpenDyslexic', sans-serif;
-    --font-mono: 'OpenDyslexic Mono', monospace;
-    /* Slightly looser tracking for OD */
+    --font-body: 'OpenDyslexic', system-ui, sans-serif;
+    --font-mono: 'OpenDyslexic Mono', ui-monospace, monospace;
     letter-spacing: 0.02em;
-    line-height: 1.8;
+    line-height: 1.85;
+    word-spacing: 0.1em;
   }
+
+  /* Comic Sans — genuinely useful for some dyslexic users */
   :root[data-font="comic"] {
     --font-body: 'Comic Sans MS', 'Comic Sans', cursive;
-    --font-mono: 'IBM Plex Mono', monospace;
+    --font-mono: ui-monospace, monospace;
     line-height: 1.75;
+  }
+
+  /* Monospace body — for users who prefer it */
+  :root[data-font="mono"] {
+    --font-body: var(--font-mono);
   }
 
   /* ── Top nav bar ── */
@@ -309,7 +323,7 @@
   }
 
   .navbar-brand {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--accent);
@@ -346,7 +360,7 @@
     border: none;
     border-right: 0.5px solid var(--border);
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.5625rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -376,7 +390,7 @@
     border: none;
     border-bottom: 2px solid transparent;
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -408,7 +422,7 @@
     border: none;
     border-left: 0.5px solid var(--border);
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -445,17 +459,17 @@
   }
 
   /* ── Page views ── */
-  .page { display: none; padding: 1.5rem 1rem 3rem; }
+  .page { display: none; padding: 1.5rem 1rem 3rem; overflow-x: hidden; width: 100%; }
   .page.active { display: block; }
 
-  .container { max-width: 580px; margin: 0 auto; }
+  .container { max-width: 580px; margin: 0 auto; width: 100%; overflow-x: hidden; }
 
   .header { margin-bottom: 1.5rem; border-bottom: 0.5px solid var(--border); padding-bottom: 1.25rem; }
 
   .header-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
   h1 {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 1rem;
     font-weight: 500;
     color: var(--accent);
@@ -463,7 +477,7 @@
   }
 
   .date {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--text3);
   }
@@ -480,7 +494,7 @@
   .nag-banner.visible { display: block; }
 
   .nag-banner p {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.8125rem;
     color: var(--danger);
     font-weight: 500;
@@ -510,7 +524,7 @@
   }
 
   .stat-num {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 1.75rem;
     font-weight: 500;
     color: var(--text);
@@ -532,7 +546,7 @@
   .section { margin-bottom: 1.5rem; }
 
   .section-label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
@@ -614,7 +628,7 @@
 
   /* ── Task timer label ── */
   .task-timer {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     margin-top: 3px;
@@ -624,7 +638,7 @@
 
   /* ── Daily window timer ── */
   .window-timer {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--text3);
     margin-top: 4px;
@@ -647,7 +661,7 @@
   .ctimer-ring { flex-shrink: 0; }
   .ctimer-info { flex: 1; }
   .ctimer-name { font-size: 0.8125rem; color: var(--text); }
-  .ctimer-countdown { font-family: var(--mono); font-size: 0.75rem; color: var(--accent); margin-top: 2px; }
+  .ctimer-countdown { font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); margin-top: 2px; }
   .ctimer-countdown.done { color: var(--success); }
   .ctimer-countdown.overdue { color: var(--danger); }
   .ctimer-actions { display: flex; gap: 6px; }
@@ -656,7 +670,7 @@
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     padding: 4px 8px;
     cursor: pointer;
@@ -675,7 +689,7 @@
     font-size: 0.6875rem;
     color: var(--text3);
     margin-top: 2px;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
   }
 
   .symptom-block {
@@ -688,7 +702,7 @@
   }
 
   .symptom-header {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--accent);
     margin-bottom: 14px;
@@ -703,7 +717,7 @@
   }
 
   .mood-type {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     width: 44px;
@@ -721,7 +735,7 @@
     background: transparent;
     color: var(--text2);
     font-size: 0.6875rem;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     cursor: pointer;
     transition: all 0.1s;
   }
@@ -737,7 +751,7 @@
   .divider { border: none; border-top: 0.5px solid var(--border); margin: 14px 0; }
 
   .flag-label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
@@ -759,7 +773,7 @@
     background: transparent;
     color: var(--text3);
     font-size: 0.6875rem;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     cursor: pointer;
     text-align: left;
     transition: all 0.1s;
@@ -779,7 +793,7 @@
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     padding: 10px 12px;
     resize: none;
@@ -799,7 +813,7 @@
     border-radius: var(--radius);
     background: transparent;
     color: var(--text2);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: var(--text-md);
     cursor: pointer;
     transition: all 0.15s;
@@ -818,7 +832,7 @@
   .btn.primary:hover { background: var(--warning-bg); box-shadow: var(--shadow); }
 
   .confirm {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--success);
     margin-top: 8px;
@@ -853,7 +867,7 @@
     box-shadow: 0 8px 32px rgba(0,0,0,0.6);
   }
   .preview-label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: rgba(255,255,255,0.5);
     text-align: center;
@@ -876,7 +890,7 @@
     border-radius: var(--radius);
     padding: 10px 14px;
     margin-bottom: 6px;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--text2);
     display: flex;
@@ -893,7 +907,7 @@
     margin-top: 2rem;
     padding-top: 1rem;
     border-top: 0.5px solid var(--border);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     text-align: center;
@@ -917,7 +931,7 @@
     font-style: italic;
   }
   .quote-meta {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.5625rem;
     color: var(--text3);
     text-transform: uppercase;
@@ -942,7 +956,7 @@
   .quote-action-btn:hover { border-color: var(--accent); color: var(--accent); }
   .quote-action-btn.liked { color: var(--success); border-color: var(--success); }
   .quote-loading {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     text-align: center;
@@ -967,7 +981,7 @@
     line-height: 1.6;
   }
   .checkin-msg-source {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.5625rem;
     color: var(--text3);
     margin-top: 6px;
@@ -1004,6 +1018,161 @@
   .fav-quote-remove:hover { color: var(--danger); }
 
   /* Confetti canvas ── */
+  /* ── Daily spending card (Today tab) ── */
+  .daily-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-4);
+    margin-bottom: var(--sp-4);
+    box-shadow: var(--shadow-sm);
+  }
+  .daily-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--sp-3);
+  }
+  .daily-card-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .daily-card-amount {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xl);
+    color: var(--text);
+    font-weight: 500;
+  }
+  .daily-card-amount.tight { color: var(--warning); }
+  .daily-card-bar {
+    height: 6px;
+    background: var(--bg3);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    margin-bottom: var(--sp-2);
+  }
+  .daily-card-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background: var(--success);
+    transition: width 0.4s ease, background 0.3s;
+  }
+  .daily-card-sub {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text3);
+    display: flex;
+    justify-content: space-between;
+  }
+  .daily-card-log-btn {
+    width: 100%;
+    margin-top: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--bg3);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 44px;
+  }
+  .daily-card-log-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Four buckets ── */
+  .bucket-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+  }
+  .bucket-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--sp-3);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .bucket-card:hover { border-color: var(--border2); box-shadow: var(--shadow); }
+  .bucket-card.essentials { border-left: 2px solid #4a9e6b; }
+  .bucket-card.daily      { border-left: 2px solid #c8a96e; }
+  .bucket-card.shortterm  { border-left: 2px solid #8fb8d4; }
+  .bucket-card.longterm   { border-left: 2px solid #a080e0; }
+  .bucket-icon  { font-size: 1.25rem; margin-bottom: 4px; }
+  .bucket-name  { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+  .bucket-amount { font-family: var(--font-mono); font-size: var(--text-lg); color: var(--text); font-weight: 500; margin-top: 2px; }
+  .bucket-limit  { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text3); }
+
+  /* ── Dopamine list ── */
+  .dopamine-item {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--sp-3) var(--sp-4);
+    margin-bottom: var(--sp-2);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    box-shadow: var(--shadow-sm);
+  }
+  .dopamine-item.got-it { opacity: 0.4; }
+  .dopamine-want {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .want-star {
+    font-size: 0.75rem;
+    color: var(--text3);
+    cursor: pointer;
+    transition: color 0.1s;
+    background: none;
+    border: none;
+    padding: 2px;
+    min-height: 28px;
+  }
+  .want-star.lit { color: var(--accent); }
+  .dopamine-info { flex: 1; min-width: 0; }
+  .dopamine-name  { font-size: var(--text-base); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dopamine-meta  { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text3); margin-top: 2px; }
+  .dopamine-cost  { font-family: var(--font-mono); font-size: var(--text-md); color: var(--accent); flex-shrink: 0; }
+  .dopamine-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .dopamine-btn {
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text3);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    padding: 3px 8px;
+    cursor: pointer;
+    min-height: 28px;
+    transition: all 0.1s;
+  }
+  .dopamine-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .dopamine-btn.got    { border-color: var(--success); color: var(--success); }
+
+  /* Big purchase friction flag */
+  .friction-notice {
+    background: var(--warning-bg);
+    border: 0.5px solid var(--accent);
+    border-radius: var(--radius);
+    padding: var(--sp-3) var(--sp-4);
+    margin-bottom: var(--sp-3);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--text2);
+    line-height: 1.6;
+    display: none;
+  }
+  .friction-notice.visible { display: block; }
+
   /* ── Confetti canvas ── */
   #confettiCanvas {
     position: fixed;
@@ -1028,7 +1197,7 @@
   .milestone-overlay.hidden { display: none; }
   .milestone-emoji { font-size: 64px; margin-bottom: 16px; line-height: 1; }
   .milestone-title {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 1.375rem;
     font-weight: 500;
     color: var(--accent);
@@ -1042,7 +1211,7 @@
     margin-bottom: 24px;
   }
   .milestone-points {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.8125rem;
     color: var(--success);
     margin-bottom: 20px;
@@ -1058,7 +1227,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
   }
   .points-total { font-size: 1.5rem; color: var(--accent); font-weight: 500; }
   .points-label { font-size: 0.625rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
@@ -1081,8 +1250,8 @@
   .badge-card.earned { border-color: var(--accent); }
   .badge-card.locked { opacity: 0.4; }
   .badge-icon { font-size: 1.75rem; display: block; margin-bottom: 4px; }
-  .badge-name { font-family: var(--mono); font-size: 0.625rem; color: var(--text2); display: block; }
-  .badge-date { font-family: var(--mono); font-size: 0.5625rem; color: var(--text3); display: block; margin-top: 2px; }
+  .badge-name { font-family: var(--font-mono); font-size: 0.625rem; color: var(--text2); display: block; }
+  .badge-date { font-family: var(--font-mono); font-size: 0.5625rem; color: var(--text3); display: block; margin-top: 2px; }
 
   /* ── Weekly/monthly cards ── */
   .summary-card {
@@ -1093,7 +1262,7 @@
     margin-bottom: 1rem;
   }
   .summary-card-title {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--accent);
     margin-bottom: 10px;
@@ -1103,7 +1272,7 @@
   .summary-card-stat {
     display: flex;
     justify-content: space-between;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--text2);
     padding: 4px 0;
@@ -1114,7 +1283,7 @@
 
   /* ── Nag banner encouraging text ── */
   .nag-encouragement {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--accent);
     opacity: 0.8;
@@ -1136,6 +1305,8 @@
     padding: var(--sp-5) var(--sp-4);
     margin-bottom: var(--sp-3);
     box-shadow: var(--shadow-sm);
+    overflow: hidden; /* prevent child elements overflowing the card */
+    width: 100%;
   }
 
   .settings-segment-header {
@@ -1150,7 +1321,7 @@
   }
 
   .settings-segment-header h2 {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--accent);
@@ -1170,7 +1341,7 @@
   }
 
   .notif-toggle-label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--text2);
     flex: 1;
@@ -1242,7 +1413,7 @@
     flex-wrap: wrap;
   }
   .audio-row label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
@@ -1264,7 +1435,7 @@
     border: none;
     background: transparent;
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     cursor: pointer;
     transition: all 0.15s;
@@ -1283,7 +1454,7 @@
     flex-wrap: wrap;
   }
   .audio-upload-label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--text2);
     cursor: pointer;
@@ -1298,7 +1469,7 @@
   }
   .audio-upload-label:hover { border-color: var(--accent); color: var(--accent); }
   .audio-file-name {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     flex: 1;
@@ -1308,7 +1479,7 @@
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     padding: 5px 10px;
     cursor: pointer;
@@ -1325,7 +1496,7 @@
     margin-top: 8px;
   }
   .volume-row label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
@@ -1340,7 +1511,7 @@
     cursor: pointer;
   }
   .volume-val {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     width: 32px;
@@ -1357,7 +1528,7 @@
   }
 
   .vibration-row label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
@@ -1380,7 +1551,7 @@
     border: none;
     background: transparent;
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     cursor: pointer;
     transition: all 0.15s;
@@ -1409,7 +1580,7 @@
   }
 
   .history-section-header h2 {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--text3);
     text-transform: uppercase;
@@ -1438,7 +1609,7 @@
   .onboarding.hidden { display: none; }
   .onboarding-card { max-width: 420px; width: 100%; }
   .onboarding-card h2 {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.9375rem;
     font-weight: 500;
     color: var(--accent);
@@ -1451,7 +1622,7 @@
     line-height: 1.6;
   }
   .onboarding-card label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
@@ -1465,7 +1636,7 @@
     border: 0.5px solid var(--border2);
     border-radius: var(--radius);
     color: var(--text);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.875rem;
     padding: 10px 12px;
     outline: none;
@@ -1484,27 +1655,34 @@
   }
   .settings-panel.open { display: block; }
   .settings-section-title {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--accent);
     margin-bottom: 10px;
     margin-top: 16px;
   }
   .settings-section-title:first-child { margin-top: 0; }
-  .settings-task-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .settings-task-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; width: 100%; min-width: 0; }
   .settings-task-row input[type="text"] {
     flex: 1;
+    min-width: 0; /* critical — prevents flex children from overflowing */
     background: var(--bg3);
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     padding: 6px 10px;
     outline: none;
+    width: 100%;
   }
   .settings-task-row input[type="text"]:focus { border-color: var(--border2); }
-  .settings-task-row input.sub-input { font-size: 0.6875rem; color: var(--text3); max-width: 160px; }
+  .settings-task-row input.sub-input {
+    font-size: 0.6875rem;
+    color: var(--text3);
+    flex: 0 1 140px; /* shrinks but doesn't grow past 140px */
+    min-width: 0;
+  }
   .del-btn {
     background: transparent;
     border: 0.5px solid var(--border);
@@ -1523,7 +1701,7 @@
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     padding: 5px 12px;
     cursor: pointer;
@@ -1538,7 +1716,7 @@
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     padding: 4px 8px;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--text2);
   }
@@ -1554,7 +1732,7 @@
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     padding: 6px 10px;
     outline: none;
@@ -1576,16 +1754,16 @@
     transition: border-color 0.15s, box-shadow 0.15s;
   }
   .stat-card:hover { border-color: var(--border2); box-shadow: var(--shadow); }
-  .stat-card .stat-num { font-family: var(--mono); font-size: 2.25rem; font-weight: 500; color: var(--text); display: block; }
+  .stat-card .stat-num { font-family: var(--font-mono); font-size: 2.25rem; font-weight: 500; color: var(--text); display: block; }
   .stat-card .stat-num.accent { color: var(--accent); }
   .stat-card .stat-num.danger { color: var(--danger); }
   .stat-card .stat-num.success { color: var(--success); }
   .stat-card .stat-label { font-size: 0.6875rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; display: block; }
-  .stat-card .stat-sub { font-family: var(--mono); font-size: 0.625rem; color: var(--text3); margin-top: 6px; display: block; }
+  .stat-card .stat-sub { font-family: var(--font-mono); font-size: 0.625rem; color: var(--text3); margin-top: 6px; display: block; }
 
   /* ── Appointments ── */
   .appt-section-title {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
@@ -1615,7 +1793,7 @@
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     padding: 3px 8px;
     cursor: pointer;
@@ -1624,13 +1802,13 @@
   .appt-btn:hover { border-color: var(--accent); color: var(--accent); }
   .appt-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
   .appt-meta {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--text2);
     margin-bottom: 4px;
   }
   .appt-countdown {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--accent);
     margin-bottom: 4px;
@@ -1649,7 +1827,7 @@
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     padding: 5px 12px;
     cursor: pointer;
@@ -1682,14 +1860,14 @@
     overflow-y: auto;
   }
   .appt-modal h3 {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.8125rem;
     color: var(--accent);
     margin-bottom: 16px;
   }
   .appt-field { margin-bottom: 12px; }
   .appt-field label {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
@@ -1703,7 +1881,7 @@
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.8125rem;
     padding: 8px 10px;
     outline: none;
@@ -1714,7 +1892,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--text2);
     margin-bottom: 12px;
@@ -1733,13 +1911,13 @@
     overflow-y: auto;
   }
   .summary-modal h3 {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.8125rem;
     color: var(--accent);
     margin-bottom: 12px;
   }
   .summary-text {
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--text2);
     line-height: 1.7;
@@ -1757,7 +1935,7 @@
     border-radius: var(--radius);
     padding: 10px 14px;
     margin-bottom: 1.5rem;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--accent);
     display: none;
@@ -1772,7 +1950,7 @@
     border-radius: var(--radius);
     padding: 12px 14px;
     margin-bottom: 8px;
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     color: var(--text2);
   }
@@ -1809,7 +1987,7 @@
     border: none;
     background: transparent;
     color: var(--text3);
-    font-family: var(--mono);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
     cursor: pointer;
     transition: all 0.15s;
@@ -1954,6 +2132,24 @@
       </div>
     </div>
 
+    <!-- Daily spending card -->
+    <div class="daily-card" id="dailySpendCard" style="display:none"
+         role="region" aria-label="Daily spending">
+      <div class="daily-card-header">
+        <span class="daily-card-label">daily limit</span>
+        <span class="daily-card-amount" id="dailyRemaining">—</span>
+      </div>
+      <div class="daily-card-bar" aria-hidden="true">
+        <div class="daily-card-bar-fill" id="dailyBar" style="width:0%"></div>
+      </div>
+      <div class="daily-card-sub">
+        <span id="dailySpent">$0 spent today</span>
+        <span id="dailyLimit">of $— limit</span>
+      </div>
+      <button class="daily-card-log-btn" onclick="openSpendModal()"
+              aria-label="Log a quick expense">+ log expense</button>
+    </div>
+
     <div class="custom-timers" id="customTimersWidget"></div>
 
     <div class="section">
@@ -2020,7 +2216,7 @@
   <div class="container">
     <div class="header">
       <div class="header-top">
-        <h1 style="font-family:var(--mono);font-size:14px;color:var(--accent)" id="history-heading">log &amp; appointments</h1>
+        <h1 style="font-family:var(--font-mono);font-size:14px;color:var(--accent)" id="history-heading">log &amp; appointments</h1>
         <span class="date" id="historyDateDisplay"></span>
       </div>
     </div>
@@ -2099,7 +2295,7 @@
 <div class="page" id="page-stats" role="tabpanel" aria-labelledby="tab-stats" aria-hidden="true">
   <div class="container">
     <div class="header">
-      <h1 style="font-family:var(--mono);font-size:14px;color:var(--accent)" id="stats-heading">your stats</h1>
+      <h1 style="font-family:var(--font-mono);font-size:14px;color:var(--accent)" id="stats-heading">your stats</h1>
     </div>
 
     <!-- Points banner -->
@@ -2109,8 +2305,8 @@
         <div class="points-label">total points</div>
       </div>
       <div style="text-align:right">
-        <div style="font-family:var(--mono);font-size:12px;color:var(--text2)" id="pointsMultiplier">×1 multiplier</div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">streak bonus</div>
+        <div style="font-family:var(--font-mono);font-size:12px;color:var(--text2)" id="pointsMultiplier">×1 multiplier</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text3)">streak bonus</div>
       </div>
     </div>
 
@@ -2157,6 +2353,9 @@
 
     <h2 class="section-label" style="margin-bottom:10px">mood over time</h2>
     <div id="moodTimeline" aria-label="Mood timeline"></div>
+
+    <h2 class="section-label" style="margin:1.5rem 0 10px">spending &amp; mood</h2>
+    <div id="spendMoodCorrelation" aria-label="Spending and mood correlation"></div>
   </div>
 </div>
 
@@ -2164,7 +2363,7 @@
 <div class="page" id="page-settings" role="tabpanel" aria-labelledby="tab-settings" aria-hidden="true">
   <div class="container">
     <div class="header">
-      <h1 style="font-family:var(--mono);font-size:14px;color:var(--accent)" id="settings-heading">settings</h1>
+      <h1 style="font-family:var(--font-mono);font-size:14px;color:var(--accent)" id="settings-heading">settings</h1>
     </div>
 
     <!-- ── Profile ── -->
@@ -2193,7 +2392,7 @@
       </div>
 
       <div style="margin-top:12px;margin-bottom:4px">
-        <div style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">font</div>
+        <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">font</div>
         <div class="theme-pill" role="radiogroup" aria-label="Font choice"
              style="flex-wrap:wrap;height:auto;padding:4px;gap:3px">
           <button class="theme-opt active" id="fontOptDefault"
@@ -2212,7 +2411,7 @@
                   onclick="setFont('comic')" role="radio" aria-checked="false"
                   style="font-family:'Comic Sans MS',cursive">comic sans</button>
         </div>
-        <p style="font-family:var(--mono);font-size:0.5625rem;color:var(--text3);margin-top:6px">
+        <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-top:6px">
           Atkinson Hyperlegible and OpenDyslexic are designed for low vision and dyslexia.
         </p>
       </div>
@@ -2223,7 +2422,7 @@
       </div>
 
       <div style="margin-bottom:10px">
-        <div style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">text size</div>
+        <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">text size</div>
         <div class="theme-pill" role="radiogroup" aria-label="Text size">
           <button class="theme-opt" id="textSizeSmall"  onclick="setTextSize('small')"  role="radio" aria-checked="false">S</button>
           <button class="theme-opt active" id="textSizeNormal" onclick="setTextSize('normal')" role="radio" aria-checked="true">A</button>
@@ -2310,12 +2509,12 @@
 
       <div class="settings-divider"></div>
       <h3 class="settings-section-title">quiet hours schedule</h3>
-      <p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
         No notifications during these windows. Add multiple windows per day.
       </p>
 
       <div style="margin-bottom:8px">
-        <div style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">active days</div>
+        <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">active days</div>
         <div style="display:flex;gap:4px;flex-wrap:wrap" id="dndDaysRow" role="group" aria-label="Days for quiet hours">
           <button class="theme-opt active" id="dndDay0" onclick="toggleDNDDay(0)" aria-pressed="true">Sun</button>
           <button class="theme-opt active" id="dndDay1" onclick="toggleDNDDay(1)" aria-pressed="true">Mon</button>
@@ -2422,7 +2621,7 @@
 
       <div class="settings-divider"></div>
       <h3 class="settings-section-title">task deadlines</h3>
-      <p style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.6">
+      <p style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.6">
         Set a daily must-be-done-by time for each non-negotiable.
       </p>
       <div id="taskDeadlineSettings"></div>
@@ -2506,7 +2705,7 @@
       <h3 class="settings-section-title">check-in window time</h3>
       <div class="settings-task-row">
         <input type="time" id="windowCloseTime"
-               style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:13px;padding:6px 10px;outline:none;flex:1"
+               style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:6px 10px;outline:none;flex:1"
                aria-label="Daily check-in window closing time">
         <button class="add-btn" onclick="saveWindowTime()" aria-label="Save window time">save</button>
         <button class="add-btn" onclick="clearWindowTime()" aria-label="Clear window time">clear</button>
@@ -2519,7 +2718,7 @@
         <input type="text" id="newTimerName" placeholder="timer name" maxlength="30"
                style="flex:2" aria-label="New timer name">
         <input type="number" id="newTimerMins" placeholder="mins" min="1" max="1440"
-               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 10px;outline:none"
+               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:6px 10px;outline:none"
                aria-label="Timer duration in minutes">
         <button class="add-btn" onclick="addCustomTimer()" aria-label="Add custom timer">+ add</button>
       </div>
@@ -2605,7 +2804,7 @@
       <div class="settings-segment-header">
         <h2 id="seg-quotes">ai quotes &amp; messages</h2>
       </div>
-      <p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
         Personalised messages generated by Claude AI using your daily data.<br>
         Get a free API key at <strong style="color:var(--text2)">console.anthropic.com</strong><br>
         Your key is stored locally and never leaves your device.
@@ -2617,7 +2816,7 @@
         <button class="add-btn" onclick="saveApiKey()" aria-label="Save API key">save</button>
       </div>
       <div id="apiKeyStatus" role="status" aria-live="polite"
-           style="font-family:var(--mono);font-size:0.625rem;margin-bottom:8px"></div>
+           style="font-family:var(--font-mono);font-size:0.625rem;margin-bottom:8px"></div>
       <div class="notif-toggle-row">
         <div class="notif-toggle-label">
           AI quotes enabled
@@ -2636,7 +2835,7 @@
       <div class="settings-segment-header">
         <h2 id="seg-telegram">telegram setup</h2>
       </div>
-      <p style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:10px;line-height:1.8">
+      <p style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:10px;line-height:1.8">
         1. Message <strong style="color:var(--text2)">@BotFather</strong> on Telegram → /newbot → copy the token<br>
         2. Message your new bot once so it can reply to you<br>
         3. Paste token below and tap connect
@@ -2648,7 +2847,7 @@
         <button class="add-btn" onclick="connectTelegram()" aria-label="Connect Telegram bot">connect</button>
       </div>
       <div id="tgStatus" role="status" aria-live="polite"
-           style="font-family:var(--mono);font-size:10px;margin-bottom:8px"></div>
+           style="font-family:var(--font-mono);font-size:10px;margin-bottom:8px"></div>
       <div class="settings-task-row">
         <input type="text" id="tgTestMsg" placeholder="test message (optional)"
                style="font-size:11px" aria-label="Optional test message">
@@ -2663,7 +2862,7 @@
       </div>
 
       <h3 class="settings-section-title" style="margin-top:0">backup &amp; restore</h3>
-      <p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
         Export saves everything — tasks, history, appointments, streak, badges, settings.<br>
         Import restores it all. QR code transfers to another device.
       </p>
@@ -2678,9 +2877,9 @@
                 aria-label="Generate QR code for cross-device transfer">⬡ QR transfer</button>
       </div>
       <div id="backupStatus" role="status" aria-live="polite"
-           style="font-family:var(--mono);font-size:0.625rem;margin-bottom:10px"></div>
+           style="font-family:var(--font-mono);font-size:0.625rem;margin-bottom:10px"></div>
       <div id="qrSection" style="display:none;margin-bottom:12px;text-align:center">
-        <p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px">
+        <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px">
           Scan on another device to import your data.
         </p>
         <canvas id="qrCanvas" style="border-radius:8px;max-width:220px"
@@ -2696,7 +2895,7 @@
         <button class="add-btn" onclick="changeSaveFolder()"
                 aria-label="Set or change screenshot save folder">📁 set save folder</button>
       </div>
-      <p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);line-height:1.5">
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);line-height:1.5">
         Chrome/Edge only. DDG uses long-press method.
       </p>
 
@@ -2704,11 +2903,11 @@
       <h3 class="settings-section-title">monthly budget</h3>
       <div class="settings-task-row" style="margin-bottom:6px">
         <input type="number" id="monthlyBudget" placeholder="e.g. 1500"
-               min="0" step="1" style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:0.8125rem;padding:8px 10px;outline:none"
+               min="0" step="1" style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:8px 10px;outline:none"
                aria-label="Monthly budget amount">
         <button class="add-btn" onclick="saveMonthlyBudget()" aria-label="Save monthly budget">save</button>
       </div>
-      <p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px">
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px">
         Set your total monthly budget. Track daily spending on the Budget tab.
       </p>
 
@@ -2728,8 +2927,123 @@
   </div>
 </div>
 
-<div class="footer" style="text-align:center;padding:1rem;font-family:var(--mono);font-size:10px;color:var(--text3)">
-  daily structure tracker &mdash; v2.8 &mdash; add to home screen to install
+<!-- ── BUDGET ── -->
+<div class="page" id="page-budget" role="tabpanel" aria-labelledby="tab-budget" aria-hidden="true">
+  <div class="container">
+    <div class="header">
+      <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="budget-heading">spending</h1>
+    </div>
+
+    <!-- Setup prompt if no limits set -->
+    <div id="budgetSetupPrompt" style="display:none;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:var(--sp-4);margin-bottom:var(--sp-4);text-align:center">
+      <p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text2);margin-bottom:10px;line-height:1.7">
+        Set your spending bucket limits in<br><strong style="color:var(--accent)">Settings → Data & Storage → Spending Buckets</strong><br>to activate the budget tracker.
+      </p>
+      <button class="add-btn" onclick="switchTab('settings')" aria-label="Go to settings to set up budget">go to settings →</button>
+    </div>
+
+    <!-- Four buckets -->
+    <div class="bucket-grid" id="bucketGrid" role="list" aria-label="Spending buckets">
+      <div class="bucket-card essentials" role="listitem" onclick="openBucketDetail('essentials')"
+           aria-label="Essentials bucket">
+        <div class="bucket-icon" aria-hidden="true">🏠</div>
+        <div class="bucket-name">essentials</div>
+        <div class="bucket-amount" id="bucketEssAmount">—</div>
+        <div class="bucket-limit" id="bucketEssLimit">set limit</div>
+      </div>
+      <div class="bucket-card daily" role="listitem" onclick="openBucketDetail('daily')"
+           aria-label="Daily bucket">
+        <div class="bucket-icon" aria-hidden="true">💳</div>
+        <div class="bucket-name">daily</div>
+        <div class="bucket-amount" id="bucketDayAmount">—</div>
+        <div class="bucket-limit" id="bucketDayLimit">set limit</div>
+      </div>
+      <div class="bucket-card shortterm" role="listitem" onclick="openBucketDetail('shortterm')"
+           aria-label="Short term bucket">
+        <div class="bucket-icon" aria-hidden="true">🎯</div>
+        <div class="bucket-name">short term</div>
+        <div class="bucket-amount" id="bucketSTAmount">—</div>
+        <div class="bucket-limit" id="bucketSTLimit">set limit</div>
+      </div>
+      <div class="bucket-card longterm" role="listitem" onclick="openBucketDetail('longterm')"
+           aria-label="Long term bucket">
+        <div class="bucket-icon" aria-hidden="true">🚀</div>
+        <div class="bucket-name">long term</div>
+        <div class="bucket-amount" id="bucketLTAmount">—</div>
+        <div class="bucket-limit" id="bucketLTLimit">set limit</div>
+      </div>
+    </div>
+
+    <!-- Today's spending -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <h2 class="section-label">today</h2>
+      <button class="add-btn" onclick="openSpendModal()" aria-label="Log expense">+ log expense</button>
+    </div>
+    <div id="todaySpendList"></div>
+
+    <!-- Dopamine / want list -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:1.5rem 0 10px;flex-wrap:wrap;gap:8px">
+      <h2 class="section-label">want list</h2>
+      <button class="add-btn" onclick="openDopamineModal()" aria-label="Add to want list">+ add want</button>
+    </div>
+    <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-bottom:10px;line-height:1.6">
+      Things you want but aren't buying yet. Writing it down scratches the itch without spending.
+    </p>
+    <div id="dopamineList"></div>
+
+    <!-- Monthly log -->
+    <h2 class="section-label" style="margin:1.5rem 0 10px">this month</h2>
+    <div id="monthSpendList"></div>
+  </div>
+</div>
+
+<!-- Dopamine / want list modal -->
+<div class="appt-modal-overlay hidden" id="dopamineModalOverlay"
+     role="dialog" aria-modal="true" aria-labelledby="dopamineModalTitle">
+  <div class="appt-modal">
+    <h3 id="dopamineModalTitle">// add to want list</h3>
+    <input type="hidden" id="dopamineEditId">
+    <div class="appt-field">
+      <label>what do you want?</label>
+      <input type="text" id="dopamineName" placeholder="name the thing" maxlength="60"
+             aria-label="Item name">
+    </div>
+    <div class="appt-field">
+      <label>estimated cost (optional)</label>
+      <input type="number" id="dopamineCost" placeholder="0.00" min="0" step="0.01"
+             inputmode="decimal" aria-label="Estimated cost">
+    </div>
+    <div class="appt-field">
+      <label>which bucket?</label>
+      <select id="dopamineBucket"
+              style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:8px 10px;width:100%;outline:none"
+              aria-label="Which budget bucket">
+        <option value="daily">daily</option>
+        <option value="shortterm">short term</option>
+        <option value="longterm">long term</option>
+        <option value="essentials">essentials</option>
+      </select>
+    </div>
+    <div class="appt-field">
+      <label>want level</label>
+      <div style="display:flex;gap:4px;margin-top:4px" id="wantLevelRow"
+           role="group" aria-label="Want level 1 to 5">
+        <button class="want-star lit" id="wantStar1" onclick="setWantLevel(1)" aria-label="Want level 1">★</button>
+        <button class="want-star lit" id="wantStar2" onclick="setWantLevel(2)" aria-label="Want level 2">★</button>
+        <button class="want-star lit" id="wantStar3" onclick="setWantLevel(3)" aria-label="Want level 3">★</button>
+        <button class="want-star"     id="wantStar4" onclick="setWantLevel(4)" aria-label="Want level 4">★</button>
+        <button class="want-star"     id="wantStar5" onclick="setWantLevel(5)" aria-label="Want level 5">★</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn primary" style="flex:1" onclick="saveDopamineItem()">add to list</button>
+      <button class="btn" style="flex:1" onclick="closeDopamineModal()">cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer" style="text-align:center;padding:1rem;font-family:var(--font-mono);font-size:10px;color:var(--text3)">
+  daily structure tracker &mdash; v3.7 &mdash; add to home screen to install
 </div>
 
 <!-- Screenshot preview modal -->
@@ -2757,15 +3071,15 @@
     orientation: 'portrait',
     icons: [
       {
-        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230f0f0f'/%3E%3Crect x='24' y='24' width='144' height='144' rx='18' fill='%231e1e1e' stroke='%23c8a96e' stroke-width='3'/%3E%3Ctext x='96' y='120' font-family='monospace' font-size='72' text-anchor='middle' fill='%23c8a96e'%3E✓%3C/text%3E%3C/svg%3E",
+        src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAACHUlEQVR42u3YwQ2AQAgAwSvA/tvFt18VD2S2AaIZY2Ad0oOWVyCABJAAEkASQAJIAAkgCSABJIAEkASQABJAAkgCSAAJIAEkgCSA1BBQJFdh4q7RkR9AAAEEEEAAAQQQQAABBBBAAAEEEEAAAQQQQAABBBBAAAEEEEAAAQQQQAABBBBAAAEEEEAAAQQQQAABBBBAAAEEEEAAAQQQQAABBBBAAAEEEEAAAQQQQD8FpMkBJIAEkAASQJI13hrvDgQQQAABBBBAAAEEEEAAAQQQQAABBBBAAAEEEEAAAQQQQAABBBBAAAEEEEAAAQQQQAABBBBAAAEEEEAAAQQQQAABBBBAAAEEEEAAAQQQQAABBBBAAAEEkGYHkAASQAJIANnCbGEAAQQQQJdxSX8fgAACCCCAAAIIIIAAAggggAACCCCAAAIIIIAAAggggAACCCCAAAIIIIAAAggggAACCCCAAAIIIIAAAggggAACCCCAAAIIIIAAAggggAB6DdCuhwUIoA6ANDmABJAAEkACSLLGW+PdgaoDyviUXaIBAggggAACCCCAAAIIIIAAAggggAACCCCAAAIIIIAAAggggAACCCCAAAIIIIAAAggggAACCCCAAAIIIIAAAggggAACCCCAAAIIIIAAAgigMoA+Gx35AQRQc0CaHEACSAAJIAEkASSABJAAkgASQAJIAEkACSABJIAkgASQABJAAki60wnsMotYuXBi4QAAAABJRU5ErkJggg==",
         sizes: '192x192',
-        type: 'image/svg+xml',
+        type: 'image/png',
         purpose: 'any maskable'
       },
       {
-        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230f0f0f'/%3E%3Crect x='48' y='48' width='416' height='416' rx='48' fill='%231e1e1e' stroke='%23c8a96e' stroke-width='6'/%3E%3Ctext x='256' y='330' font-family='monospace' font-size='200' text-anchor='middle' fill='%23c8a96e'%3E✓%3C/text%3E%3C/svg%3E",
+        src: "data:image/png;base64,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",
         sizes: '512x512',
-        type: 'image/svg+xml',
+        type: 'image/png',
         purpose: 'any maskable'
       }
     ]
@@ -2781,7 +3095,7 @@
   if (!('serviceWorker' in navigator)) return;
 
   const swCode = `
-const CACHE = 'tracker-v3';
+const CACHE = 'tracker-v3.7';
 
 self.addEventListener('install', e => {
   e.waitUntil(self.skipWaiting());
@@ -3016,12 +3330,14 @@ function initOnboarding() {
   updateNavThemeBtn(cfg.theme || 'system');
   updateIntervalPill(cfg.reminderInterval || '30');
   updateWindowTimer();
+  renderDailyCard();
   syncNotifPrefsUI();
   syncAudioUI();
   applyA11yPrefs();
   syncQuoteSettingsUI();
   syncDNDUI();
   renderDNDWindows();
+  renderBucketLimitSettings();
   if (!cfg.name) {
     document.getElementById('onboarding').classList.remove('hidden');
     setTimeout(() => document.getElementById('nameInput').focus(), 100);
@@ -3322,7 +3638,7 @@ function renderHistory() {
   const past     = appts.filter(a => new Date(a.datetime) <  new Date());
 
   apptEl.innerHTML = upcoming.length === 0
-    ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px">no upcoming appointments</div>`
+    ? `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:8px">no upcoming appointments</div>`
     : upcoming.map((a, i) => {
         const cd = apptCountdown(a.datetime);
         const dt = new Date(a.datetime);
@@ -3348,7 +3664,7 @@ function renderHistory() {
     if (!el) return;
     const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     el.innerHTML = history.length === 0
-      ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 0">no entries yet — save a check-in on the today tab</div>`
+      ? `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);padding:8px 0">no entries yet — save a check-in on the today tab</div>`
       : history.map(e => `
         <div class="history-entry">
           <div class="history-entry-top">
@@ -3372,6 +3688,7 @@ function renderStats() {
   renderFavQuotes();
   renderWeeklySummaryCard();
   renderMonthlySummaryCard();
+  renderSpendMoodCorrelation();
   try {
     const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     document.getElementById('bigDaysLogged').textContent = history.length;
@@ -3388,12 +3705,12 @@ function renderStats() {
       const score = moodMap[e.mood] ?? null;
       const bar = score === null ? '·' : score >= 1 ? '▮' : score === 0 ? '▯' : '▮';
       const col = score === null ? 'var(--text3)' : score >= 1 ? 'var(--success)' : score === 0 ? 'var(--accent)' : 'var(--danger)';
-      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;font-family:var(--mono);font-size:11px">
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;font-family:var(--font-mono);font-size:11px">
         <span style="color:var(--text3);width:80px;flex-shrink:0">${e.date.slice(5)}</span>
         <span style="color:${col};font-size:16px;letter-spacing:1px">${bar}</span>
         <span style="color:var(--text3)">${e.mood || '—'} / ${e.energy || '—'}</span>
       </div>`;
-    }).join('') || '<div style="font-family:var(--mono);font-size:11px;color:var(--text3)">no data yet</div>';
+    }).join('') || '<div style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">no data yet</div>';
   } catch(err) {}
 }
 
@@ -4120,9 +4437,10 @@ setInterval(schedulePeriodicSummaries, 3600000);
 // ── Low vision / accessibility system ────────────────────────────────────
 
 function applyTextSize(size) {
-  const root = document.documentElement;
-  root.removeAttribute('data-text-size');
-  if (size && size !== 'normal') root.setAttribute('data-text-size', size);
+  // Apply to <html> so rem units cascade from it
+  const html = document.documentElement;
+  html.removeAttribute('data-text-size');
+  if (size && size !== 'normal') html.setAttribute('data-text-size', size);
   updateTextSizeUI(size || 'normal');
 }
 
@@ -4844,25 +5162,51 @@ function hideQR() {
 // TODO: add jsQR library for in-app camera scanning.
 
 // ── Font system ───────────────────────────────────────────────────────────
-function applyFont(font) {
+// ── Font loading registry ─────────────────────────────────────────────────
+const FONT_SOURCES = {
+  ibmplexmono:  'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap',
+  atkinson:     'https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap',
+  opendyslexic: 'https://fonts.cdnfonts.com/css/opendyslexic',
+};
+const _loadedFonts = new Set();
+
+async function loadFontIfNeeded(font) {
+  if (!FONT_SOURCES[font] || _loadedFonts.has(font)) return;
+  return new Promise((resolve) => {
+    const link  = document.createElement('link');
+    link.rel    = 'stylesheet';
+    link.href   = FONT_SOURCES[font];
+    link.onload = () => { _loadedFonts.add(font); resolve(); };
+    link.onerror = () => resolve(); // fail silently, fallback to system
+    document.head.appendChild(link);
+  });
+}
+
+async function applyFont(font) {
+  // Load font on demand if needed
+  if (font && FONT_SOURCES[font]) await loadFontIfNeeded(font);
   const root = document.documentElement;
   root.removeAttribute('data-font');
   if (font && font !== 'default') root.setAttribute('data-font', font);
   updateFontUI(font || 'default');
 }
 
-function setFont(font) {
+async function setFont(font) {
   cfg.a11y = cfg.a11y || {};
   cfg.a11y.font = font;
   saveConfig(cfg);
-  applyFont(font);
-  announce('Font set to ' + font + '.');
+  await applyFont(font);
+  announce('Font changed to ' + (font === 'default' ? 'system default' : font) + '.');
 }
 
 function updateFontUI(font) {
-  ['default','system','atkinson','opendyslexic','comic'].forEach(f => {
-    const el = document.getElementById('fontOpt' + f.charAt(0).toUpperCase() + f.slice(1));
-    if (el) { el.classList.toggle('active', f === font); el.setAttribute('aria-checked', f === font ? 'true' : 'false'); }
+  ['default','ibmplexmono','atkinson','opendyslexic','comic','mono'].forEach(f => {
+    const key = f.charAt(0).toUpperCase() + f.slice(1);
+    const el  = document.getElementById('fontOpt' + key);
+    if (el) {
+      el.classList.toggle('active', f === font);
+      el.setAttribute('aria-checked', f === font ? 'true' : 'false');
+    }
   });
 }
 
@@ -4948,18 +5292,18 @@ function renderDNDWindows() {
   if (!el) return;
   const dnd = getDNDConfig();
   el.innerHTML = dnd.windows.length === 0
-    ? `<p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px">no quiet hours set</p>`
+    ? `<p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px">no quiet hours set</p>`
     : dnd.windows.map(w => `
       <div class="settings-task-row" style="margin-bottom:8px;align-items:center">
-        <span style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);flex-shrink:0">from</span>
+        <span style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);flex-shrink:0">from</span>
         <input type="time" value="${w.start || '22:00'}"
                onchange="updateDNDWindow('${w.id}','start',this.value)"
-               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:0.75rem;padding:6px 8px;outline:none"
+               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:6px 8px;outline:none"
                aria-label="Quiet hours start time">
-        <span style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);flex-shrink:0">to</span>
+        <span style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);flex-shrink:0">to</span>
         <input type="time" value="${w.end || '08:00'}"
                onchange="updateDNDWindow('${w.id}','end',this.value)"
-               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:0.75rem;padding:6px 8px;outline:none"
+               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:6px 8px;outline:none"
                aria-label="Quiet hours end time">
         <button class="del-btn" onclick="removeDNDWindow('${w.id}')" aria-label="Remove this quiet hours window">×</button>
       </div>
@@ -5018,16 +5362,23 @@ function openSpendModal(id) {
     const spend = getSpends().find(s => s.id === id);
     if (spend) {
       document.getElementById('spendAmount').value   = spend.amount;
+      const bucketEl = document.getElementById('spendBucket');
+      if (bucketEl) bucketEl.value = spend.bucket || 'daily';
       document.getElementById('spendCategory').value = spend.category;
       document.getElementById('spendNote').value     = spend.note || '';
       document.getElementById('spendDate').value     = spend.date;
     }
   } else {
     document.getElementById('spendAmount').value   = '';
+    const bucketEl = document.getElementById('spendBucket');
+    if (bucketEl) bucketEl.value = 'daily';
     document.getElementById('spendCategory').value = 'food';
     document.getElementById('spendNote').value     = '';
     document.getElementById('spendDate').value     = TODAY;
   }
+  // Hide friction notice
+  const fn = document.getElementById('frictionNotice');
+  if (fn) fn.classList.remove('visible');
   overlay.classList.remove('hidden');
   setTimeout(() => document.getElementById('spendAmount').focus(), 100);
 }
@@ -5044,26 +5395,36 @@ function saveSpend() {
 
   const spends = getSpends();
   const editId = document.getElementById('spendEditId').value;
+  const rawAmount = Math.round(amount * 100) / 100;
   const spend  = {
     id:       editId || 'sp_' + Date.now(),
-    amount:   Math.round(amount * 100) / 100,
+    amount:   rawAmount,
+    bucket:   document.getElementById('spendBucket')?.value || 'daily',
     category: document.getElementById('spendCategory').value,
     note:     document.getElementById('spendNote').value.trim(),
-    date
+    date,
+    flagged:  false,
   };
 
-  if (editId) {
-    const idx = spends.findIndex(s => s.id === editId);
-    if (idx > -1) spends[idx] = spend; else spends.push(spend);
-  } else {
-    spends.push(spend);
+  function doSave(flagged) {
+    if (flagged) spend.flagged = true;
+    if (editId) {
+      const idx = spends.findIndex(s => s.id === editId);
+      if (idx > -1) spends[idx] = spend; else spends.push(spend);
+    } else {
+      spends.push(spend);
+    }
+    spends.sort((a,b) => b.date.localeCompare(a.date));
+    saveSpends(spends);
+    closeSpendModal();
+    renderBudgetTab();
+    renderDailyCard();
+    renderBucketCards();
+    const bucketName = BUCKET_DEFS[spend.bucket]?.label || spend.bucket;
+    announce('Expense logged: $' + spend.amount.toFixed(2) + ' from ' + bucketName + ' bucket.');
+    hapticSuccess();
   }
-  spends.sort((a,b) => b.date.localeCompare(a.date));
-  saveSpends(spends);
-  closeSpendModal();
-  renderBudgetTab();
-  announce('Expense logged: $' + spend.amount.toFixed(2) + ' for ' + spend.category + '.');
-  hapticSuccess();
+  checkFriction(rawAmount, doSave);
 }
 
 function deleteSpend(id) {
@@ -5073,6 +5434,9 @@ function deleteSpend(id) {
 }
 
 function renderBudgetTab() {
+  renderBucketCards();
+  renderDopamineList();
+  renderDailyCard();
   const budgetCfg = getBudgetConfig();
   const spends    = getSpends();
   const now       = new Date();
@@ -5117,15 +5481,15 @@ function renderBudgetTab() {
   const todaySpends = spends.filter(s => s.date === TODAY);
   if (todayEl) {
     todayEl.innerHTML = todaySpends.length === 0
-      ? `<p style="font-family:var(--mono);font-size:0.6875rem;color:var(--text3);margin-bottom:8px">nothing logged today</p>`
+      ? `<p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:8px">nothing logged today</p>`
       : todaySpends.map(s => `
         <div class="history-entry" style="display:flex;align-items:center;gap:10px">
           <span style="font-size:1.2rem" aria-hidden="true">${CATEGORY_ICONS[s.category]||'📦'}</span>
           <div style="flex:1">
-            <div style="font-family:var(--mono);font-size:0.75rem;color:var(--text)">${s.note || s.category}</div>
-            <div style="font-family:var(--mono);font-size:0.625rem;color:var(--text3)">${s.category}</div>
+            <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text)">${s.note || s.category}</div>
+            <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">${s.category}</div>
           </div>
-          <span style="font-family:var(--mono);font-size:0.875rem;color:var(--accent)">$${s.amount.toFixed(2)}</span>
+          <span style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)">$${s.amount.toFixed(2)}</span>
           <button class="del-btn" onclick="deleteSpend('${s.id}')" aria-label="Delete expense">×</button>
         </div>`).join('');
   }
@@ -5134,7 +5498,7 @@ function renderBudgetTab() {
   const monthEl = document.getElementById('monthSpendList');
   if (monthEl) {
     if (monthSpends.length === 0) {
-      monthEl.innerHTML = `<p style="font-family:var(--mono);font-size:0.6875rem;color:var(--text3)">no spending logged this month</p>`;
+      monthEl.innerHTML = `<p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3)">no spending logged this month</p>`;
     } else {
       // Group by date
       const byDate = {};
@@ -5142,16 +5506,16 @@ function renderBudgetTab() {
       monthEl.innerHTML = Object.entries(byDate).map(([date, items]) => {
         const dayTotal = items.reduce((t,s)=>t+s.amount,0);
         return `<div style="margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:4px">
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:4px">
             <span>${date}</span><span>$${dayTotal.toFixed(2)}</span>
           </div>
           ${items.map(s=>`
           <div class="history-entry" style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
             <span style="font-size:1rem" aria-hidden="true">${CATEGORY_ICONS[s.category]||'📦'}</span>
             <div style="flex:1">
-              <div style="font-family:var(--mono);font-size:0.6875rem;color:var(--text)">${s.note||s.category}</div>
+              <div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text)">${s.note||s.category}</div>
             </div>
-            <span style="font-family:var(--mono);font-size:0.75rem;color:var(--text2)">$${s.amount.toFixed(2)}</span>
+            <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text2)">$${s.amount.toFixed(2)}</span>
             <button class="del-btn" onclick="deleteSpend('${s.id}')" aria-label="Delete">×</button>
           </div>`).join('')}
         </div>`;
@@ -5162,6 +5526,366 @@ function renderBudgetTab() {
   // Load budget setting into input
   const budgetInput = document.getElementById('monthlyBudget');
   if (budgetInput && budget > 0) budgetInput.value = budget;
+}
+
+// ── Budget — four buckets, dopamine list, friction flag ───────────────────
+
+const BUCKET_KEY   = 'tracker-buckets';
+const DOPAMINE_KEY = 'tracker-dopamine';
+const BIG_SPEND_THRESHOLD_DEFAULT = 50;
+
+// ── Bucket config ─────────────────────────────────────────────────────────
+const BUCKET_DEFS = {
+  essentials: { label: 'essentials', icon: '🏠', color: '#4a9e6b' },
+  daily:      { label: 'daily',      icon: '💳', color: '#c8a96e' },
+  shortterm:  { label: 'short term', icon: '🎯', color: '#8fb8d4' },
+  longterm:   { label: 'long term',  icon: '🚀', color: '#a080e0' },
+};
+
+function getBuckets() {
+  try {
+    return JSON.parse(localStorage.getItem(BUCKET_KEY) || 'null') || {
+      essentials: { limit: 0, spent: 0 },
+      daily:      { limit: 0, spent: 0 },
+      shortterm:  { limit: 0, spent: 0 },
+      longterm:   { limit: 0, spent: 0 },
+    };
+  } catch(e) {
+    return { essentials:{limit:0,spent:0}, daily:{limit:0,spent:0}, shortterm:{limit:0,spent:0}, longterm:{limit:0,spent:0} };
+  }
+}
+
+function saveBuckets(b) { localStorage.setItem(BUCKET_KEY, JSON.stringify(b)); }
+
+function openBucketDetail(bucket) {
+  // For now, open spend modal pre-filled with this bucket
+  openSpendModal();
+  setTimeout(() => {
+    const sel = document.getElementById('spendBucket');
+    if (sel) sel.value = bucket;
+  }, 100);
+}
+
+// ── Dopamine / want list ──────────────────────────────────────────────────
+function getDopamineList() {
+  try { return JSON.parse(localStorage.getItem(DOPAMINE_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+function saveDopamineList(list) { localStorage.setItem(DOPAMINE_KEY, JSON.stringify(list)); }
+
+let _currentWantLevel = 3;
+
+function openDopamineModal(id) {
+  _currentWantLevel = 3;
+  document.getElementById('dopamineEditId').value = id || '';
+  document.getElementById('dopamineModalTitle').textContent = id ? '// edit want' : '// add to want list';
+  if (id) {
+    const item = getDopamineList().find(d => d.id === id);
+    if (item) {
+      document.getElementById('dopamineName').value    = item.name;
+      document.getElementById('dopamineCost').value    = item.cost || '';
+      document.getElementById('dopamineBucket').value  = item.bucket || 'daily';
+      _currentWantLevel = item.want || 3;
+    }
+  } else {
+    document.getElementById('dopamineName').value   = '';
+    document.getElementById('dopamineCost').value   = '';
+    document.getElementById('dopamineBucket').value = 'daily';
+  }
+  updateWantStars(_currentWantLevel);
+  document.getElementById('dopamineModalOverlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('dopamineName').focus(), 100);
+}
+
+function closeDopamineModal() {
+  document.getElementById('dopamineModalOverlay').classList.add('hidden');
+}
+
+function setWantLevel(level) {
+  _currentWantLevel = level;
+  updateWantStars(level);
+}
+
+function updateWantStars(level) {
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('wantStar' + i);
+    if (el) {
+      el.classList.toggle('lit', i <= level);
+      el.setAttribute('aria-pressed', i <= level ? 'true' : 'false');
+    }
+  }
+}
+
+function saveDopamineItem() {
+  const name = document.getElementById('dopamineName')?.value.trim();
+  if (!name) { showToast('name it first'); return; }
+  const list   = getDopamineList();
+  const editId = document.getElementById('dopamineEditId').value;
+  const item   = {
+    id:     editId || 'dop_' + Date.now(),
+    name,
+    cost:   parseFloat(document.getElementById('dopamineCost')?.value || '0') || 0,
+    bucket: document.getElementById('dopamineBucket')?.value || 'daily',
+    want:   _currentWantLevel,
+    gotIt:  false,
+    added:  new Date().toISOString().split('T')[0],
+  };
+  if (editId) {
+    const idx = list.findIndex(d => d.id === editId);
+    if (idx > -1) list[idx] = { ...list[idx], ...item }; else list.push(item);
+  } else {
+    list.unshift(item);
+  }
+  saveDopamineList(list);
+  closeDopamineModal();
+  renderDopamineList();
+  announce(name + ' added to want list.');
+  hap('task');
+}
+
+function markGotIt(id) {
+  const list = getDopamineList();
+  const item = list.find(d => d.id === id);
+  if (!item) return;
+  item.gotIt   = !item.gotIt;
+  item.gotDate = item.gotIt ? new Date().toISOString().split('T')[0] : null;
+  saveDopamineList(list);
+  renderDopamineList();
+  if (item.gotIt) {
+    playSuccess();
+    hap('allDone');
+    fireConfetti(1200);
+    announce('You got it — ' + item.name + ' marked as purchased. Nice one.');
+  }
+}
+
+function deleteDopamineItem(id) {
+  saveDopamineList(getDopamineList().filter(d => d.id !== id));
+  renderDopamineList();
+}
+
+function renderDopamineList() {
+  const el = document.getElementById('dopamineList');
+  if (!el) return;
+  const list = getDopamineList();
+  if (list.length === 0) {
+    el.innerHTML = `<p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:8px">nothing on the want list yet</p>`;
+    return;
+  }
+  el.innerHTML = list.map(item => {
+    const stars  = '★'.repeat(item.want || 3) + '☆'.repeat(5 - (item.want || 3));
+    const bucket = BUCKET_DEFS[item.bucket] || BUCKET_DEFS.daily;
+    return `
+    <div class="dopamine-item${item.gotIt ? ' got-it' : ''}"
+         role="article" aria-label="${item.name}${item.gotIt ? ', purchased' : ''}">
+      <div class="dopamine-want" aria-label="Want level ${item.want || 3} of 5" aria-hidden="true">
+        ${[1,2,3,4,5].map(i => `<span class="want-star${i <= (item.want||3) ? ' lit' : ''}"
+          style="cursor:default">★</span>`).join('')}
+      </div>
+      <div class="dopamine-info">
+        <div class="dopamine-name">${escHtml(item.name)}</div>
+        <div class="dopamine-meta">${bucket.icon} ${bucket.label}${item.gotIt ? ' · got it ' + (item.gotDate||'') : ''}</div>
+      </div>
+      ${item.cost > 0 ? `<div class="dopamine-cost">$${item.cost.toFixed(0)}</div>` : ''}
+      <div class="dopamine-actions">
+        ${!item.gotIt ? `<button class="dopamine-btn got" onclick="markGotIt('${item.id}')"
+                aria-label="Mark ${escHtml(item.name)} as purchased">got it</button>` : ''}
+        <button class="dopamine-btn" onclick="openDopamineModal('${item.id}')"
+                aria-label="Edit ${escHtml(item.name)}">edit</button>
+        <button class="dopamine-btn" onclick="deleteDopamineItem('${item.id}')"
+                aria-label="Remove ${escHtml(item.name)} from want list"
+                style="color:var(--text3)">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Big purchase friction flag ────────────────────────────────────────────
+function checkFriction(amount, callback) {
+  const cfg2    = getBudgetConfig();
+  const thresh  = cfg2.bigSpendThreshold || BIG_SPEND_THRESHOLD_DEFAULT;
+  if (amount < thresh) { callback(); return; }
+
+  const notice = document.getElementById('frictionNotice');
+  if (notice) {
+    notice.textContent = `$${amount.toFixed(2)} is a big purchase. It's been flagged. Still logging it — no judgment, just noting it.`;
+    notice.classList.add('visible');
+    setTimeout(() => notice.classList.remove('visible'), 6000);
+  }
+  // Log it but also mark as flagged
+  callback(true); // true = is flagged
+}
+
+// ── Daily card on Today tab ───────────────────────────────────────────────
+function renderDailyCard() {
+  const card = document.getElementById('dailySpendCard');
+  if (!card) return;
+
+  const buckets  = getBuckets();
+  const dailyLim = buckets.daily?.limit || 0;
+
+  if (dailyLim === 0) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const spends     = getSpends();
+  const todayTotal = spends
+    .filter(s => s.date === TODAY && s.bucket === 'daily')
+    .reduce((t, s) => t + s.amount, 0);
+
+  const remaining = Math.max(0, dailyLim - todayTotal);
+  const pct       = Math.min(100, (todayTotal / dailyLim) * 100);
+  const tight     = pct > 80;
+
+  const remEl  = document.getElementById('dailyRemaining');
+  const barEl  = document.getElementById('dailyBar');
+  const spentEl = document.getElementById('dailySpent');
+  const limEl  = document.getElementById('dailyLimit');
+
+  if (remEl)   { remEl.textContent = '$' + remaining.toFixed(0); remEl.classList.toggle('tight', tight); }
+  if (barEl)   { barEl.style.width = pct + '%'; barEl.style.background = tight ? 'var(--warning)' : 'var(--success)'; }
+  if (spentEl) spentEl.textContent = '$' + todayTotal.toFixed(2) + ' spent today';
+  if (limEl)   limEl.textContent   = 'of $' + dailyLim.toFixed(0) + ' limit';
+}
+
+// ── Bucket cards ──────────────────────────────────────────────────────────
+function renderBucketCards() {
+  const buckets = getBuckets();
+  const spends  = getSpends();
+  const now     = new Date();
+  const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  // Show setup prompt if no limits set
+  const hasAnyLimit = Object.values(buckets).some(b => b.limit > 0);
+  const promptEl = document.getElementById('budgetSetupPrompt');
+  if (promptEl) promptEl.style.display = hasAnyLimit ? 'none' : 'block';
+
+  Object.entries(BUCKET_DEFS).forEach(([key, def]) => {
+    const limit   = buckets[key]?.limit || 0;
+    const spent   = spends
+      .filter(s => s.date.startsWith(monthKey) && s.bucket === key)
+      .reduce((t,s) => t + s.amount, 0);
+    const remaining = limit > 0 ? limit - spent : null;
+
+    const amtId = { essentials:'bucketEssAmount', daily:'bucketDayAmount', shortterm:'bucketSTAmount', longterm:'bucketLTAmount' }[key];
+    const limId = { essentials:'bucketEssLimit',  daily:'bucketDayLimit',  shortterm:'bucketSTLimit',  longterm:'bucketLTLimit'  }[key];
+
+    const amtEl = document.getElementById(amtId);
+    const limEl = document.getElementById(limId);
+    if (amtEl) amtEl.textContent = remaining !== null ? '$' + remaining.toFixed(0) : '$' + spent.toFixed(0);
+    if (limEl) limEl.textContent = limit > 0 ? 'of $' + limit.toFixed(0) : 'tap to set limit';
+  });
+}
+
+// ── Mood vs spending correlation (Stats tab) ──────────────────────────────
+function renderSpendMoodCorrelation() {
+  const el = document.getElementById('spendMoodCorrelation');
+  if (!el) return;
+
+  const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+  const spends  = getSpends();
+  if (history.length < 3 || spends.length < 3) {
+    el.innerHTML = `<p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">log a few more days of spending to see patterns</p>`;
+    return;
+  }
+
+  const moodMap = { dark:-2, low:-1, flat:0, ok:1, good:2, high:3 };
+
+  // Build day-level data
+  const byDay = {};
+  history.forEach(e => {
+    byDay[e.date] = { mood: moodMap[e.mood] ?? null, energy: e.energy };
+  });
+  spends.forEach(s => {
+    if (!byDay[s.date]) byDay[s.date] = {};
+    byDay[s.date].spent = (byDay[s.date].spent || 0) + s.amount;
+  });
+
+  // Days with both mood and spending
+  const paired = Object.entries(byDay)
+    .filter(([, d]) => d.mood !== null && d.mood !== undefined && d.spent > 0)
+    .map(([date, d]) => ({ date, mood: d.mood, spent: d.spent }));
+
+  if (paired.length < 3) {
+    el.innerHTML = `<p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">need more days with both mood logged and spending to show pattern</p>`;
+    return;
+  }
+
+  // Simple correlation: average spend by mood group
+  const groups = { low: [], mid: [], high: [] };
+  paired.forEach(d => {
+    if (d.mood <= -1)     groups.low.push(d.spent);
+    else if (d.mood <= 1) groups.mid.push(d.spent);
+    else                  groups.high.push(d.spent);
+  });
+
+  const avg = arr => arr.length ? (arr.reduce((s,v)=>s+v,0)/arr.length).toFixed(0) : null;
+  const lowAvg  = avg(groups.low);
+  const midAvg  = avg(groups.mid);
+  const highAvg = avg(groups.high);
+
+  const maxAvg = Math.max(lowAvg||0, midAvg||0, highAvg||0) || 1;
+
+  el.innerHTML = `
+    <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px">
+      average daily spending by mood — based on ${paired.length} days
+    </div>
+    ${[
+      { label: 'low mood',  val: lowAvg,  col: 'var(--danger)' },
+      { label: 'neutral',   val: midAvg,  col: 'var(--text2)'  },
+      { label: 'good mood', val: highAvg, col: 'var(--success)' },
+    ].filter(r => r.val !== null).map(row => `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);width:70px;flex-shrink:0">${row.label}</span>
+        <div style="flex:1;height:6px;background:var(--bg3);border-radius:var(--radius-pill);overflow:hidden">
+          <div style="height:100%;border-radius:var(--radius-pill);background:${row.col};width:${Math.round((row.val/maxAvg)*100)}%;transition:width 0.4s"></div>
+        </div>
+        <span style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text2);width:36px;text-align:right">$${row.val}</span>
+      </div>
+    `).join('')}
+    <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-top:8px;line-height:1.6">
+      This is a pattern, not a judgment. It's useful data for understanding your spending triggers.
+    </p>`;
+}
+
+// ── Bucket limit settings UI ──────────────────────────────────────────────
+function renderBucketLimitSettings() {
+  const el = document.getElementById('bucketLimitSettings');
+  if (!el) return;
+  const buckets = getBuckets();
+  const cfg2    = getBudgetConfig();
+  el.innerHTML = Object.entries(BUCKET_DEFS).map(([key, def]) => `
+    <div class="settings-task-row" style="margin-bottom:6px;align-items:center">
+      <span style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text2);flex-shrink:0;width:90px">${def.icon} ${def.label}</span>
+      <input type="number" id="bucketLimit_${key}" placeholder="limit $" min="0" step="1"
+             value="${buckets[key]?.limit || ''}"
+             style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:8px 10px;outline:none"
+             aria-label="${def.label} bucket monthly limit">
+    </div>`).join('');
+
+  // Big spend threshold
+  const threshEl = document.getElementById('bigSpendThreshold');
+  if (threshEl) threshEl.value = cfg2.bigSpendThreshold || BIG_SPEND_THRESHOLD_DEFAULT;
+}
+
+function saveBucketLimits() {
+  const buckets = getBuckets();
+  Object.keys(BUCKET_DEFS).forEach(key => {
+    const val = parseFloat(document.getElementById('bucketLimit_' + key)?.value || '0');
+    buckets[key] = { ...buckets[key], limit: val || 0 };
+  });
+  saveBuckets(buckets);
+  renderBucketCards();
+  renderDailyCard();
+  showToast('bucket limits saved ✓');
+  announce('Spending bucket limits saved.');
+}
+
+function saveBigSpendThreshold() {
+  const val  = parseFloat(document.getElementById('bigSpendThreshold')?.value || '50');
+  const cfg2 = getBudgetConfig();
+  cfg2.bigSpendThreshold = val;
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(cfg2));
+  showToast('big purchase flag set to $' + val.toFixed(0));
+  announce('Big purchase flag set to $' + val.toFixed(0));
 }
 
 // ── Screen reader announcements ───────────────────────────────────────────
@@ -5732,7 +6456,7 @@ function showToast(msg) {
     toast.style.cssText = `
       position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
       background:var(--bg3); border:0.5px solid var(--border2);
-      color:var(--text); font-family:var(--mono); font-size:12px;
+      color:var(--text); font-family:var(--font-mono); font-size:12px;
       padding:10px 18px; border-radius:20px; z-index:999;
       white-space:nowrap; box-shadow:0 4px 16px rgba(0,0,0,0.4);
       opacity:0; transition:opacity 0.2s;
@@ -5843,7 +6567,7 @@ function render() {
     const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     const histEl = document.getElementById('historyList');
     if (histEl) histEl.innerHTML = history.length === 0
-      ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text3)">no entries yet</div>`
+      ? `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">no entries yet</div>`
       : history.slice(0, 7).map(e => `
         <div class="history-entry">
           <span class="history-date">${e.date}</span>
@@ -6032,11 +6756,11 @@ function renderTaskDeadlineSettings() {
   if (!el) return;
   el.innerHTML = CRITICAL.map(t => `
     <div class="settings-task-row" style="margin-bottom:6px">
-      <span style="font-family:var(--mono);font-size:12px;color:var(--text2);flex:1">${escHtml(t.name)}</span>
+      <span style="font-family:var(--font-mono);font-size:12px;color:var(--text2);flex:1">${escHtml(t.name)}</span>
       <input type="time" data-task-id="${t.id}"
         value="${cfg.taskDeadlines[t.id] || ''}"
         onchange="setTaskDeadline('${t.id}', this.value)"
-        style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;outline:none">
+        style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:5px 8px;outline:none">
     </div>
   `).join('');
 }
@@ -6052,10 +6776,10 @@ function renderCustomTimerSettings() {
   if (!el) return;
   const timers = cfg.customTimers || [];
   el.innerHTML = timers.length === 0
-    ? `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:6px">no custom timers yet</div>`
+    ? `<div style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-bottom:6px">no custom timers yet</div>`
     : timers.map(t => `
       <div class="settings-task-row" style="margin-bottom:6px">
-        <span style="font-family:var(--mono);font-size:12px;color:var(--text2);flex:1">${escHtml(t.name)} (${t.durationMins}m)</span>
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--text2);flex:1">${escHtml(t.name)} (${t.durationMins}m)</span>
         <button class="del-btn" onclick="deleteCustomTimer('${t.id}')">×</button>
       </div>
     `).join('');
