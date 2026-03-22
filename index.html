@@ -19,6 +19,24 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
 
+  /* ── Text scale ── */
+  :root {
+    --text-scale: 1;
+    --base-font: calc(1rem * var(--text-scale));
+  }
+  :root[data-text-size="large"] { --text-scale: 1.2; }
+  :root[data-text-size="xl"]    { --text-scale: 1.45; }
+  :root[data-text-size="small"] { --text-scale: 0.85; }
+
+  /* ── Reduce motion ── */
+  :root[data-reduce-motion="true"] *,
+  :root[data-reduce-motion="true"] *::before,
+  :root[data-reduce-motion="true"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
   /* ── Dark theme (default) ── */
   :root {
     --bg: #0f0f0f;
@@ -118,6 +136,29 @@
     }
   }
 
+  /* ── Large touch targets option ── */
+  :root[data-large-targets="true"] button,
+  :root[data-large-targets="true"] [role="button"],
+  :root[data-large-targets="true"] .nav-tab,
+  :root[data-large-targets="true"] .task,
+  :root[data-large-targets="true"] .mood-btn,
+  :root[data-large-targets="true"] .sym-btn,
+  :root[data-large-targets="true"] .btn,
+  :root[data-large-targets="true"] .add-btn,
+  :root[data-large-targets="true"] .toggle-switch,
+  :root[data-large-targets="true"] .theme-opt,
+  :root[data-large-targets="true"] .vibration-opt,
+  :root[data-large-targets="true"] .audio-opt {
+    min-height: 56px !important;
+    min-width: 56px !important;
+  }
+  :root[data-large-targets="true"] .nav-tab {
+    padding: 0 1.2rem !important;
+  }
+  :root[data-large-targets="true"] .task {
+    padding: 1rem !important;
+  }
+
   /* ── Skip to main content ── */
   .skip-link {
     position: absolute;
@@ -126,7 +167,7 @@
     background: var(--accent);
     color: var(--bg);
     font-family: var(--mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
     padding: 8px 16px;
     border-radius: var(--radius);
     z-index: 9999;
@@ -168,6 +209,7 @@
   }
 
   /* ── Top nav bar ── */
+  /* ── Two-row navbar ── */
   .navbar {
     position: sticky;
     top: 0;
@@ -175,28 +217,80 @@
     background: var(--bg2);
     border-bottom: 0.5px solid var(--border);
     display: flex;
+    flex-direction: column;
+  }
+
+  .navbar-row1 {
+    display: flex;
     align-items: stretch;
-    justify-content: space-between;
-    padding: 0 1rem;
-    height: 52px;
+    height: 48px;
+    padding: 0 0.5rem;
+  }
+
+  .navbar-row2 {
+    display: flex;
+    align-items: stretch;
+    height: 36px;
+    border-top: 0.5px solid var(--border);
+    padding: 0 0.5rem;
+    background: var(--bg3);
   }
 
   .navbar-brand {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 500;
     color: var(--accent);
     display: flex;
     align-items: center;
     letter-spacing: 0.02em;
     flex-shrink: 0;
-    margin-right: 1rem;
+    margin-right: 0.5rem;
+    white-space: nowrap;
   }
 
   .navbar-tabs {
     display: flex;
     align-items: stretch;
+    flex: 1;
     gap: 0;
+  }
+
+  /* Accessibility toolbar (row 2) */
+  .navbar-a11y {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    flex: 1;
+  }
+
+  .nav-a11y-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-right: 0.5px solid var(--border);
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 0.5625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    white-space: nowrap;
+    min-height: 36px;
+    padding: 0 4px;
+  }
+  .nav-a11y-btn:last-child { border-right: none; }
+  .nav-a11y-btn:hover { color: var(--accent); background: var(--bg2); }
+  .nav-a11y-btn.active { color: var(--accent); background: var(--warning-bg); }
+  .nav-a11y-btn .a11y-icon { font-size: 0.8125rem; }
+  .nav-a11y-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
 
   .nav-tab {
@@ -211,7 +305,7 @@
     border-bottom: 2px solid transparent;
     color: var(--text3);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     cursor: pointer;
@@ -219,7 +313,7 @@
     white-space: nowrap;
   }
 
-  .nav-tab .tab-icon { font-size: 15px; line-height: 1; }
+  .nav-tab .tab-icon { font-size: 0.9375rem; line-height: 1; }
 
   .nav-tab:hover { color: var(--text2); }
 
@@ -241,7 +335,7 @@
     border-left: 0.5px solid var(--border);
     color: var(--text3);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     cursor: pointer;
@@ -252,10 +346,28 @@
   .nav-theme-btn:hover { color: var(--accent); }
   .nav-theme-btn .tab-icon { font-size: 17px; line-height: 1; }
   /* High-contrast focus ring for keyboard/screen-reader users */
+  /* ── Strong focus indicators for low vision ── */
+  :focus-visible {
+    outline: 3px solid var(--accent) !important;
+    outline-offset: 3px !important;
+    box-shadow: 0 0 0 6px rgba(200,169,110,0.25) !important;
+  }
+  :root[data-theme="light"] :focus-visible {
+    outline-color: var(--accent) !important;
+    box-shadow: 0 0 0 6px rgba(154,111,46,0.25) !important;
+  }
+  /* High contrast focus */
+  @media (prefers-contrast: more) {
+    :focus-visible {
+      outline: 4px solid #fff !important;
+      outline-offset: 3px !important;
+      box-shadow: 0 0 0 8px #000 !important;
+    }
+  }
   .nav-theme-btn:focus-visible,
   .nav-tab:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
   }
 
   /* ── Page views ── */
@@ -270,7 +382,7 @@
 
   h1 {
     font-family: var(--mono);
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 500;
     color: var(--accent);
     letter-spacing: 0.02em;
@@ -278,7 +390,7 @@
 
   .date {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text3);
   }
 
@@ -295,13 +407,13 @@
 
   .nag-banner p {
     font-family: var(--mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--danger);
     font-weight: 500;
   }
 
   .nag-banner span {
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--danger);
     opacity: 0.7;
     display: block;
@@ -325,7 +437,7 @@
 
   .stat-num {
     font-family: var(--mono);
-    font-size: 28px;
+    font-size: 1.75rem;
     font-weight: 500;
     color: var(--text);
     display: block;
@@ -335,7 +447,7 @@
   .stat-num.danger { color: var(--danger); }
 
   .stat-label {
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -347,7 +459,7 @@
 
   .section-label {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -429,7 +541,7 @@
   /* ── Task timer label ── */
   .task-timer {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     margin-top: 3px;
   }
@@ -439,7 +551,7 @@
   /* ── Daily window timer ── */
   .window-timer {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text3);
     margin-top: 4px;
   }
@@ -460,8 +572,8 @@
   }
   .ctimer-ring { flex-shrink: 0; }
   .ctimer-info { flex: 1; }
-  .ctimer-name { font-size: 13px; color: var(--text); }
-  .ctimer-countdown { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-top: 2px; }
+  .ctimer-name { font-size: 0.8125rem; color: var(--text); }
+  .ctimer-countdown { font-family: var(--mono); font-size: 0.75rem; color: var(--accent); margin-top: 2px; }
   .ctimer-countdown.done { color: var(--success); }
   .ctimer-countdown.overdue { color: var(--danger); }
   .ctimer-actions { display: flex; gap: 6px; }
@@ -471,7 +583,7 @@
     border-radius: var(--radius);
     color: var(--text3);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     padding: 4px 8px;
     cursor: pointer;
     transition: all 0.1s;
@@ -480,13 +592,13 @@
   .ctimer-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
 
   .task-name {
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--text);
     flex: 1;
   }
 
   .task-sub {
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text3);
     margin-top: 2px;
     font-family: var(--mono);
@@ -502,7 +614,7 @@
 
   .symptom-header {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--accent);
     margin-bottom: 14px;
   }
@@ -517,7 +629,7 @@
 
   .mood-type {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     width: 44px;
     flex-shrink: 0;
@@ -533,7 +645,7 @@
     border-radius: var(--radius);
     background: transparent;
     color: var(--text2);
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-family: var(--mono);
     cursor: pointer;
     transition: all 0.1s;
@@ -551,7 +663,7 @@
 
   .flag-label {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -571,7 +683,7 @@
     border-radius: var(--radius);
     background: transparent;
     color: var(--text3);
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-family: var(--mono);
     cursor: pointer;
     text-align: left;
@@ -593,7 +705,7 @@
     border-radius: var(--radius);
     color: var(--text);
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     padding: 10px 12px;
     resize: none;
     outline: none;
@@ -613,7 +725,7 @@
     background: transparent;
     color: var(--text2);
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.15s;
     text-align: center;
@@ -626,7 +738,7 @@
 
   .confirm {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--success);
     margin-top: 8px;
     display: none;
@@ -661,7 +773,7 @@
   }
   .preview-label {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: rgba(255,255,255,0.5);
     text-align: center;
   }
@@ -684,7 +796,7 @@
     padding: 10px 14px;
     margin-bottom: 6px;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text2);
     display: flex;
     justify-content: space-between;
@@ -694,17 +806,141 @@
   }
 
   .history-date { color: var(--accent); }
-  .history-flags { color: var(--danger); font-size: 10px; }
+  .history-flags { color: var(--danger); font-size: 0.625rem; }
 
   .footer {
     margin-top: 2rem;
     padding-top: 1rem;
     border-top: 0.5px solid var(--border);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     text-align: center;
   }
+
+  /* ── Confetti canvas ── */
+  #confettiCanvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9000;
+  }
+
+  /* ── Milestone overlay ── */
+  .milestone-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 9500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+  }
+  .milestone-overlay.hidden { display: none; }
+  .milestone-emoji { font-size: 64px; margin-bottom: 16px; line-height: 1; }
+  .milestone-title {
+    font-family: var(--mono);
+    font-size: 1.375rem;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .milestone-msg {
+    font-size: 0.9375rem;
+    color: var(--text2);
+    line-height: 1.6;
+    max-width: 320px;
+    margin-bottom: 24px;
+  }
+  .milestone-points {
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    color: var(--success);
+    margin-bottom: 20px;
+  }
+
+  /* ── Points display ── */
+  .points-banner {
+    background: var(--warning-bg);
+    border: 0.5px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+  }
+  .points-total { font-size: 1.5rem; color: var(--accent); font-weight: 500; }
+  .points-label { font-size: 0.625rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* ── Badges grid ── */
+  .badges-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+  .badge-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 8px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+  .badge-card.earned { border-color: var(--accent); }
+  .badge-card.locked { opacity: 0.4; }
+  .badge-icon { font-size: 1.75rem; display: block; margin-bottom: 4px; }
+  .badge-name { font-family: var(--mono); font-size: 0.625rem; color: var(--text2); display: block; }
+  .badge-date { font-family: var(--mono); font-size: 0.5625rem; color: var(--text3); display: block; margin-top: 2px; }
+
+  /* ── Weekly/monthly cards ── */
+  .summary-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 1rem;
+  }
+  .summary-card-title {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    color: var(--accent);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .summary-card-stat {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text2);
+    padding: 4px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .summary-card-stat:last-child { border-bottom: none; }
+  .summary-card-stat span:last-child { color: var(--accent); }
+
+  /* ── Nag banner encouraging text ── */
+  .nag-encouragement {
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    color: var(--accent);
+    opacity: 0.8;
+    margin-top: 4px;
+  }
+
+  /* ── Task completion flash ── */
+  @keyframes taskFlash {
+    0%   { background: var(--success-bg); }
+    100% { background: var(--bg2); }
+  }
+  .task.just-done { animation: taskFlash 0.5s ease-out; }
 
   /* ── Settings segments ── */
   .settings-segment {
@@ -728,7 +964,7 @@
 
   .settings-segment-header h2 {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 500;
     color: var(--accent);
     text-transform: uppercase;
@@ -748,14 +984,14 @@
 
   .notif-toggle-label {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text2);
     flex: 1;
   }
 
   .notif-toggle-label span {
     display: block;
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     margin-top: 2px;
   }
@@ -820,7 +1056,7 @@
   }
   .audio-row label {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -842,7 +1078,7 @@
     background: transparent;
     color: var(--text3);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     cursor: pointer;
     transition: all 0.15s;
     min-height: 28px;
@@ -861,7 +1097,7 @@
   }
   .audio-upload-label {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text2);
     cursor: pointer;
     background: var(--bg3);
@@ -876,7 +1112,7 @@
   .audio-upload-label:hover { border-color: var(--accent); color: var(--accent); }
   .audio-file-name {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     flex: 1;
   }
@@ -886,7 +1122,7 @@
     border-radius: var(--radius);
     color: var(--text3);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     padding: 5px 10px;
     cursor: pointer;
     min-height: 44px;
@@ -903,7 +1139,7 @@
   }
   .volume-row label {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -918,7 +1154,7 @@
   }
   .volume-val {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     width: 32px;
     text-align: right;
@@ -935,7 +1171,7 @@
 
   .vibration-row label {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -958,7 +1194,7 @@
     background: transparent;
     color: var(--text3);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     cursor: pointer;
     transition: all 0.15s;
     min-height: 28px;
@@ -987,7 +1223,7 @@
 
   .history-section-header h2 {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -1016,20 +1252,20 @@
   .onboarding-card { max-width: 420px; width: 100%; }
   .onboarding-card h2 {
     font-family: var(--mono);
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 500;
     color: var(--accent);
     margin-bottom: 8px;
   }
   .onboarding-card p {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--text2);
     margin-bottom: 24px;
     line-height: 1.6;
   }
   .onboarding-card label {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -1043,7 +1279,7 @@
     border-radius: var(--radius);
     color: var(--text);
     font-family: var(--mono);
-    font-size: 14px;
+    font-size: 0.875rem;
     padding: 10px 12px;
     outline: none;
     margin-bottom: 20px;
@@ -1062,7 +1298,7 @@
   .settings-panel.open { display: block; }
   .settings-section-title {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--accent);
     margin-bottom: 10px;
     margin-top: 16px;
@@ -1076,18 +1312,18 @@
     border-radius: var(--radius);
     color: var(--text);
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     padding: 6px 10px;
     outline: none;
   }
   .settings-task-row input[type="text"]:focus { border-color: var(--border2); }
-  .settings-task-row input.sub-input { font-size: 11px; color: var(--text3); max-width: 160px; }
+  .settings-task-row input.sub-input { font-size: 0.6875rem; color: var(--text3); max-width: 160px; }
   .del-btn {
     background: transparent;
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     color: var(--text3);
-    font-size: 14px;
+    font-size: 0.875rem;
     width: 28px; height: 28px;
     cursor: pointer;
     flex-shrink: 0;
@@ -1101,7 +1337,7 @@
     border-radius: var(--radius);
     color: var(--text3);
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     padding: 5px 12px;
     cursor: pointer;
     margin-top: 4px;
@@ -1116,12 +1352,12 @@
     border-radius: var(--radius);
     padding: 4px 8px;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text2);
   }
   .sym-edit-chip button {
     background: none; border: none; color: var(--text3);
-    cursor: pointer; font-size: 13px; padding: 0; line-height: 1;
+    cursor: pointer; font-size: 0.8125rem; padding: 0; line-height: 1;
   }
   .sym-edit-chip button:hover { color: var(--danger); }
   .sym-add-row { display: flex; gap: 8px; margin-top: 4px; }
@@ -1132,7 +1368,7 @@
     border-radius: var(--radius);
     color: var(--text);
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     padding: 6px 10px;
     outline: none;
   }
@@ -1150,17 +1386,17 @@
     padding: 18px 16px;
     text-align: center;
   }
-  .stat-card .stat-num { font-family: var(--mono); font-size: 36px; font-weight: 500; color: var(--text); display: block; }
+  .stat-card .stat-num { font-family: var(--mono); font-size: 2.25rem; font-weight: 500; color: var(--text); display: block; }
   .stat-card .stat-num.accent { color: var(--accent); }
   .stat-card .stat-num.danger { color: var(--danger); }
   .stat-card .stat-num.success { color: var(--success); }
-  .stat-card .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; display: block; }
-  .stat-card .stat-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 6px; display: block; }
+  .stat-card .stat-label { font-size: 0.6875rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; display: block; }
+  .stat-card .stat-sub { font-family: var(--mono); font-size: 0.625rem; color: var(--text3); margin-top: 6px; display: block; }
 
   /* ── Appointments ── */
   .appt-section-title {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -1182,7 +1418,7 @@
     gap: 8px;
     margin-bottom: 6px;
   }
-  .appt-title { font-size: 14px; color: var(--text); font-weight: 500; }
+  .appt-title { font-size: 0.875rem; color: var(--text); font-weight: 500; }
   .appt-actions { display: flex; gap: 6px; flex-shrink: 0; }
   .appt-btn {
     background: transparent;
@@ -1190,7 +1426,7 @@
     border-radius: var(--radius);
     color: var(--text3);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     padding: 3px 8px;
     cursor: pointer;
     transition: all 0.1s;
@@ -1199,20 +1435,20 @@
   .appt-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
   .appt-meta {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text2);
     margin-bottom: 4px;
   }
   .appt-countdown {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--accent);
     margin-bottom: 4px;
   }
   .appt-countdown.soon { color: var(--warning); }
   .appt-countdown.overdue { color: var(--danger); }
   .appt-notes {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--text3);
     margin-top: 6px;
     line-height: 1.5;
@@ -1224,7 +1460,7 @@
     border-radius: var(--radius);
     color: var(--text3);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     padding: 5px 12px;
     cursor: pointer;
     transition: all 0.1s;
@@ -1257,14 +1493,14 @@
   }
   .appt-modal h3 {
     font-family: var(--mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--accent);
     margin-bottom: 16px;
   }
   .appt-field { margin-bottom: 12px; }
   .appt-field label {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -1278,7 +1514,7 @@
     border-radius: var(--radius);
     color: var(--text);
     font-family: var(--mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
     padding: 8px 10px;
     outline: none;
   }
@@ -1289,7 +1525,7 @@
     align-items: center;
     gap: 10px;
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--text2);
     margin-bottom: 12px;
   }
@@ -1308,13 +1544,13 @@
   }
   .summary-modal h3 {
     font-family: var(--mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--accent);
     margin-bottom: 12px;
   }
   .summary-text {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text2);
     line-height: 1.7;
     white-space: pre-wrap;
@@ -1332,12 +1568,12 @@
     padding: 10px 14px;
     margin-bottom: 1.5rem;
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--accent);
     display: none;
   }
   .next-appt-banner.visible { display: block; }
-  .next-appt-banner span { color: var(--text3); font-size: 10px; display: block; margin-top: 2px; }
+  .next-appt-banner span { color: var(--text3); font-size: 0.625rem; display: block; margin-top: 2px; }
 
   /* history view */
   .history-entry {
@@ -1347,7 +1583,7 @@
     padding: 12px 14px;
     margin-bottom: 8px;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text2);
   }
   .history-entry-top {
@@ -1358,9 +1594,9 @@
     gap: 8px;
     margin-bottom: 6px;
   }
-  .history-date { color: var(--accent); font-size: 12px; }
+  .history-date { color: var(--accent); font-size: 0.75rem; }
   .history-flags { color: var(--danger); }
-  .history-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 10px; color: var(--text3); }
+  .history-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.625rem; color: var(--text3); }
 
   /* ── Theme toggle pill ── */
   .theme-row {
@@ -1384,7 +1620,7 @@
     background: transparent;
     color: var(--text3);
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     cursor: pointer;
     transition: all 0.15s;
   }
@@ -1399,6 +1635,22 @@
 
 <!-- Skip to main content (screen readers / keyboard users) -->
 <a class="skip-link" href="#main-content">Skip to main content</a>
+
+<!-- Confetti canvas -->
+<canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+<!-- Milestone celebration overlay -->
+<div class="milestone-overlay hidden" id="milestoneOverlay"
+     role="dialog" aria-modal="true" aria-labelledby="milestoneTitleEl">
+  <div class="milestone-emoji" id="milestoneEmoji" aria-hidden="true">🎉</div>
+  <div class="milestone-title" id="milestoneTitleEl"></div>
+  <div class="milestone-msg"   id="milestoneMsgEl"></div>
+  <div class="milestone-points" id="milestonePointsEl" aria-live="polite"></div>
+  <button class="btn primary" style="min-width:160px"
+          onclick="closeMilestone()" aria-label="Close celebration">
+    let's go ✓
+  </button>
+</div>
 
 <!-- ARIA live regions — screen readers announce changes here without focus moving -->
 <div id="ariaStatus"   role="status"   aria-live="polite"   aria-atomic="true" class="sr-only">&#8203;</div>
@@ -1417,26 +1669,49 @@
 
 <!-- Top nav bar -->
 <nav class="navbar" role="navigation" aria-label="Main navigation">
-  <span class="navbar-brand" aria-hidden="true">// tracker</span>
-  <div class="navbar-tabs" role="tablist">
-    <button class="nav-tab active" id="tab-today"    role="tab" aria-selected="true"  aria-controls="page-today"    onclick="switchTab('today')">
-      <span class="tab-icon" aria-hidden="true">◈</span><span>today</span>
-    </button>
-    <button class="nav-tab" id="tab-history" role="tab" aria-selected="false" aria-controls="page-history" onclick="switchTab('history')">
-      <span class="tab-icon" aria-hidden="true">▤</span><span>history</span>
-    </button>
-    <button class="nav-tab" id="tab-stats"   role="tab" aria-selected="false" aria-controls="page-stats"   onclick="switchTab('stats')">
-      <span class="tab-icon" aria-hidden="true">◎</span><span>stats</span>
-    </button>
-    <button class="nav-tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="page-settings" onclick="switchTab('settings')">
-      <span class="tab-icon" aria-hidden="true">⚙</span><span>settings</span>
-    </button>
+  <!-- Row 1: brand + main tabs -->
+  <div class="navbar-row1">
+    <span class="navbar-brand" aria-hidden="true">// tracker</span>
+    <div class="navbar-tabs" role="tablist">
+      <button class="nav-tab active" id="tab-today"    role="tab" aria-selected="true"  aria-controls="page-today"    onclick="switchTab('today')">
+        <span class="tab-icon" aria-hidden="true">◈</span><span>today</span>
+      </button>
+      <button class="nav-tab" id="tab-history" role="tab" aria-selected="false" aria-controls="page-history" onclick="switchTab('history')">
+        <span class="tab-icon" aria-hidden="true">▤</span><span>history</span>
+      </button>
+      <button class="nav-tab" id="tab-stats"   role="tab" aria-selected="false" aria-controls="page-stats"   onclick="switchTab('stats')">
+        <span class="tab-icon" aria-hidden="true">◎</span><span>stats</span>
+      </button>
+      <button class="nav-tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="page-settings" onclick="switchTab('settings')">
+        <span class="tab-icon" aria-hidden="true">⚙</span><span>settings</span>
+      </button>
+    </div>
   </div>
-  <button class="nav-theme-btn" id="navThemeBtn" onclick="cycleTheme()"
-          aria-label="Toggle colour theme" title="Toggle light / dark theme">
-    <span class="tab-icon" id="navThemeIcon" aria-hidden="true">◑</span>
-    <span id="navThemeLabel">theme</span>
-  </button>
+  <!-- Row 2: accessibility toolbar -->
+  <div class="navbar-row2" role="toolbar" aria-label="Accessibility controls">
+    <div class="navbar-a11y">
+      <button class="nav-a11y-btn" id="navThemeBtn" onclick="cycleTheme()"
+              aria-label="Toggle colour theme">
+        <span class="a11y-icon" id="navThemeIcon" aria-hidden="true">◑</span>
+        <span id="navThemeLabel">theme</span>
+      </button>
+      <button class="nav-a11y-btn" id="navContrastBtn" onclick="toggleHighContrast()"
+              aria-label="Toggle high contrast" aria-pressed="false">
+        <span class="a11y-icon" aria-hidden="true">◐</span>
+        <span>contrast</span>
+      </button>
+      <button class="nav-a11y-btn" id="navTextSizeBtn" onclick="cycleTextSize()"
+              aria-label="Cycle text size">
+        <span class="a11y-icon" id="navTextSizeIcon" aria-hidden="true">A</span>
+        <span id="navTextSizeLabel">text</span>
+      </button>
+      <button class="nav-a11y-btn" id="navMotionBtn" onclick="toggleReduceMotion()"
+              aria-label="Toggle reduce motion" aria-pressed="false">
+        <span class="a11y-icon" aria-hidden="true">⏸</span>
+        <span>motion</span>
+      </button>
+    </div>
+  </div>
 </nav>
 
 <!-- ── TODAY ── -->
@@ -1453,6 +1728,7 @@
     <div class="nag-banner" id="nagBanner" role="alert" aria-live="assertive" aria-atomic="true">
       <p id="nagText"></p>
       <span>these are not optional. do them and come back.</span>
+      <div class="nag-encouragement" id="nagEncouragement"></div>
     </div>
 
     <div class="stats-row">
@@ -1609,6 +1885,20 @@
     <div class="header">
       <h1 style="font-family:var(--mono);font-size:14px;color:var(--accent)" id="stats-heading">your stats</h1>
     </div>
+
+    <!-- Points banner -->
+    <div class="points-banner" aria-label="Total points">
+      <div>
+        <div class="points-total" id="totalPointsDisplay">0</div>
+        <div class="points-label">total points</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--mono);font-size:12px;color:var(--text2)" id="pointsMultiplier">×1 multiplier</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">streak bonus</div>
+      </div>
+    </div>
+
+    <!-- Core stats -->
     <div class="stats-grid">
       <div class="stat-card">
         <span class="stat-num accent" id="bigStreak">0</span>
@@ -1631,8 +1921,20 @@
         <span class="stat-sub">per logged day</span>
       </div>
     </div>
-    <div class="section-label" style="margin-bottom:10px">mood over time</div>
-    <div id="moodTimeline"></div>
+
+    <!-- Badges -->
+    <h2 class="section-label" style="margin-bottom:10px">badges</h2>
+    <div class="badges-grid" id="badgesGrid" aria-label="Earned badges"></div>
+
+    <!-- Weekly summary card -->
+    <div id="weeklySummaryCard"></div>
+
+    <!-- Monthly summary card -->
+    <div id="monthlySummaryCard"></div>
+
+    <!-- Mood timeline -->
+    <h2 class="section-label" style="margin-bottom:10px">mood over time</h2>
+    <div id="moodTimeline" aria-label="Mood timeline"></div>
   </div>
 </div>
 
@@ -1666,6 +1968,57 @@
           <button class="theme-opt" id="themeOptDark"   onclick="setTheme('dark')"
                   role="radio" aria-checked="false">dark</button>
         </div>
+      </div>
+
+      <div class="settings-divider"></div>
+      <div class="settings-segment-header" style="margin-top:12px;margin-bottom:10px;border:none;padding:0">
+        <h2 id="seg-accessibility" style="color:var(--text2)">accessibility</h2>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">text size</div>
+        <div class="theme-pill" role="radiogroup" aria-label="Text size">
+          <button class="theme-opt" id="textSizeSmall"  onclick="setTextSize('small')"  role="radio" aria-checked="false">S</button>
+          <button class="theme-opt active" id="textSizeNormal" onclick="setTextSize('normal')" role="radio" aria-checked="true">A</button>
+          <button class="theme-opt" id="textSizeLarge"  onclick="setTextSize('large')"  role="radio" aria-checked="false">A+</button>
+          <button class="theme-opt" id="textSizeXL"     onclick="setTextSize('xl')"     role="radio" aria-checked="false">A++</button>
+        </div>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          larger touch targets
+          <span>increases tap area to 56px minimum</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable larger touch targets">
+          <input type="checkbox" id="largeTouchTargets"
+                 onchange="setLargeTouchTargets(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          reduce motion
+          <span>disables animations and confetti</span>
+        </div>
+        <label class="toggle-switch" aria-label="Reduce motion">
+          <input type="checkbox" id="settingsReduceMotion"
+                 onchange="toggleReduceMotion(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          high contrast
+          <span>stronger colours for low vision</span>
+        </div>
+        <label class="toggle-switch" aria-label="High contrast mode">
+          <input type="checkbox" id="settingsHighContrast"
+                 onchange="setHighContrast(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
       </div>
     </section>
 
@@ -2210,6 +2563,7 @@ if (!cfg.tgChatId)           cfg.tgChatId = '';
 if (!cfg.windowCloseTime)    cfg.windowCloseTime = '';
 if (!cfg.taskDeadlines)      cfg.taskDeadlines = {};
 if (!cfg.customTimers)       cfg.customTimers = [];
+if (!cfg.a11y)               cfg.a11y = { textSize: 'normal', highContrast: false, reduceMotion: false, largeTouchTargets: false };
 if (!cfg.notifPrefs) cfg.notifPrefs = {
   taskBrowser: true,   taskTelegram: true,   taskVib: 'gentle',
   timerBrowser: true,  windowBrowser: true,  timerVib: 'gentle',
@@ -2298,6 +2652,7 @@ function initOnboarding() {
   updateWindowTimer();
   syncNotifPrefsUI();
   syncAudioUI();
+  applyA11yPrefs();
   if (!cfg.name) {
     document.getElementById('onboarding').classList.remove('hidden');
     setTimeout(() => document.getElementById('nameInput').focus(), 100);
@@ -2555,6 +2910,7 @@ function showSummary(apptId) {
   const text = generateSummary(appt ? appt.title : 'appointment');
   document.getElementById('summaryText').textContent = text;
   document.getElementById('summaryModalOverlay').classList.remove('hidden');
+  earnBadge('appointment');
 }
 
 function closeSummaryModal() {
@@ -2636,6 +2992,10 @@ function renderHistory() {
 
 function renderStats() {
   document.getElementById('bigStreak').textContent = state.medStreak || 0;
+  renderPointsDisplay(true);  // announces to screen readers
+  renderBadges();
+  renderWeeklySummaryCard();
+  renderMonthlySummaryCard();
   try {
     const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     document.getElementById('bigDaysLogged').textContent = history.length;
@@ -2874,6 +3234,638 @@ function syncAudioUI() {
   });
 }
 
+// ── Dopamine / reward system ─────────────────────────────────────────────
+
+// ── Points system ─────────────────────────────────────────────────────────
+const POINTS_KEY   = 'tracker-points';
+const BADGES_KEY   = 'tracker-badges';
+const WEEKLY_KEY   = 'tracker-weekly-summary';
+const MONTHLY_KEY  = 'tracker-monthly-summary';
+
+const TASK_POINTS  = 10;   // per task completion
+const STREAK_BONUS = 5;    // extra per day for streak continuation
+const ALL_DONE_BONUS = 25; // bonus for all non-negotiables
+
+function getPoints()  { try { return JSON.parse(localStorage.getItem(POINTS_KEY) || '0'); } catch(e) { return 0; } }
+function addPoints(n) {
+  const total = getPoints() + n;
+  localStorage.setItem(POINTS_KEY, JSON.stringify(total));
+  return total;
+}
+
+function getStreakMultiplier() {
+  const streak = state.medStreak || 0;
+  if (streak >= 100) return 4;
+  if (streak >= 30)  return 3;
+  if (streak >= 7)   return 2;
+  return 1;
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────
+const BADGE_DEFS = [
+  { id: 'first_task',    icon: '⭐', name: 'first step',     desc: 'Complete your first task' },
+  { id: 'streak_3',      icon: '🔥', name: '3-day streak',   desc: '3 days of meds in a row' },
+  { id: 'streak_7',      icon: '💪', name: 'one week',       desc: '7-day medication streak' },
+  { id: 'streak_30',     icon: '🏆', name: 'one month',      desc: '30-day medication streak' },
+  { id: 'streak_100',    icon: '💎', name: '100 days',       desc: '100-day medication streak' },
+  { id: 'streak_365',    icon: '👑', name: 'one year',       desc: '365-day medication streak' },
+  { id: 'all_done',      icon: '✅', name: 'full day',       desc: 'Complete all tasks in a day' },
+  { id: 'full_week',     icon: '📅', name: 'perfect week',   desc: 'All non-neg done every day for 7 days' },
+  { id: 'points_100',    icon: '💯', name: '100 points',     desc: 'Earn 100 total points' },
+  { id: 'points_1000',   icon: '🚀', name: '1000 points',    desc: 'Earn 1000 total points' },
+  { id: 'mood_logged',   icon: '📊', name: 'self-aware',     desc: 'Log mood 7 days in a row' },
+  { id: 'appointment',   icon: '🏥', name: 'prepared',       desc: 'Use pre-appointment summary' },
+];
+
+function getBadges()    { try { return JSON.parse(localStorage.getItem(BADGES_KEY) || '{}'); } catch(e) { return {}; } }
+function saveBadges(b)  { localStorage.setItem(BADGES_KEY, JSON.stringify(b)); }
+
+function earnBadge(id) {
+  const badges = getBadges();
+  if (badges[id]) return false; // already earned
+  badges[id] = new Date().toISOString().split('T')[0];
+  saveBadges(badges);
+  const def = BADGE_DEFS.find(b => b.id === id);
+  if (def) {
+    // Play badge sound immediately (doesn't wait for overlay)
+    playBadgeSound();
+    hap('badge');
+    // Short delay then show overlay
+    setTimeout(() => showMilestone(def.icon, 'badge unlocked: ' + def.name, def.desc, 50, 'badge'), 300);
+  }
+  return true;
+}
+
+function checkBadges() {
+  const streak = state.medStreak || 0;
+  const points = getPoints();
+  const all    = [...CRITICAL, ...DAILY];
+  const done   = all.filter(t => state.tasks[t.id]).length;
+
+  if (done >= 1)               earnBadge('first_task');
+  if (streak >= 3)             earnBadge('streak_3');
+  if (streak >= 7)             earnBadge('streak_7');
+  if (streak >= 30)            earnBadge('streak_30');
+  if (streak >= 100)           earnBadge('streak_100');
+  if (streak >= 365)           earnBadge('streak_365');
+  if (done === all.length)     earnBadge('all_done');
+  if (points >= 100)           earnBadge('points_100');
+  if (points >= 1000)          earnBadge('points_1000');
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────────
+function fireConfetti(duration) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const canvas = document.getElementById('confettiCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.display = 'block';
+
+  const colors = ['#c8a96e','#4a9e6b','#8fb8d4','#e07070','#f0c040','#a080e0'];
+  const pieces = Array.from({length: 80}, () => ({
+    x:    Math.random() * canvas.width,
+    y:    Math.random() * canvas.height - canvas.height,
+    w:    6 + Math.random() * 8,
+    h:    10 + Math.random() * 8,
+    rot:  Math.random() * 360,
+    rotV: (Math.random() - 0.5) * 8,
+    vx:   (Math.random() - 0.5) * 4,
+    vy:   3 + Math.random() * 4,
+    col:  colors[Math.floor(Math.random() * colors.length)],
+    alpha: 1
+  }));
+
+  const end = Date.now() + (duration || 2000);
+  function frame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const now = Date.now();
+    const fade = Math.max(0, (end - now) / 800);
+    pieces.forEach(p => {
+      p.x   += p.vx;
+      p.y   += p.vy;
+      p.rot += p.rotV;
+      p.vy  += 0.1; // gravity
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, fade) * p.alpha;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * Math.PI / 180);
+      ctx.fillStyle = p.col;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    });
+    if (now < end) requestAnimationFrame(frame);
+    else { ctx.clearRect(0,0,canvas.width,canvas.height); canvas.style.display = 'none'; }
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── Celebration sounds — rich audio for all users including blind ─────────
+
+// Haptic patterns per celebration type
+const HAPTIC = {
+  task:         [40, 20, 80],                          // quick double
+  allDone:      [80, 40, 80, 40, 200],                 // two bumps + long
+  badge:        [30, 20, 30, 20, 30, 40, 150],         // triple tap + long
+  streak7:      [100, 50, 100, 50, 300],               // firm double + long
+  streak30:     [100, 50, 100, 50, 100, 50, 400],      // triple firm + long
+  streak100:    [200, 80, 200, 80, 200, 80, 600],      // strong triple + boom
+  streak365:    [300, 100, 300, 100, 300, 100, 800],   // max intensity
+  points:       [30, 20, 60],                          // light confirm
+};
+
+function hap(type) {
+  const reduceMotion = (cfg.a11y || {}).reduceMotion;
+  if (navigator.vibrate && !reduceMotion) {
+    navigator.vibrate(HAPTIC[type] || HAPTIC.task);
+  }
+}
+
+// Task completion — ascending 5-note chime
+function playSuccess() {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    [523, 659, 784, 1047, 1319].forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t = now + i * 0.1;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.25, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.start(t); osc.stop(t + 0.4);
+    });
+  } catch(e) {}
+}
+
+// All non-negotiables done — triumphant resolution chord
+function playAllDoneSound() {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    // Rising arpeggio then held chord
+    [[523,0,'sine'],[659,0.12,'sine'],[784,0.24,'sine'],[1047,0.36,'sine'],
+     [523,0.55,'triangle'],[659,0.55,'triangle'],[784,0.55,'triangle']].forEach(([freq,t,type]) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = type;
+      osc.frequency.value = freq;
+      const st = now + t;
+      gain.gain.setValueAtTime(0, st);
+      gain.gain.linearRampToValueAtTime(t >= 0.55 ? 0.15 : 0.25, st + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, st + (t >= 0.55 ? 1.2 : 0.35));
+      osc.start(st); osc.stop(st + (t >= 0.55 ? 1.3 : 0.4));
+    });
+  } catch(e) {}
+}
+
+// Badge earned — distinctive two-tone chime
+function playBadgeSound() {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    [[880,0],[1108,0.2],[880,0.45],[1320,0.6]].forEach(([freq,t]) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const st = now + t;
+      gain.gain.setValueAtTime(0, st);
+      gain.gain.linearRampToValueAtTime(0.2, st + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, st + 0.5);
+      osc.start(st); osc.stop(st + 0.55);
+    });
+  } catch(e) {}
+}
+
+// Streak milestone — full fanfare, scaled by milestone size
+function playMilestoneSound(days) {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    // Longer, richer fanfare for bigger milestones
+    const notes = days >= 100
+      ? [[523,0],[659,0.15],[784,0.3],[1047,0.5],[784,0.7],[1047,0.85],[1319,1.1],[1047,1.4],[1319,1.6]]
+      : [[523,0],[659,0.15],[784,0.3],[1047,0.5],[784,0.7],[1047,0.85],[1319,1.0]];
+    notes.forEach(([freq, t]) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const st = now + t;
+      gain.gain.setValueAtTime(0, st);
+      gain.gain.linearRampToValueAtTime(0.3, st + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, st + 0.45);
+      osc.start(st); osc.stop(st + 0.5);
+    });
+  } catch(e) {}
+}
+
+// Points earned — quiet ascending two-note confirm
+function playPointsSound(mult) {
+  try {
+    const ctx  = getAudioCtx();
+    const now  = ctx.currentTime;
+    const freq = mult > 1 ? 880 : 660;
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.linearRampToValueAtTime(freq * 1.5, now + 0.1);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.start(now); osc.stop(now + 0.28);
+  } catch(e) {}
+}
+
+// ── Milestone overlay ─────────────────────────────────────────────────────
+function showMilestone(emoji, title, msg, bonusPoints, hapticType, days) {
+  document.getElementById('milestoneEmoji').textContent   = emoji;
+  document.getElementById('milestoneTitleEl').textContent = title;
+  document.getElementById('milestoneMsgEl').textContent   = msg;
+  const total = bonusPoints ? addPoints(bonusPoints) : getPoints();
+  const pointsMsg = bonusPoints ? '+' + bonusPoints + ' points! Total: ' + total.toLocaleString() : '';
+  document.getElementById('milestonePointsEl').textContent = pointsMsg;
+  document.getElementById('milestoneOverlay').classList.remove('hidden');
+
+  // Visual — respects reduce motion
+  fireConfetti(3000);
+
+  // Audio — always plays regardless of motion setting
+  playMilestoneSound(days || 0);
+
+  // Haptic — distinctive per milestone type
+  hap(hapticType || 'allDone');
+
+  // Screen reader announcement — fires immediately, full context
+  const fullMsg = title + '. ' + msg + (pointsMsg ? ' ' + pointsMsg : '');
+  announce(fullMsg, true);
+
+  // Focus for keyboard/screen reader users
+  setTimeout(() => {
+    const btn = document.getElementById('milestoneOverlay').querySelector('button');
+    if (btn) btn.focus();
+  }, 100);
+}
+
+function closeMilestone() {
+  document.getElementById('milestoneOverlay').classList.add('hidden');
+  announce('Celebration closed.');
+}
+
+// ── Per-task celebration ──────────────────────────────────────────────────
+function celebrateTask(taskId, taskName, isNonNeg) {
+  const mult   = getStreakMultiplier();
+  const earned = TASK_POINTS * mult;
+  const total  = addPoints(earned);
+
+  // Audio — always
+  playSuccess();
+  // Haptic — always
+  hap('task');
+  // Visual — skipped if reduce motion
+  if (!(cfg.a11y || {}).reduceMotion) fireConfetti(800);
+
+  // Screen reader: announce points earned
+  announce(taskName + ' done. +' + earned + ' points' + (mult > 1 ? ' (×' + mult + ' streak bonus)' : '') + '. Total: ' + total.toLocaleString() + '.', false);
+
+  // Flash task element (visual only)
+  if (!(cfg.a11y || {}).reduceMotion) {
+    setTimeout(() => {
+      document.querySelectorAll('.task').forEach(el => {
+        if ((el.getAttribute('onclick') || '').includes(taskId)) {
+          el.classList.add('just-done');
+          setTimeout(() => el.classList.remove('just-done'), 500);
+        }
+      });
+    }, 50);
+  }
+
+  // All non-negotiables done?
+  const allCritDone = CRITICAL.every(t => state.tasks[t.id]);
+  if (allCritDone && isNonNeg) {
+    setTimeout(() => {
+      playAllDoneSound();
+      hap('allDone');
+      showMilestone('🎯', 'non-negotiables done!',
+        'All critical tasks complete for today. ' + (cfg.name ? 'Nice work, ' + cfg.name + '.' : 'Nice work.'),
+        ALL_DONE_BONUS, 'allDone');
+    }, 600);
+  }
+
+  checkBadges();
+}
+
+// ── Streak milestones ─────────────────────────────────────────────────────
+const STREAK_MILESTONES = [
+  { days: 3,   emoji: '🔥', msg: "Three days in a row. You're building momentum.",      haptic: 'streak7' },
+  { days: 7,   emoji: '💪', msg: "One full week. That's a real streak.",                haptic: 'streak7' },
+  { days: 14,  emoji: '⚡', msg: 'Two weeks straight. Your brain is noticing.',           haptic: 'streak7' },
+  { days: 30,  emoji: '🏆', msg: 'Thirty days. One month of consistency. Huge.',          haptic: 'streak30' },
+  { days: 60,  emoji: '🌟', msg: 'Sixty days. This is a genuine habit now.',              haptic: 'streak30' },
+  { days: 100, emoji: '💎', msg: 'One hundred days. You should be genuinely proud.',      haptic: 'streak100' },
+  { days: 365, emoji: '👑', msg: 'A full year. That is extraordinary.',                   haptic: 'streak365' },
+];
+
+function checkStreakMilestone(streak) {
+  const milestone = STREAK_MILESTONES.find(m => m.days === streak);
+  if (milestone) {
+    setTimeout(() => showMilestone(
+      milestone.emoji,
+      streak + '-day streak!',
+      milestone.msg,
+      streak * 5,
+      milestone.haptic,
+      streak
+    ), 800);
+  }
+}
+
+// ── Encouraging nag messages ──────────────────────────────────────────────
+const NAG_ENCOURAGEMENTS = [
+  'you\'ve done this before. you can do it again.',
+  'small steps count. start with one.',
+  'future you will be grateful.',
+  'this is the one thing that helps. do it.',
+  'you\'re not behind. just start now.',
+  'consistency beats perfection every time.',
+  'your body is worth the effort.',
+  'one task at a time. that\'s all.',
+];
+
+function getEncouragement() {
+  return NAG_ENCOURAGEMENTS[Math.floor(Math.random() * NAG_ENCOURAGEMENTS.length)];
+}
+
+// ── Weekly summary ────────────────────────────────────────────────────────
+function generateWeeklySummary() {
+  const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+  const last7   = history.slice(0, 7);
+  if (last7.length === 0) return null;
+  const avgDone  = (last7.reduce((s,e) => s + (e.done/(e.total||1)), 0) / last7.length * 100).toFixed(0);
+  const moods    = last7.map(e => e.mood).filter(Boolean);
+  const topMood  = moods.sort((a,b) => moods.filter(v=>v===b).length - moods.filter(v=>v===a).length)[0] || '—';
+  const flags    = last7.reduce((s,e) => s + (e.flags||0), 0);
+  return { avgDone, topMood, flags, days: last7.length, week: new Date().toISOString().split('T')[0] };
+}
+
+function renderWeeklySummaryCard() {
+  const el = document.getElementById('weeklySummaryCard');
+  if (!el) return;
+  const summary = generateWeeklySummary();
+  if (!summary) { el.innerHTML = ''; return; }
+  const srText = 'Weekly summary: ' + summary.avgDone + '% task completion, top mood: ' +
+    summary.topMood + ', ' + summary.flags + ' symptom flags, ' + summary.days + ' days logged.';
+  el.innerHTML = `
+    <div class="summary-card" role="region" aria-label="${srText}">
+      <div class="summary-card-title">📅 this week</div>
+      <div class="summary-card-stat"><span>avg task completion</span><span>${summary.avgDone}%</span></div>
+      <div class="summary-card-stat"><span>most common mood</span><span>${summary.topMood}</span></div>
+      <div class="summary-card-stat"><span>total symptom flags</span><span>${summary.flags}</span></div>
+      <div class="summary-card-stat"><span>days logged</span><span>${summary.days}/7</span></div>
+    </div>`;
+  // Announce summary to screen readers when Stats tab is opened
+  setTimeout(() => announce(srText), 500);
+}
+
+// ── Monthly summary ────────────────────────────────────────────────────────
+function generateMonthlySummary() {
+  const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+  if (history.length === 0) return null;
+  const now     = new Date();
+  const month   = now.getMonth();
+  const year    = now.getFullYear();
+  const thisMonth = history.filter(e => {
+    const d = new Date(e.date);
+    return d.getMonth() === month && d.getFullYear() === year;
+  });
+  if (thisMonth.length === 0) return null;
+  const avgDone = (thisMonth.reduce((s,e) => s + (e.done/(e.total||1)), 0) / thisMonth.length * 100).toFixed(0);
+  const flags   = thisMonth.reduce((s,e) => s + (e.flags||0), 0);
+  const moods   = thisMonth.map(e => e.mood).filter(Boolean);
+  const topMood = moods.sort((a,b) => moods.filter(v=>v===b).length - moods.filter(v=>v===a).length)[0] || '—';
+  const monthName = now.toLocaleString('default', { month: 'long' });
+  return { avgDone, topMood, flags, days: thisMonth.length, monthName };
+}
+
+function renderMonthlySummaryCard() {
+  const el = document.getElementById('monthlySummaryCard');
+  if (!el) return;
+  const summary = generateMonthlySummary();
+  if (!summary) { el.innerHTML = ''; return; }
+  const srText = summary.monthName + ' summary: ' + summary.avgDone + '% task completion, top mood: ' +
+    summary.topMood + ', ' + summary.flags + ' symptom flags, ' + summary.days + ' days logged.';
+  el.innerHTML = `
+    <div class="summary-card" role="region" aria-label="${srText}">
+      <div class="summary-card-title">📆 ${summary.monthName}</div>
+      <div class="summary-card-stat"><span>avg task completion</span><span>${summary.avgDone}%</span></div>
+      <div class="summary-card-stat"><span>most common mood</span><span>${summary.topMood}</span></div>
+      <div class="summary-card-stat"><span>total symptom flags</span><span>${summary.flags}</span></div>
+      <div class="summary-card-stat"><span>days logged this month</span><span>${summary.days}</span></div>
+    </div>`;
+  setTimeout(() => announce(srText), 1200);
+}
+
+// ── Badges render ─────────────────────────────────────────────────────────
+function renderBadges() {
+  const el     = document.getElementById('badgesGrid');
+  if (!el) return;
+  const earned = getBadges();
+  el.innerHTML = BADGE_DEFS.map(b => {
+    const date   = earned[b.id];
+    const status = date ? 'earned on ' + date : 'not yet earned. To unlock: ' + b.desc;
+    return `<div class="badge-card ${date ? 'earned' : 'locked'}"
+                 role="article" aria-label="${b.name} badge. ${status}">
+      <span class="badge-icon" aria-hidden="true">${b.icon}</span>
+      <span class="badge-name">${b.name}</span>
+      <span class="badge-date">${date || 'locked'}</span>
+      ${!date ? `<span class="sr-only">To unlock: ${b.desc}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Points display ────────────────────────────────────────────────────────
+function renderPointsDisplay(announce_) {
+  const el    = document.getElementById('totalPointsDisplay');
+  const mult  = document.getElementById('pointsMultiplier');
+  const total = getPoints();
+  const m     = getStreakMultiplier();
+  if (el)   el.textContent = total.toLocaleString();
+  if (mult) mult.textContent = '×' + m + ' multiplier';
+  if (announce_) announce('Total points: ' + total.toLocaleString() + '. Streak multiplier: ×' + m + '.');
+}
+
+// ── Weekly/monthly notification scheduling ────────────────────────────────
+function schedulePeriodicSummaries() {
+  const now     = new Date();
+  const day     = now.getDay();   // 0=Sun
+  const date    = now.getDate();
+  const hour    = now.getHours();
+  const name    = cfg.name || 'hey';
+
+  // Weekly — Sunday at 7pm
+  if (day === 0 && hour === 19) {
+    const summary = generateWeeklySummary();
+    if (summary) {
+      swNotify(name + ' — weekly summary',
+        'This week: ' + summary.avgDone + '% task completion, ' +
+        summary.days + ' days logged.',
+        'weekly-summary', false);
+      if (cfg.tgToken && cfg.tgChatId) {
+        sendTelegramMessage('📅 Weekly summary: ' + summary.avgDone +
+          '% task completion, top mood: ' + summary.topMood);
+      }
+    }
+  }
+
+  // Monthly — 1st of month at 9am
+  if (date === 1 && hour === 9) {
+    const summary = generateMonthlySummary();
+    if (summary) {
+      swNotify(name + ' — monthly summary',
+        summary.monthName + ': ' + summary.avgDone + '% avg completion, ' +
+        summary.days + ' days logged.',
+        'monthly-summary', false);
+    }
+  }
+}
+
+// Check every hour
+setInterval(schedulePeriodicSummaries, 3600000);
+
+// ── Low vision / accessibility system ────────────────────────────────────
+
+function applyTextSize(size) {
+  const root = document.documentElement;
+  root.removeAttribute('data-text-size');
+  if (size && size !== 'normal') root.setAttribute('data-text-size', size);
+  updateTextSizeUI(size || 'normal');
+}
+
+function setTextSize(size) {
+  cfg.a11y = cfg.a11y || {};
+  cfg.a11y.textSize = size;
+  saveConfig(cfg);
+  applyTextSize(size);
+  announce('Text size set to ' + size + '.');
+}
+
+function cycleTextSize() {
+  const sizes  = ['normal','large','xl','small'];
+  const current = (cfg.a11y || {}).textSize || 'normal';
+  const next    = sizes[(sizes.indexOf(current) + 1) % sizes.length];
+  setTextSize(next);
+}
+
+function updateTextSizeUI(size) {
+  const icons  = { small:'a', normal:'A', large:'A+', xl:'A++' };
+  const iconEl = document.getElementById('navTextSizeIcon');
+  const lblEl  = document.getElementById('navTextSizeLabel');
+  if (iconEl) iconEl.textContent = icons[size] || 'A';
+  if (lblEl)  lblEl.textContent  = 'text';
+  const btn = document.getElementById('navTextSizeBtn');
+  if (btn) btn.setAttribute('aria-label', 'Text size: ' + size + '. Click to cycle.');
+  // Sync settings pills
+  ['small','normal','large','xl'].forEach(s => {
+    const el = document.getElementById('textSize' + s.charAt(0).toUpperCase() + s.slice(1));
+    if (el) { el.classList.toggle('active', s === size); el.setAttribute('aria-checked', s === size ? 'true' : 'false'); }
+  });
+  // Sync settings toggle
+  const settEl = document.getElementById('textSize' + size.charAt(0).toUpperCase() + size.slice(1));
+}
+
+function applyHighContrast(on) {
+  const root = document.documentElement;
+  if (on) root.setAttribute('data-contrast', 'high');
+  else    root.removeAttribute('data-contrast');
+  // Update nav button state
+  const btn = document.getElementById('navContrastBtn');
+  if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  const settEl = document.getElementById('settingsHighContrast');
+  if (settEl) settEl.checked = !!on;
+}
+
+function setHighContrast(on) {
+  cfg.a11y = cfg.a11y || {};
+  cfg.a11y.highContrast = on;
+  saveConfig(cfg);
+  applyHighContrast(on);
+  announce('High contrast ' + (on ? 'enabled' : 'disabled') + '.');
+}
+
+function toggleHighContrast() {
+  const current = (cfg.a11y || {}).highContrast;
+  setHighContrast(!current);
+}
+
+function applyReduceMotion(on) {
+  const root = document.documentElement;
+  if (on) root.setAttribute('data-reduce-motion', 'true');
+  else    root.removeAttribute('data-reduce-motion');
+  const btn    = document.getElementById('navMotionBtn');
+  if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  const settEl = document.getElementById('settingsReduceMotion');
+  if (settEl) settEl.checked = !!on;
+}
+
+function toggleReduceMotion(val) {
+  const on = typeof val === 'boolean' ? val : !(cfg.a11y || {}).reduceMotion;
+  cfg.a11y = cfg.a11y || {};
+  cfg.a11y.reduceMotion = on;
+  saveConfig(cfg);
+  applyReduceMotion(on);
+  announce('Reduce motion ' + (on ? 'enabled' : 'disabled') + '.');
+}
+
+function setLargeTouchTargets(on) {
+  cfg.a11y = cfg.a11y || {};
+  cfg.a11y.largeTouchTargets = on;
+  saveConfig(cfg);
+  const root = document.documentElement;
+  if (on) root.setAttribute('data-large-targets', 'true');
+  else    root.removeAttribute('data-large-targets');
+  announce('Larger touch targets ' + (on ? 'enabled' : 'disabled') + '.');
+}
+
+function applyA11yPrefs() {
+  const a11y = cfg.a11y || {};
+  applyTextSize(a11y.textSize || 'normal');
+  applyHighContrast(!!a11y.highContrast);
+  applyReduceMotion(!!a11y.reduceMotion);
+  if (a11y.largeTouchTargets) document.documentElement.setAttribute('data-large-targets', 'true');
+  // Sync settings checkboxes
+  const lttEl = document.getElementById('largeTouchTargets');
+  if (lttEl) lttEl.checked = !!a11y.largeTouchTargets;
+}
+
+// Also add high contrast CSS for data-contrast attribute (manual override)
+// This is separate from prefers-contrast media query
+(function() {
+  const style = document.createElement('style');
+  style.textContent = `
+    :root[data-contrast="high"] {
+      --bg: #000 !important; --bg2: #0a0a0a !important; --bg3: #111 !important;
+      --border: rgba(255,255,255,0.4) !important; --border2: rgba(255,255,255,0.7) !important;
+      --text: #fff !important; --text2: #ddd !important; --text3: #aaa !important;
+      --accent: #ffd080 !important; --danger: #ff6060 !important; --success: #60dd90 !important;
+    }
+    :root[data-contrast="high"][data-theme="light"] {
+      --bg: #fff !important; --bg2: #f0f0f0 !important; --bg3: #e0e0e0 !important;
+      --text: #000 !important; --text2: #222 !important; --text3: #444 !important;
+      --accent: #7a4800 !important; --danger: #cc0000 !important;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
 // ── Screen reader announcements ───────────────────────────────────────────
 // ── Notification preferences ─────────────────────────────────────────────
 function saveNotifPrefs() {
@@ -3057,14 +4049,19 @@ function toggleTask(id) {
     state.medStreak = done
       ? (state.medStreak || 0) + 1
       : Math.max(0, (state.medStreak || 0) - 1);
-    if (done) announce(name + ' marked done. Medication streak: ' + state.medStreak + ' days.');
-    else      announce(name + ' unmarked. Medication streak reset to ' + state.medStreak + '.');
+    if (done) {
+      announce(name + ' marked done. Medication streak: ' + state.medStreak + ' days.');
+      checkStreakMilestone(state.medStreak);
+    } else {
+      announce(name + ' unmarked. Medication streak reset to ' + state.medStreak + '.');
+    }
   } else {
     announce(name + (done ? ' marked done.' : ' unmarked.'));
   }
-  // Check if all critical tasks done
-  const allCritDone = CRITICAL.every(t => state.tasks[t.id]);
-  if (allCritDone && done) announce('All non-negotiables complete. Great work.', false);
+  if (done) {
+    const isNonNeg = CRITICAL.some(t => t.id === id);
+    celebrateTask(id, name, isNonNeg);
+  }
   saveState();
   render();
   // Update aria-pressed on the toggled element
@@ -3111,6 +4108,8 @@ function saveAll() {
   const all  = [...CRITICAL, ...DAILY];
   const done = all.filter(t => state.tasks[t.id]).length;
   announce('Check-in saved. ' + done + ' of ' + all.length + ' tasks completed today. Mood: ' + (state.mood.mood || 'not set') + '. Energy: ' + (state.mood.energy || 'not set') + '.');
+  checkBadges();
+  renderPointsDisplay();
 }
 
 function saveHistoryEntry() {
@@ -3473,6 +4472,8 @@ function render() {
     const name = cfg.name || 'hey';
     document.getElementById('nagText').textContent =
       name + '. ' + nagItems.map(t => t.name).join(', ') + '. Right now.';
+    const encEl = document.getElementById('nagEncouragement');
+    if (encEl) encEl.textContent = getEncouragement();
   } else {
     banner.classList.remove('visible');
   }
