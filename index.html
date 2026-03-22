@@ -16,6 +16,10 @@
 <!-- PWA: inline manifest via data URI -->
 <link rel="manifest" id="manifestLink">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- TensorFlow.js + Universal Sentence Encoder for semantic RAG -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder@1.3.3/dist/universal-sentence-encoder.min.js"></script>
+<script src="rag-engine.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
 
@@ -818,6 +822,111 @@
     text-align: center;
   }
 
+  /* ── Quote of the day ── */
+  .quote-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .quote-text {
+    font-size: 0.875rem;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+  .quote-meta {
+    font-family: var(--mono);
+    font-size: 0.5625rem;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .quote-actions { display: flex; gap: 6px; }
+  .quote-action-btn {
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    cursor: pointer;
+    min-height: 28px;
+    transition: all 0.1s;
+  }
+  .quote-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .quote-action-btn.liked { color: var(--success); border-color: var(--success); }
+  .quote-loading {
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    color: var(--text3);
+    text-align: center;
+    padding: 8px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+  /* Post check-in message */
+  .checkin-msg {
+    background: var(--success-bg);
+    border: 0.5px solid var(--success);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-top: 10px;
+    display: none;
+  }
+  .checkin-msg.visible { display: block; }
+  .checkin-msg p {
+    font-size: 0.875rem;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .checkin-msg-source {
+    font-family: var(--mono);
+    font-size: 0.5625rem;
+    color: var(--text3);
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Favourites section on stats */
+  .fav-quote {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-left: 2px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 0.8125rem;
+    color: var(--text2);
+    line-height: 1.6;
+    font-style: italic;
+    position: relative;
+  }
+  .fav-quote-remove {
+    position: absolute;
+    top: 6px; right: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text3);
+    font-size: 0.875rem;
+    cursor: pointer;
+    min-height: 28px;
+    min-width: 28px;
+  }
+  .fav-quote-remove:hover { color: var(--danger); }
+
+  /* Confetti canvas ── */
   /* ── Confetti canvas ── */
   #confettiCanvas {
     position: fixed;
@@ -1725,6 +1834,21 @@
       <div class="window-timer" id="windowTimer" aria-live="polite" aria-atomic="true"></div>
     </div>
 
+    <!-- Quote of the day -->
+    <div class="quote-card" id="quoteCard" aria-label="Quote of the day" role="region">
+      <div class="quote-loading" id="quoteLoading">generating your daily message...</div>
+      <p class="quote-text" id="quoteText" style="display:none"></p>
+      <div class="quote-meta" id="quoteMeta" style="display:none">
+        <span id="quoteSource"></span>
+        <div class="quote-actions">
+          <button class="quote-action-btn" id="quoteLikeBtn"
+                  onclick="likeQuote()" aria-label="Save quote to favourites">♡</button>
+          <button class="quote-action-btn" onclick="refreshQuote()"
+                  aria-label="Get a different quote">↻</button>
+        </div>
+      </div>
+    </div>
+
     <div class="nag-banner" id="nagBanner" role="alert" aria-live="assertive" aria-atomic="true">
       <p id="nagText"></p>
       <span>these are not optional. do them and come back.</span>
@@ -1795,6 +1919,14 @@
         <button class="btn primary" onclick="saveAll()" aria-label="save today's check-in to history">save check-in</button>
       </div>
       <div class="confirm" id="saveConfirm" role="status" aria-live="polite">saved.</div>
+      <div class="checkin-msg" id="checkinMsg" role="status" aria-live="polite">
+        <p id="checkinMsgText"></p>
+        <div class="checkin-msg-source">
+          <span id="checkinMsgSource"></span>
+          <button class="quote-action-btn" onclick="likeCheckinMsg()"
+                  id="checkinLikeBtn" aria-label="Save this message to favourites">♡ save</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1933,6 +2065,12 @@
     <div id="monthlySummaryCard"></div>
 
     <!-- Mood timeline -->
+    <!-- Favourite quotes -->
+    <div id="favQuotesSection" style="display:none">
+      <h2 class="section-label" style="margin-bottom:10px">saved quotes</h2>
+      <div id="favQuotesList" aria-label="Saved favourite quotes"></div>
+    </div>
+
     <h2 class="section-label" style="margin-bottom:10px">mood over time</h2>
     <div id="moodTimeline" aria-label="Mood timeline"></div>
   </div>
@@ -2313,6 +2451,37 @@
       </div>
     </section>
 
+    <!-- ── AI Quotes ── -->
+    <section class="settings-segment" aria-labelledby="seg-quotes">
+      <div class="settings-segment-header">
+        <h2 id="seg-quotes">ai quotes &amp; messages</h2>
+      </div>
+      <p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
+        Personalised messages generated by Claude AI using your daily data.<br>
+        Get a free API key at <strong style="color:var(--text2)">console.anthropic.com</strong><br>
+        Your key is stored locally and never leaves your device.
+      </p>
+      <div class="settings-task-row" style="margin-bottom:6px">
+        <input type="password" id="anthropicKey" placeholder="sk-ant-..."
+               style="font-size:0.6875rem" autocomplete="off"
+               aria-label="Anthropic API key">
+        <button class="add-btn" onclick="saveApiKey()" aria-label="Save API key">save</button>
+      </div>
+      <div id="apiKeyStatus" role="status" aria-live="polite"
+           style="font-family:var(--mono);font-size:0.625rem;margin-bottom:8px"></div>
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          AI quotes enabled
+          <span>uses Claude when online, offline bank when not</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable AI quotes">
+          <input type="checkbox" id="aiQuotesEnabled" checked
+                 onchange="saveQuotePrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </section>
+
     <!-- ── Telegram ── -->
     <section class="settings-segment" aria-labelledby="seg-telegram">
       <div class="settings-segment-header">
@@ -2653,6 +2822,7 @@ function initOnboarding() {
   syncNotifPrefsUI();
   syncAudioUI();
   applyA11yPrefs();
+  syncQuoteSettingsUI();
   if (!cfg.name) {
     document.getElementById('onboarding').classList.remove('hidden');
     setTimeout(() => document.getElementById('nameInput').focus(), 100);
@@ -2661,6 +2831,7 @@ function initOnboarding() {
     loadState();
     renderCustomTimersWidget();
     updateNextApptBanner();
+    setTimeout(() => loadQuoteOfDay(), 500);
   }
 }
 
@@ -2994,6 +3165,7 @@ function renderStats() {
   document.getElementById('bigStreak').textContent = state.medStreak || 0;
   renderPointsDisplay(true);  // announces to screen readers
   renderBadges();
+  renderFavQuotes();
   renderWeeklySummaryCard();
   renderMonthlySummaryCard();
   try {
@@ -3866,6 +4038,373 @@ function applyA11yPrefs() {
   document.head.appendChild(style);
 })();
 
+// ── Quote / encouragement system ─────────────────────────────────────────
+
+const QUOTE_KEY       = 'tracker-quote-today';
+const QUOTE_FAVS_KEY  = 'tracker-quote-favs';
+const QUOTE_BLOCKED_KEY = 'tracker-quote-blocked';
+const ANTHROPIC_KEY_K = 'tracker-anthropic-key';
+
+// ── Offline quote bank ────────────────────────────────────────────────────
+const OFFLINE_QUOTES = {
+  struggling: [
+    "You showed up. That's the whole job today.",
+    "A bad day with meds is still better than the alternative. You did that.",
+    "Struggling and still trying are not opposites. You're doing both.",
+    "Your brain is working against you right now. That's not a character flaw.",
+    "You don't have to feel okay to do okay. Evidence: you're here.",
+    "Hard days are part of the deal. You're not failing, you're just in one.",
+    "Consistency isn't about feeling motivated. It's about showing up anyway. You did.",
+    "The fact that you opened this app is a form of not giving up.",
+    "Low energy is not the same as low effort. You're expending more than you think.",
+    "Some days the win is just 'didn't make it worse.' That counts.",
+    "You are allowed to have a hard day and still be someone who is trying.",
+    "There is no version of this that requires you to feel good first.",
+  ],
+  okay: [
+    "Flat is fine. Flat is sustainable. Flat keeps you in the game.",
+    "Ordinary days are the ones that build the streak. This is one of those.",
+    "You don't need to love the routine. You just need to do it. And you did.",
+    "Not every day has a lesson. Sometimes it's just another day done.",
+    "Showing up in the middle is underrated. The middle is most of it.",
+    "You're maintaining something. That's harder than it sounds.",
+    "Good enough is a legitimate goal and you hit it today.",
+    "The boring repetition is the point. You're doing the actual work.",
+    "Another day on the streak. That's real.",
+    "Consistency is built in the unremarkable days. Today counts.",
+  ],
+  good: [
+    "This is what a good day looks like. Remember it for the other kind.",
+    "You built this. The streak, the habit, the capacity for a day like today.",
+    "Notice this. Your brain on structure, working. This is the goal.",
+    "Good days aren't luck. They're downstream of the work you've been doing.",
+    "You get to feel good about this. Actually let yourself.",
+    "This is the payoff for all the low-energy days you still showed up through.",
+    "Today you made it look easy. That's because you've been doing the hard work.",
+    "This is evidence. When things are working, they work like this.",
+  ],
+  milestone: [
+    "Streaks are just small decisions that compound. You've been making them.",
+    "The person who started this and the person reading this have different evidence.",
+    "You built something real here. Not a feeling — an actual record.",
+    "This is what keeping promises to yourself looks like from the outside.",
+    "You didn't just survive the hard days. You kept going through them.",
+  ],
+  generic: [
+    "The goal was never perfection. The goal was continuation.",
+    "Your nervous system is different. Your tools need to be too. These are yours.",
+    "Structure isn't a cage. For some brains it's the thing that sets you free.",
+    "You are not behind. You are exactly where your effort has put you.",
+    "It doesn't have to feel meaningful to be meaningful.",
+    "The app doesn't care how you feel about using it. It just works when you do.",
+    "Small consistent actions outperform large inconsistent ones. Always.",
+    "You get credit for doing the thing even when doing the thing is hard.",
+    "Tomorrow's version of you benefits from what you do right now.",
+    "There is no version of getting better that skips the boring middle part.",
+  ]
+};
+
+function getOfflineQuote(state) {
+  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
+  let pool = OFFLINE_QUOTES[state] || OFFLINE_QUOTES.generic;
+  const available = pool.filter(q => !blocked.includes(q));
+  if (available.length === 0) return pool[Math.floor(Math.random() * pool.length)];
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+function getDayState() {
+  const all    = [...CRITICAL, ...DAILY];
+  const done   = all.filter(t => state.tasks[t.id]).length;
+  const pct    = all.length > 0 ? done / all.length : 0;
+  const streak = state.medStreak || 0;
+  const flags  = state.symptoms.length;
+  if (STREAK_MILESTONES.some(m => m.days === streak)) return 'milestone';
+  if (flags >= 3 || pct < 0.3) return 'struggling';
+  if (pct >= 0.8 && flags === 0) return 'good';
+  return 'okay';
+}
+
+// ── AI quote generation ───────────────────────────────────────────────────
+async function generateAIQuote(context) {
+  const key = localStorage.getItem(ANTHROPIC_KEY_K);
+  if (!key) return null;
+  const prefs = cfg.notifPrefs || {};
+  if (prefs.aiQuotesEnabled === false) return null;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        system: `You write short, honest, non-generic encouragement for people with AuDHD and bipolar disorder using a daily structure tracker. 
+You know their data for today. Write ONE sentence or two short sentences max. 
+No exclamation marks. No toxic positivity. No "You've got this!" type phrases.
+Be real, specific to their situation, and warm without being saccharine.
+Respond with ONLY the message text, nothing else.`,
+        messages: [{
+          role: 'user',
+          content: `Today's data: ${context}. Write a short personalised message for them.`
+        }]
+      })
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.content?.[0]?.text?.trim() || null;
+  } catch(e) {
+    return null;
+  }
+}
+
+function buildContext() {
+  const all    = [...CRITICAL, ...DAILY];
+  const done   = all.filter(t => state.tasks[t.id]).length;
+  const streak = state.medStreak || 0;
+  const flags  = state.symptoms;
+  const mood   = state.mood.mood || 'not set';
+  const energy = state.mood.energy || 'not set';
+  const name   = cfg.name || '';
+  return [
+    name ? 'Name: ' + name : '',
+    'Tasks done: ' + done + '/' + all.length,
+    'Mood: ' + mood,
+    'Energy: ' + energy,
+    flags.length > 0 ? 'Flagged symptoms: ' + flags.join(', ') : 'No symptoms flagged',
+    'Medication streak: ' + streak + ' days',
+    'Day state: ' + getDayState()
+  ].filter(Boolean).join('. ');
+}
+
+// ── Quote of the day ──────────────────────────────────────────────────────
+async function loadQuoteOfDay(forceRefresh) {
+  const card    = document.getElementById('quoteCard');
+  const loading = document.getElementById('quoteLoading');
+  const textEl  = document.getElementById('quoteText');
+  const metaEl  = document.getElementById('quoteMeta');
+  if (!card) return;
+
+  // Check cache (regenerate once per day or on force)
+  if (!forceRefresh) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(QUOTE_KEY) || 'null');
+      if (cached && cached.date === TODAY) {
+        showQuote(cached.text, cached.source, cached.liked);
+        return;
+      }
+    } catch(e) {}
+  }
+
+  // Show loading state
+  if (loading) loading.style.display = 'block';
+  if (textEl)  textEl.style.display  = 'none';
+  if (metaEl)  metaEl.style.display  = 'none';
+
+  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
+  let text = null, source = 'daily reminder', method = 'rag';
+
+  // Build context for RAG
+  const ragContext = buildRAGContext();
+
+  // Try AI (Claude) first if key is set
+  const aiText = await generateAIQuote(buildContext());
+  if (aiText) {
+    text   = aiText;
+    source = 'generated for you today';
+    method = 'ai';
+  } else if (window.RAGEngine) {
+    // Use RAG engine — semantic if USE model loaded, tag-based otherwise
+    const result = await RAGEngine.getQuote(ragContext, blocked, true);
+    text   = result.text;
+    source = result.source;
+    method = result.method;
+  } else {
+    // Ultimate fallback
+    text   = getOfflineQuote(getDayState());
+    source = 'daily reminder';
+  }
+
+  // Cache it
+  localStorage.setItem(QUOTE_KEY, JSON.stringify({ date: TODAY, text, source, liked: false }));
+  showQuote(text, source, false);
+  announce('Daily message: ' + text);
+}
+
+function buildRAGContext() {
+  const all    = [...CRITICAL, ...DAILY];
+  const done   = all.filter(t => state.tasks[t.id]).length;
+  return {
+    mood:    state.mood.mood    || 'any',
+    energy:  state.mood.energy  || 'any',
+    flags:   state.symptoms.length,
+    streak:  state.medStreak || 0,
+    taskPct: all.length > 0 ? done / all.length : 0,
+    notes:   state.notes || ''
+  };
+}
+
+function showQuote(text, source, liked) {
+  const loading = document.getElementById('quoteLoading');
+  const textEl  = document.getElementById('quoteText');
+  const metaEl  = document.getElementById('quoteMeta');
+  const srcEl   = document.getElementById('quoteSource');
+  const likeBtn = document.getElementById('quoteLikeBtn');
+  if (loading) loading.style.display = 'none';
+  if (textEl)  { textEl.textContent = text; textEl.style.display = 'block'; }
+  if (srcEl)   srcEl.textContent = source;
+  if (metaEl)  metaEl.style.display = 'flex';
+  if (likeBtn) {
+    likeBtn.classList.toggle('liked', !!liked);
+    likeBtn.textContent = liked ? '♥' : '♡';
+    likeBtn.setAttribute('aria-label', liked ? 'Quote saved to favourites' : 'Save quote to favourites');
+  }
+}
+
+function refreshQuote() {
+  loadQuoteOfDay(true);
+  announce('Refreshing your daily message.');
+}
+
+function likeQuote() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(QUOTE_KEY) || 'null');
+    if (!cached) return;
+    const wasLiked = cached.liked;
+    cached.liked = !wasLiked;
+    localStorage.setItem(QUOTE_KEY, JSON.stringify(cached));
+    if (!wasLiked) saveFavQuote(cached.text);
+    showQuote(cached.text, cached.source, cached.liked);
+    announce(cached.liked ? 'Quote saved to favourites.' : 'Quote removed from favourites.');
+  } catch(e) {}
+}
+
+// ── Post check-in message ─────────────────────────────────────────────────
+async function showCheckinMessage() {
+  const el     = document.getElementById('checkinMsg');
+  const textEl = document.getElementById('checkinMsgText');
+  const srcEl  = document.getElementById('checkinMsgSource');
+  if (!el || !textEl) return;
+
+  el.classList.add('visible');
+  textEl.textContent = '...';
+
+  const context = buildContext();
+  let text = null, source = 'daily reminder';
+
+  const aiText = await generateAIQuote(context + '. This message follows their check-in save, so acknowledge the act of checking in.');
+  if (aiText) {
+    text   = aiText;
+    source = 'generated for you';
+  } else {
+    // Post-checkin specific offline messages
+    const checkinQuotes = [
+      "Check-in logged. That's the whole thing.",
+      "Saved. That record exists now because you made it.",
+      "Logged. Tomorrow's you has this data.",
+      "Done. You showed up for yourself today.",
+      "Check-in complete. One more data point in your favour.",
+    ];
+    text = checkinQuotes[Math.floor(Math.random() * checkinQuotes.length)];
+  }
+
+  textEl.textContent = text;
+  if (srcEl) srcEl.textContent = source;
+  announce('Check-in message: ' + text);
+
+  // Store for like button
+  el.dataset.msgText = text;
+  setTimeout(() => el.classList.remove('visible'), 8000);
+}
+
+function likeCheckinMsg() {
+  const el = document.getElementById('checkinMsg');
+  const text = el?.dataset?.msgText;
+  if (text) {
+    saveFavQuote(text);
+    announce('Message saved to favourites.');
+    const btn = document.getElementById('checkinLikeBtn');
+    if (btn) { btn.textContent = '♥ saved'; btn.classList.add('liked'); }
+  }
+}
+
+// ── Favourites ────────────────────────────────────────────────────────────
+function getFavQuotes() {
+  try { return JSON.parse(localStorage.getItem(QUOTE_FAVS_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function saveFavQuote(text) {
+  const favs = getFavQuotes();
+  if (!favs.includes(text)) {
+    favs.unshift(text);
+    localStorage.setItem(QUOTE_FAVS_KEY, JSON.stringify(favs.slice(0, 50)));
+  }
+}
+
+function removeFavQuote(idx) {
+  const favs = getFavQuotes();
+  favs.splice(idx, 1);
+  localStorage.setItem(QUOTE_FAVS_KEY, JSON.stringify(favs));
+  renderFavQuotes();
+}
+
+function blockQuote(text) {
+  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
+  if (!blocked.includes(text)) {
+    blocked.push(text);
+    localStorage.setItem(QUOTE_BLOCKED_KEY, JSON.stringify(blocked));
+  }
+}
+
+function renderFavQuotes() {
+  const section = document.getElementById('favQuotesSection');
+  const el      = document.getElementById('favQuotesList');
+  if (!el) return;
+  const favs = getFavQuotes();
+  if (section) section.style.display = favs.length > 0 ? 'block' : 'none';
+  el.innerHTML = favs.length === 0 ? '' : favs.map((q, i) => `
+    <div class="fav-quote" role="article" aria-label="Saved quote: ${q.replace(/"/g, '&quot;')}">
+      ${q}
+      <button class="fav-quote-remove" onclick="removeFavQuote(${i})"
+              aria-label="Remove this quote from favourites">×</button>
+    </div>
+  `).join('');
+}
+
+// ── API key + quote prefs ─────────────────────────────────────────────────
+function saveApiKey() {
+  const key = document.getElementById('anthropicKey')?.value?.trim();
+  if (!key) { apiKeyStatus('enter a key first', 'var(--danger)'); return; }
+  if (!key.startsWith('sk-ant-')) { apiKeyStatus('key should start with sk-ant-', 'var(--warning)'); return; }
+  localStorage.setItem(ANTHROPIC_KEY_K, key);
+  apiKeyStatus('key saved ✓', 'var(--success)');
+  announce('API key saved.');
+}
+
+function apiKeyStatus(msg, color) {
+  const el = document.getElementById('apiKeyStatus');
+  if (el) { el.textContent = msg; el.style.color = color; }
+}
+
+function saveQuotePrefs() {
+  if (!cfg.notifPrefs) cfg.notifPrefs = {};
+  cfg.notifPrefs.aiQuotesEnabled = document.getElementById('aiQuotesEnabled')?.checked !== false;
+  saveConfig(cfg);
+}
+
+function syncQuoteSettingsUI() {
+  const keyEl = document.getElementById('anthropicKey');
+  if (keyEl) {
+    const stored = localStorage.getItem(ANTHROPIC_KEY_K);
+    if (stored) { keyEl.value = stored; apiKeyStatus('key saved ✓', 'var(--success)'); }
+  }
+  const toggleEl = document.getElementById('aiQuotesEnabled');
+  if (toggleEl) toggleEl.checked = (cfg.notifPrefs || {}).aiQuotesEnabled !== false;
+}
+
 // ── Screen reader announcements ───────────────────────────────────────────
 // ── Notification preferences ─────────────────────────────────────────────
 function saveNotifPrefs() {
@@ -4110,6 +4649,8 @@ function saveAll() {
   announce('Check-in saved. ' + done + ' of ' + all.length + ' tasks completed today. Mood: ' + (state.mood.mood || 'not set') + '. Energy: ' + (state.mood.energy || 'not set') + '.');
   checkBadges();
   renderPointsDisplay();
+  // Show personalised post check-in message
+  showCheckinMessage();
 }
 
 function saveHistoryEntry() {
