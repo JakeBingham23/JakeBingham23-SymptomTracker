@@ -22,7 +22,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder@1.3.3/dist/universal-sentence-encoder.min.js"></script>
 <script src="rag-engine.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=Atkinson+Hyperlegible:wght@400;700&display=swap');
+  @import url('https://fonts.cdnfonts.com/css/opendyslexic');
 
   /* ── Text scale ── */
   :root {
@@ -94,6 +95,8 @@
     --warning-bg:rgba(200,169,110,0.08);
     --mono: 'IBM Plex Mono', monospace;
     --sans: 'IBM Plex Sans', sans-serif;
+    --font-body: var(--sans);
+    --font-mono: var(--mono);
     /* Shadows */
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
     --shadow:    0 2px 8px rgba(0,0,0,0.5);
@@ -248,11 +251,33 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: var(--sans);
+    font-family: var(--font-body);
     min-height: 100vh;
     padding-top: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Font themes ── */
+  :root[data-font="system"] {
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+  }
+  :root[data-font="atkinson"] {
+    --font-body: 'Atkinson Hyperlegible', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  :root[data-font="opendyslexic"] {
+    --font-body: 'OpenDyslexic', sans-serif;
+    --font-mono: 'OpenDyslexic Mono', monospace;
+    /* Slightly looser tracking for OD */
+    letter-spacing: 0.02em;
+    line-height: 1.8;
+  }
+  :root[data-font="comic"] {
+    --font-body: 'Comic Sans MS', 'Comic Sans', cursive;
+    --font-mono: 'IBM Plex Mono', monospace;
+    line-height: 1.75;
   }
 
   /* ── Top nav bar ── */
@@ -1850,6 +1875,9 @@
       <button class="nav-tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="page-settings" onclick="switchTab('settings')">
         <span class="tab-icon" aria-hidden="true">⚙</span><span>settings</span>
       </button>
+      <button class="nav-tab" id="tab-budget" role="tab" aria-selected="false" aria-controls="page-budget" onclick="switchTab('budget')">
+        <span class="tab-icon" aria-hidden="true">$</span><span>budget</span>
+      </button>
     </div>
   </div>
   <!-- Row 2: accessibility toolbar -->
@@ -2164,6 +2192,31 @@
         </div>
       </div>
 
+      <div style="margin-top:12px;margin-bottom:4px">
+        <div style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">font</div>
+        <div class="theme-pill" role="radiogroup" aria-label="Font choice"
+             style="flex-wrap:wrap;height:auto;padding:4px;gap:3px">
+          <button class="theme-opt active" id="fontOptDefault"
+                  onclick="setFont('default')" role="radio" aria-checked="true"
+                  style="font-family:'IBM Plex Sans',sans-serif">default</button>
+          <button class="theme-opt" id="fontOptSystem"
+                  onclick="setFont('system')" role="radio" aria-checked="false"
+                  style="font-family:system-ui,sans-serif">system</button>
+          <button class="theme-opt" id="fontOptAtkinson"
+                  onclick="setFont('atkinson')" role="radio" aria-checked="false"
+                  style="font-family:'Atkinson Hyperlegible',sans-serif">atkinson</button>
+          <button class="theme-opt" id="fontOptOpendyslexic"
+                  onclick="setFont('opendyslexic')" role="radio" aria-checked="false"
+                  style="font-family:'OpenDyslexic',sans-serif">opendyslexic</button>
+          <button class="theme-opt" id="fontOptComic"
+                  onclick="setFont('comic')" role="radio" aria-checked="false"
+                  style="font-family:'Comic Sans MS',cursive">comic sans</button>
+        </div>
+        <p style="font-family:var(--mono);font-size:0.5625rem;color:var(--text3);margin-top:6px">
+          Atkinson Hyperlegible and OpenDyslexic are designed for low vision and dyslexia.
+        </p>
+      </div>
+
       <div class="settings-divider"></div>
       <div class="settings-segment-header" style="margin-top:12px;margin-bottom:10px;border:none;padding:0">
         <h2 id="seg-accessibility" style="color:var(--text2)">accessibility</h2>
@@ -2236,6 +2289,46 @@
                aria-label="New symptom name">
         <button class="add-btn" onclick="addSymptom()" aria-label="Add symptom">+ add</button>
       </div>
+    </section>
+
+    <!-- ── Do Not Disturb ── -->
+    <section class="settings-segment" aria-labelledby="seg-dnd">
+      <div class="settings-segment-header">
+        <h2 id="seg-dnd">do not disturb</h2>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          do not disturb
+          <span>silence all notifications now</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable do not disturb">
+          <input type="checkbox" id="dndEnabled" onchange="saveDND()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">quiet hours schedule</h3>
+      <p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
+        No notifications during these windows. Add multiple windows per day.
+      </p>
+
+      <div style="margin-bottom:8px">
+        <div style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">active days</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap" id="dndDaysRow" role="group" aria-label="Days for quiet hours">
+          <button class="theme-opt active" id="dndDay0" onclick="toggleDNDDay(0)" aria-pressed="true">Sun</button>
+          <button class="theme-opt active" id="dndDay1" onclick="toggleDNDDay(1)" aria-pressed="true">Mon</button>
+          <button class="theme-opt active" id="dndDay2" onclick="toggleDNDDay(2)" aria-pressed="true">Tue</button>
+          <button class="theme-opt active" id="dndDay3" onclick="toggleDNDDay(3)" aria-pressed="true">Wed</button>
+          <button class="theme-opt active" id="dndDay4" onclick="toggleDNDDay(4)" aria-pressed="true">Thu</button>
+          <button class="theme-opt active" id="dndDay5" onclick="toggleDNDDay(5)" aria-pressed="true">Fri</button>
+          <button class="theme-opt active" id="dndDay6" onclick="toggleDNDDay(6)" aria-pressed="true">Sat</button>
+        </div>
+      </div>
+
+      <div id="dndWindowsList" style="margin-bottom:8px"></div>
+      <button class="add-btn" onclick="addDNDWindow()" aria-label="Add quiet hours window">+ add quiet hours</button>
     </section>
 
     <!-- ── Task Reminders ── -->
@@ -2608,6 +2701,18 @@
       </p>
 
       <div class="settings-divider"></div>
+      <h3 class="settings-section-title">monthly budget</h3>
+      <div class="settings-task-row" style="margin-bottom:6px">
+        <input type="number" id="monthlyBudget" placeholder="e.g. 1500"
+               min="0" step="1" style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:0.8125rem;padding:8px 10px;outline:none"
+               aria-label="Monthly budget amount">
+        <button class="add-btn" onclick="saveMonthlyBudget()" aria-label="Save monthly budget">save</button>
+      </div>
+      <p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px">
+        Set your total monthly budget. Track daily spending on the Budget tab.
+      </p>
+
+      <div class="settings-divider"></div>
       <h3 class="settings-section-title">export history</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="add-btn" onclick="exportCSV()"
@@ -2824,7 +2929,7 @@ if (!cfg.tgChatId)           cfg.tgChatId = '';
 if (!cfg.windowCloseTime)    cfg.windowCloseTime = '';
 if (!cfg.taskDeadlines)      cfg.taskDeadlines = {};
 if (!cfg.customTimers)       cfg.customTimers = [];
-if (!cfg.a11y)               cfg.a11y = { textSize: 'normal', highContrast: false, reduceMotion: false, largeTouchTargets: false };
+if (!cfg.a11y)               cfg.a11y = { textSize: 'normal', highContrast: false, reduceMotion: false, largeTouchTargets: false, font: 'default' };
 if (!cfg.notifPrefs) cfg.notifPrefs = {
   taskBrowser: true,   taskTelegram: true,   taskVib: 'gentle',
   timerBrowser: true,  windowBrowser: true,  timerVib: 'gentle',
@@ -2915,6 +3020,8 @@ function initOnboarding() {
   syncAudioUI();
   applyA11yPrefs();
   syncQuoteSettingsUI();
+  syncDNDUI();
+  renderDNDWindows();
   if (!cfg.name) {
     document.getElementById('onboarding').classList.remove('hidden');
     setTimeout(() => document.getElementById('nameInput').focus(), 100);
@@ -2944,19 +3051,21 @@ function applyName(name) {
 // ── Settings panel ────────────────────────────────────────────────────────
 // ── Tab navigation ────────────────────────────────────────────────────────
 function switchTab(tab) {
-  const tabNames = { today: 'Today', history: 'Log and appointments', stats: 'Stats', settings: 'Settings' };
-  ['today','history','stats','settings'].forEach(t => {
+  const tabNames = { today: 'Today', history: 'Log and appointments', stats: 'Stats', settings: 'Settings', budget: 'Budget' };
+  ['today','history','stats','settings','budget'].forEach(t => {
     const tabEl  = document.getElementById('tab-' + t);
     const pageEl = document.getElementById('page-' + t);
+    if (!tabEl || !pageEl) return;
     const active = t === tab;
     tabEl.classList.toggle('active', active);
     tabEl.setAttribute('aria-selected', active ? 'true' : 'false');
     pageEl.classList.toggle('active', active);
     pageEl.setAttribute('aria-hidden', active ? 'false' : 'true');
   });
-  announce(tabNames[tab] + ' tab.');
+  announce((tabNames[tab] || tab) + ' tab.');
   if (tab === 'history')  renderHistory();
   if (tab === 'stats')    renderStats();
+  if (tab === 'budget')   renderBudgetTab();
   if (tab === 'settings') renderSettingsPanel();
 }
 
@@ -3199,13 +3308,15 @@ async function shareSummary() {
 
 // ── renderHistory — now includes appointments ─────────────────────────────
 function renderHistory() {
-  const el = document.getElementById('historyList');
-  document.getElementById('historyDateDisplay').textContent = new Date().toLocaleDateString('en-US', {
+  const el     = document.getElementById('historyList');
+  const dateEl = document.getElementById('historyDateDisplay');
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', {
     weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
   });
 
   // Render appointments
-  const apptEl   = document.getElementById('apptList');
+  const apptEl = document.getElementById('apptList');
+  if (!apptEl) return;
   const appts    = loadAppts();
   const upcoming = appts.filter(a => new Date(a.datetime) >= new Date());
   const past     = appts.filter(a => new Date(a.datetime) <  new Date());
@@ -3234,6 +3345,7 @@ function renderHistory() {
 
   // Render check-in history
   try {
+    if (!el) return;
     const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     el.innerHTML = history.length === 0
       ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 0">no entries yet — save a check-in on the today tab</div>`
@@ -4104,8 +4216,8 @@ function applyA11yPrefs() {
   applyTextSize(a11y.textSize || 'normal');
   applyHighContrast(!!a11y.highContrast);
   applyReduceMotion(!!a11y.reduceMotion);
+  applyFont(a11y.font || 'default');
   if (a11y.largeTouchTargets) document.documentElement.setAttribute('data-large-targets', 'true');
-  // Sync settings checkboxes
   const lttEl = document.getElementById('largeTouchTargets');
   if (lttEl) lttEl.checked = !!a11y.largeTouchTargets;
 }
@@ -4730,6 +4842,327 @@ function hideQR() {
 // For now, users scan the QR with their new device's camera app which opens
 // a URL or shows the JSON — they can then copy/paste into a text file and import.
 // TODO: add jsQR library for in-app camera scanning.
+
+// ── Font system ───────────────────────────────────────────────────────────
+function applyFont(font) {
+  const root = document.documentElement;
+  root.removeAttribute('data-font');
+  if (font && font !== 'default') root.setAttribute('data-font', font);
+  updateFontUI(font || 'default');
+}
+
+function setFont(font) {
+  cfg.a11y = cfg.a11y || {};
+  cfg.a11y.font = font;
+  saveConfig(cfg);
+  applyFont(font);
+  announce('Font set to ' + font + '.');
+}
+
+function updateFontUI(font) {
+  ['default','system','atkinson','opendyslexic','comic'].forEach(f => {
+    const el = document.getElementById('fontOpt' + f.charAt(0).toUpperCase() + f.slice(1));
+    if (el) { el.classList.toggle('active', f === font); el.setAttribute('aria-checked', f === font ? 'true' : 'false'); }
+  });
+}
+
+// ── Do Not Disturb ─────────────────────────────────────────────────────────
+const DND_KEY = 'tracker-dnd';
+
+function getDNDConfig() {
+  try { return JSON.parse(localStorage.getItem(DND_KEY) || 'null') || {
+    enabled: false,
+    days: [true,true,true,true,true,true,true],
+    windows: []
+  }; } catch(e) { return { enabled:false, days:[true,true,true,true,true,true,true], windows:[] }; }
+}
+
+function saveDNDConfig(dnd) {
+  localStorage.setItem(DND_KEY, JSON.stringify(dnd));
+}
+
+function isDNDActive() {
+  const dnd = getDNDConfig();
+  if (!dnd.enabled && dnd.windows.length === 0) return false;
+
+  const now     = new Date();
+  const day     = now.getDay();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
+  // Manual DND toggle
+  if (dnd.enabled) return true;
+
+  // Check if current day/time is in a quiet window
+  if (!dnd.days[day]) return false;
+  return dnd.windows.some(w => {
+    if (!w.start || !w.end) return false;
+    const [sh, sm] = w.start.split(':').map(Number);
+    const [eh, em] = w.end.split(':').map(Number);
+    const startMins = sh * 60 + sm;
+    const endMins   = eh * 60 + em;
+    if (startMins <= endMins) return nowMins >= startMins && nowMins < endMins;
+    // Overnight window (e.g. 22:00 - 08:00)
+    return nowMins >= startMins || nowMins < endMins;
+  });
+}
+
+function saveDND() {
+  const dnd = getDNDConfig();
+  dnd.enabled = document.getElementById('dndEnabled')?.checked || false;
+  saveDNDConfig(dnd);
+  announce('Do not disturb ' + (dnd.enabled ? 'enabled.' : 'disabled.'));
+}
+
+function toggleDNDDay(day) {
+  const dnd = getDNDConfig();
+  dnd.days[day] = !dnd.days[day];
+  saveDNDConfig(dnd);
+  const btn = document.getElementById('dndDay' + day);
+  if (btn) { btn.classList.toggle('active', dnd.days[day]); btn.setAttribute('aria-pressed', dnd.days[day] ? 'true' : 'false'); }
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  announce(days[day] + ' quiet hours ' + (dnd.days[day] ? 'enabled' : 'disabled') + '.');
+}
+
+function addDNDWindow() {
+  const dnd = getDNDConfig();
+  dnd.windows.push({ id: 'dndw_' + Date.now(), start: '22:00', end: '08:00' });
+  saveDNDConfig(dnd);
+  renderDNDWindows();
+}
+
+function removeDNDWindow(id) {
+  const dnd = getDNDConfig();
+  dnd.windows = dnd.windows.filter(w => w.id !== id);
+  saveDNDConfig(dnd);
+  renderDNDWindows();
+}
+
+function updateDNDWindow(id, field, val) {
+  const dnd = getDNDConfig();
+  const w = dnd.windows.find(w => w.id === id);
+  if (w) { w[field] = val; saveDNDConfig(dnd); }
+}
+
+function renderDNDWindows() {
+  const el = document.getElementById('dndWindowsList');
+  if (!el) return;
+  const dnd = getDNDConfig();
+  el.innerHTML = dnd.windows.length === 0
+    ? `<p style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px">no quiet hours set</p>`
+    : dnd.windows.map(w => `
+      <div class="settings-task-row" style="margin-bottom:8px;align-items:center">
+        <span style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);flex-shrink:0">from</span>
+        <input type="time" value="${w.start || '22:00'}"
+               onchange="updateDNDWindow('${w.id}','start',this.value)"
+               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:0.75rem;padding:6px 8px;outline:none"
+               aria-label="Quiet hours start time">
+        <span style="font-family:var(--mono);font-size:0.625rem;color:var(--text3);flex-shrink:0">to</span>
+        <input type="time" value="${w.end || '08:00'}"
+               onchange="updateDNDWindow('${w.id}','end',this.value)"
+               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:0.75rem;padding:6px 8px;outline:none"
+               aria-label="Quiet hours end time">
+        <button class="del-btn" onclick="removeDNDWindow('${w.id}')" aria-label="Remove this quiet hours window">×</button>
+      </div>
+    `).join('');
+}
+
+function syncDNDUI() {
+  const dnd = getDNDConfig();
+  const el = document.getElementById('dndEnabled');
+  if (el) el.checked = dnd.enabled;
+  [0,1,2,3,4,5,6].forEach(d => {
+    const btn = document.getElementById('dndDay' + d);
+    if (btn) { btn.classList.toggle('active', dnd.days[d]); btn.setAttribute('aria-pressed', dnd.days[d] ? 'true' : 'false'); }
+  });
+  renderDNDWindows();
+}
+
+// ── Budget system ──────────────────────────────────────────────────────────
+const BUDGET_KEY  = 'tracker-budget';
+const SPEND_KEY   = 'tracker-spend';
+
+const CATEGORY_ICONS = {
+  food:'🍔', transport:'🚗', health:'💊', household:'🏠',
+  personal:'🧴', entertainment:'🎮', impulse:'⚡', subscription:'📱', other:'📦'
+};
+
+function getBudgetConfig() {
+  try { return JSON.parse(localStorage.getItem(BUDGET_KEY) || '{"monthly":0}'); }
+  catch(e) { return { monthly: 0 }; }
+}
+
+function getSpends() {
+  try { return JSON.parse(localStorage.getItem(SPEND_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+
+function saveSpends(spends) {
+  localStorage.setItem(SPEND_KEY, JSON.stringify(spends));
+}
+
+function saveMonthlyBudget() {
+  const val = parseFloat(document.getElementById('monthlyBudget')?.value || '0');
+  const cfg2 = getBudgetConfig();
+  cfg2.monthly = val;
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(cfg2));
+  renderBudgetTab();
+  announce('Monthly budget set to $' + val.toFixed(2));
+  showToast('budget saved ✓');
+}
+
+function openSpendModal(id) {
+  const overlay = document.getElementById('spendModalOverlay');
+  document.getElementById('spendEditId').value = id || '';
+  document.getElementById('spendModalTitle').textContent = id ? '// edit expense' : '// log expense';
+  if (id) {
+    const spend = getSpends().find(s => s.id === id);
+    if (spend) {
+      document.getElementById('spendAmount').value   = spend.amount;
+      document.getElementById('spendCategory').value = spend.category;
+      document.getElementById('spendNote').value     = spend.note || '';
+      document.getElementById('spendDate').value     = spend.date;
+    }
+  } else {
+    document.getElementById('spendAmount').value   = '';
+    document.getElementById('spendCategory').value = 'food';
+    document.getElementById('spendNote').value     = '';
+    document.getElementById('spendDate').value     = TODAY;
+  }
+  overlay.classList.remove('hidden');
+  setTimeout(() => document.getElementById('spendAmount').focus(), 100);
+}
+
+function closeSpendModal() {
+  document.getElementById('spendModalOverlay').classList.add('hidden');
+}
+
+function saveSpend() {
+  const amount = parseFloat(document.getElementById('spendAmount').value);
+  const date   = document.getElementById('spendDate').value;
+  if (isNaN(amount) || amount <= 0) { showToast('enter a valid amount'); return; }
+  if (!date) { showToast('select a date'); return; }
+
+  const spends = getSpends();
+  const editId = document.getElementById('spendEditId').value;
+  const spend  = {
+    id:       editId || 'sp_' + Date.now(),
+    amount:   Math.round(amount * 100) / 100,
+    category: document.getElementById('spendCategory').value,
+    note:     document.getElementById('spendNote').value.trim(),
+    date
+  };
+
+  if (editId) {
+    const idx = spends.findIndex(s => s.id === editId);
+    if (idx > -1) spends[idx] = spend; else spends.push(spend);
+  } else {
+    spends.push(spend);
+  }
+  spends.sort((a,b) => b.date.localeCompare(a.date));
+  saveSpends(spends);
+  closeSpendModal();
+  renderBudgetTab();
+  announce('Expense logged: $' + spend.amount.toFixed(2) + ' for ' + spend.category + '.');
+  hapticSuccess();
+}
+
+function deleteSpend(id) {
+  const spends = getSpends().filter(s => s.id !== id);
+  saveSpends(spends);
+  renderBudgetTab();
+}
+
+function renderBudgetTab() {
+  const budgetCfg = getBudgetConfig();
+  const spends    = getSpends();
+  const now       = new Date();
+  const monthKey  = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const daysInMonth   = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const daysRemaining = daysInMonth - now.getDate() + 1;
+
+  // Filter this month's spends
+  const monthSpends = spends.filter(s => s.date.startsWith(monthKey));
+  const monthTotal  = monthSpends.reduce((s,e) => s + e.amount, 0);
+  const budget      = budgetCfg.monthly || 0;
+  const remaining   = budget > 0 ? budget - monthTotal : null;
+  const avgDaily    = monthSpends.length > 0
+    ? monthTotal / (now.getDate()) : 0;
+  const dailyLeft   = remaining !== null && daysRemaining > 0
+    ? remaining / daysRemaining : null;
+
+  // Update stat cards
+  const fmt = n => '$' + Math.abs(n).toFixed(0);
+  const el  = id => document.getElementById(id);
+  if (el('budgetSpent'))    { el('budgetSpent').textContent    = fmt(monthTotal); }
+  if (el('budgetRemaining')){ el('budgetRemaining').textContent = remaining !== null ? fmt(remaining) : '—';
+    el('budgetRemaining').style.color = remaining !== null && remaining < 0 ? 'var(--danger)' : 'var(--accent)'; }
+  if (el('budgetAvgDaily')) { el('budgetAvgDaily').textContent  = avgDaily > 0 ? fmt(avgDaily) : '—'; }
+  if (el('budgetDailyLeft')){ el('budgetDailyLeft').textContent = dailyLeft !== null ? fmt(dailyLeft) : '—';
+    el('budgetDailyLeft').style.color = dailyLeft !== null && dailyLeft < avgDaily ? 'var(--danger)' : 'var(--success)'; }
+
+  // Budget bar
+  const bar     = document.getElementById('budgetBar');
+  const barLabel = document.getElementById('budgetBarLabel');
+  if (bar && budget > 0) {
+    const pct = Math.min(100, (monthTotal / budget) * 100);
+    bar.style.width = pct + '%';
+    bar.style.background = pct > 90 ? 'var(--danger)' : pct > 70 ? 'var(--warning)' : 'var(--success)';
+    if (barLabel) barLabel.textContent = fmt(monthTotal) + ' of $' + budget.toFixed(0);
+  } else if (barLabel) {
+    barLabel.textContent = budget > 0 ? 'set a budget in settings' : 'set a budget in settings → data & storage';
+  }
+
+  // Today's spends
+  const todayEl = document.getElementById('todaySpendList');
+  const todaySpends = spends.filter(s => s.date === TODAY);
+  if (todayEl) {
+    todayEl.innerHTML = todaySpends.length === 0
+      ? `<p style="font-family:var(--mono);font-size:0.6875rem;color:var(--text3);margin-bottom:8px">nothing logged today</p>`
+      : todaySpends.map(s => `
+        <div class="history-entry" style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:1.2rem" aria-hidden="true">${CATEGORY_ICONS[s.category]||'📦'}</span>
+          <div style="flex:1">
+            <div style="font-family:var(--mono);font-size:0.75rem;color:var(--text)">${s.note || s.category}</div>
+            <div style="font-family:var(--mono);font-size:0.625rem;color:var(--text3)">${s.category}</div>
+          </div>
+          <span style="font-family:var(--mono);font-size:0.875rem;color:var(--accent)">$${s.amount.toFixed(2)}</span>
+          <button class="del-btn" onclick="deleteSpend('${s.id}')" aria-label="Delete expense">×</button>
+        </div>`).join('');
+  }
+
+  // Monthly list grouped by date
+  const monthEl = document.getElementById('monthSpendList');
+  if (monthEl) {
+    if (monthSpends.length === 0) {
+      monthEl.innerHTML = `<p style="font-family:var(--mono);font-size:0.6875rem;color:var(--text3)">no spending logged this month</p>`;
+    } else {
+      // Group by date
+      const byDate = {};
+      monthSpends.forEach(s => { (byDate[s.date] = byDate[s.date]||[]).push(s); });
+      monthEl.innerHTML = Object.entries(byDate).map(([date, items]) => {
+        const dayTotal = items.reduce((t,s)=>t+s.amount,0);
+        return `<div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.625rem;color:var(--text3);margin-bottom:4px">
+            <span>${date}</span><span>$${dayTotal.toFixed(2)}</span>
+          </div>
+          ${items.map(s=>`
+          <div class="history-entry" style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <span style="font-size:1rem" aria-hidden="true">${CATEGORY_ICONS[s.category]||'📦'}</span>
+            <div style="flex:1">
+              <div style="font-family:var(--mono);font-size:0.6875rem;color:var(--text)">${s.note||s.category}</div>
+            </div>
+            <span style="font-family:var(--mono);font-size:0.75rem;color:var(--text2)">$${s.amount.toFixed(2)}</span>
+            <button class="del-btn" onclick="deleteSpend('${s.id}')" aria-label="Delete">×</button>
+          </div>`).join('')}
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Load budget setting into input
+  const budgetInput = document.getElementById('monthlyBudget');
+  if (budgetInput && budget > 0) budgetInput.value = budget;
+}
 
 // ── Screen reader announcements ───────────────────────────────────────────
 // ── Notification preferences ─────────────────────────────────────────────
@@ -5408,7 +5841,8 @@ function render() {
 
   try {
     const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
-    document.getElementById('historyList').innerHTML = history.length === 0
+    const histEl = document.getElementById('historyList');
+    if (histEl) histEl.innerHTML = history.length === 0
       ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text3)">no entries yet</div>`
       : history.slice(0, 7).map(e => `
         <div class="history-entry">
