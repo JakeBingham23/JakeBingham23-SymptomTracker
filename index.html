@@ -3518,117 +3518,132 @@
 <!-- ── BUDGET ── -->
 <div class="page" id="page-budget" role="tabpanel" aria-labelledby="tab-budget" aria-hidden="true">
   <div class="container">
+
     <div class="header">
-      <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="budget-heading">spending</h1>
-    </div>
-
-    <!-- Setup prompt if no limits set -->
-    <div id="budgetSetupPrompt" style="display:none;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:var(--sp-4);margin-bottom:var(--sp-4);text-align:center">
-      <p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text2);margin-bottom:10px;line-height:1.7">
-        Set your spending bucket limits in<br><strong style="color:var(--accent)">Settings → Data & Storage → Spending Buckets</strong><br>to activate the budget tracker.
-      </p>
-      <button class="add-btn" onclick="switchTab('settings')" aria-label="Go to settings to set up budget">go to settings →</button>
-    </div>
-
-    <!-- Four buckets -->
-    <div class="bucket-grid" id="bucketGrid" role="list" aria-label="Spending buckets">
-      <div class="bucket-card essentials" role="listitem" onclick="openBucketDetail('essentials')"
-           aria-label="Essentials bucket">
-        <div class="bucket-icon" aria-hidden="true">🏠</div>
-        <div class="bucket-name">essentials</div>
-        <div class="bucket-amount" id="bucketEssAmount">—</div>
-        <div class="bucket-limit" id="bucketEssLimit">set limit</div>
-      </div>
-      <div class="bucket-card daily" role="listitem" onclick="openBucketDetail('daily')"
-           aria-label="Daily bucket">
-        <div class="bucket-icon" aria-hidden="true">💳</div>
-        <div class="bucket-name">daily</div>
-        <div class="bucket-amount" id="bucketDayAmount">—</div>
-        <div class="bucket-limit" id="bucketDayLimit">set limit</div>
-      </div>
-      <div class="bucket-card shortterm" role="listitem" onclick="openBucketDetail('shortterm')"
-           aria-label="Short term bucket">
-        <div class="bucket-icon" aria-hidden="true">🎯</div>
-        <div class="bucket-name">short term</div>
-        <div class="bucket-amount" id="bucketSTAmount">—</div>
-        <div class="bucket-limit" id="bucketSTLimit">set limit</div>
-      </div>
-      <div class="bucket-card longterm" role="listitem" onclick="openBucketDetail('longterm')"
-           aria-label="Long term bucket">
-        <div class="bucket-icon" aria-hidden="true">🚀</div>
-        <div class="bucket-name">long term</div>
-        <div class="bucket-amount" id="bucketLTAmount">—</div>
-        <div class="bucket-limit" id="bucketLTLimit">set limit</div>
+      <div class="header-top">
+        <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="budget-heading">spending</h1>
+        <button class="add-btn" onclick="openSpendModal()" aria-label="Log a new expense">+ log expense</button>
       </div>
     </div>
 
-    <!-- Today's spending -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-      <h2 class="section-label">today</h2>
-      <button class="add-btn" onclick="openSpendModal()" aria-label="Log expense">+ log expense</button>
+    <!-- Setup prompt — shown when no budget configured -->
+    <div id="budgetSetupPrompt" style="display:none">
+      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:var(--sp-5);text-align:center;margin-bottom:var(--sp-4)">
+        <p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text2);margin-bottom:var(--sp-3);line-height:1.7">
+          no budget set yet.<br>go to <strong style="color:var(--accent)">☰ menu → budget settings</strong><br>to set your monthly limits.
+        </p>
+        <button class="add-btn" onclick="openMenu();openMenuSubPage('data')" aria-label="Open budget settings">set up budget →</button>
+      </div>
     </div>
-    <div id="todaySpendList"></div>
 
-    <!-- Dopamine / want list -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:1.5rem 0 10px;flex-wrap:wrap;gap:8px">
+    <!-- Stats dashboard — shown when budget is configured -->
+    <div id="budgetStatsDashboard" style="display:none">
+
+      <!-- Four stat cards -->
+      <div class="stats-grid" style="margin-bottom:var(--sp-4)">
+        <div class="stat-card" aria-label="Total spent this month">
+          <span class="stat-num" id="budgetSpent">$0</span>
+          <span class="stat-label">spent</span>
+          <span class="stat-sub">this month</span>
+        </div>
+        <div class="stat-card" aria-label="Remaining budget">
+          <span class="stat-num accent" id="budgetRemaining">$0</span>
+          <span class="stat-label">remaining</span>
+          <span class="stat-sub">this month</span>
+        </div>
+        <div class="stat-card" aria-label="Average daily spending">
+          <span class="stat-num" id="budgetAvgDaily">$0</span>
+          <span class="stat-label">avg daily</span>
+          <span class="stat-sub">this month</span>
+        </div>
+        <div class="stat-card" aria-label="Daily allowance remaining">
+          <span class="stat-num success" id="budgetDailyLeft">$0</span>
+          <span class="stat-label">daily left</span>
+          <span class="stat-sub">days remaining</span>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div style="margin-bottom:var(--sp-5)">
+        <div style="height:8px;border-radius:var(--radius-pill);background:var(--bg3);overflow:hidden;margin-bottom:6px">
+          <div id="budgetBarFill" style="height:100%;width:0%;border-radius:var(--radius-pill);background:var(--success);transition:width 0.4s ease,background 0.3s"
+               role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Budget used"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text3)">
+          <span id="budgetBarLabel">0% used</span>
+          <span id="budgetBarTotal"></span>
+        </div>
+      </div>
+
+      <!-- Four buckets -->
+      <h2 class="section-label" style="margin-bottom:var(--sp-3)">buckets</h2>
+      <div class="bucket-grid" id="bucketGrid" role="list" aria-label="Spending buckets">
+        <div class="bucket-card essentials" role="listitem" onclick="filterSpendByBucket('essentials')" aria-label="Essentials bucket">
+          <div class="bucket-icon" aria-hidden="true">🏠</div>
+          <div class="bucket-name">essentials</div>
+          <div class="bucket-amount" id="bucketEssAmount">—</div>
+          <div class="bucket-limit"  id="bucketEssLimit">set limit</div>
+        </div>
+        <div class="bucket-card daily" role="listitem" onclick="filterSpendByBucket('daily')" aria-label="Daily bucket">
+          <div class="bucket-icon" aria-hidden="true">💳</div>
+          <div class="bucket-name">daily</div>
+          <div class="bucket-amount" id="bucketDayAmount">—</div>
+          <div class="bucket-limit"  id="bucketDayLimit">set limit</div>
+        </div>
+        <div class="bucket-card shortterm" role="listitem" onclick="filterSpendByBucket('shortterm')" aria-label="Short term bucket">
+          <div class="bucket-icon" aria-hidden="true">🎯</div>
+          <div class="bucket-name">short term</div>
+          <div class="bucket-amount" id="bucketSTAmount">—</div>
+          <div class="bucket-limit"  id="bucketSTLimit">set limit</div>
+        </div>
+        <div class="bucket-card longterm" role="listitem" onclick="filterSpendByBucket('longterm')" aria-label="Long term bucket">
+          <div class="bucket-icon" aria-hidden="true">🚀</div>
+          <div class="bucket-name">long term</div>
+          <div class="bucket-amount" id="bucketLTAmount">—</div>
+          <div class="bucket-limit"  id="bucketLTLimit">set limit</div>
+        </div>
+      </div>
+
+      <!-- Category breakdown -->
+      <h2 class="section-label" style="margin:var(--sp-5) 0 var(--sp-3)">by category</h2>
+      <div id="categoryBreakdown" aria-label="Spending by category"></div>
+
+      <!-- Today's spending -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:var(--sp-5) 0 var(--sp-3);flex-wrap:wrap;gap:8px">
+        <h2 class="section-label">today</h2>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="bucketFilter" onchange="renderBudgetTab()"
+                  style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text2);font-family:var(--font-mono);font-size:var(--text-xs);padding:4px 8px;outline:none"
+                  aria-label="Filter by bucket">
+            <option value="">all buckets</option>
+            <option value="essentials">🏠 essentials</option>
+            <option value="daily">💳 daily</option>
+            <option value="shortterm">🎯 short term</option>
+            <option value="longterm">🚀 long term</option>
+          </select>
+        </div>
+      </div>
+      <div id="todaySpendList"></div>
+
+      <!-- Monthly log -->
+      <h2 class="section-label" style="margin:var(--sp-5) 0 var(--sp-3)">this month</h2>
+      <div id="monthSpendList"></div>
+
+    </div><!-- /budgetStatsDashboard -->
+
+    <!-- Want list — always visible -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:var(--sp-5) 0 var(--sp-3);flex-wrap:wrap;gap:8px">
       <h2 class="section-label">want list</h2>
       <button class="add-btn" onclick="openDopamineModal()" aria-label="Add to want list">+ add want</button>
     </div>
-    <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-bottom:10px;line-height:1.6">
-      Things you want but aren't buying yet. Writing it down scratches the itch without spending.
+    <p style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text3);margin-bottom:var(--sp-3);line-height:1.6">
+      things you want but aren't buying yet. writing it down helps with the impulse.
     </p>
     <div id="dopamineList"></div>
 
-    <!-- Monthly log -->
-    <h2 class="section-label" style="margin:1.5rem 0 10px">this month</h2>
-    <div id="monthSpendList"></div>
   </div>
 </div>
 
-<!-- Dopamine / want list modal -->
-<div class="appt-modal-overlay hidden" id="dopamineModalOverlay"
-     role="dialog" aria-modal="true" aria-labelledby="dopamineModalTitle">
-  <div class="appt-modal">
-    <h3 id="dopamineModalTitle">// add to want list</h3>
-    <input type="hidden" id="dopamineEditId">
-    <div class="appt-field">
-      <label>what do you want?</label>
-      <input type="text" id="dopamineName" placeholder="name the thing" maxlength="60"
-             aria-label="Item name">
-    </div>
-    <div class="appt-field">
-      <label>estimated cost (optional)</label>
-      <input type="number" id="dopamineCost" placeholder="0.00" min="0" step="0.01"
-             inputmode="decimal" aria-label="Estimated cost">
-    </div>
-    <div class="appt-field">
-      <label>which bucket?</label>
-      <select id="dopamineBucket"
-              style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:8px 10px;width:100%;outline:none"
-              aria-label="Which budget bucket">
-        <option value="daily">daily</option>
-        <option value="shortterm">short term</option>
-        <option value="longterm">long term</option>
-        <option value="essentials">essentials</option>
-      </select>
-    </div>
-    <div class="appt-field">
-      <label>want level</label>
-      <div style="display:flex;gap:4px;margin-top:4px" id="wantLevelRow"
-           role="group" aria-label="Want level 1 to 5">
-        <button class="want-star lit" id="wantStar1" onclick="setWantLevel(1)" aria-label="Want level 1">★</button>
-        <button class="want-star lit" id="wantStar2" onclick="setWantLevel(2)" aria-label="Want level 2">★</button>
-        <button class="want-star lit" id="wantStar3" onclick="setWantLevel(3)" aria-label="Want level 3">★</button>
-        <button class="want-star"     id="wantStar4" onclick="setWantLevel(4)" aria-label="Want level 4">★</button>
-        <button class="want-star"     id="wantStar5" onclick="setWantLevel(5)" aria-label="Want level 5">★</button>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn primary" style="flex:1" onclick="saveDopamineItem()">add to list</button>
-      <button class="btn" style="flex:1" onclick="closeDopamineModal()">cancel</button>
-    </div>
-  </div>
-</div>
 
 <!-- ── JOURNAL ── -->
 <div class="page" id="page-journal" role="tabpanel" aria-labelledby="tab-journal" aria-hidden="true">
@@ -6023,90 +6038,17 @@ function saveSpends(spends) {
 
 function saveMonthlyBudget() {
   const val = parseFloat(document.getElementById('monthlyBudget')?.value || '0');
-  const cfg2 = getBudgetConfig();
-  cfg2.monthly = val;
-  localStorage.setItem(BUDGET_KEY, JSON.stringify(cfg2));
+  const c = getBudgetConfig();
+  c.monthly = val;
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
   renderBudgetTab();
   announce('Monthly budget set to $' + val.toFixed(2));
   showToast('budget saved ✓');
 }
 
-function openSpendModal(id) {
-  const overlay = document.getElementById('spendModalOverlay');
-  document.getElementById('spendEditId').value = id || '';
-  document.getElementById('spendModalTitle').textContent = id ? '// edit expense' : '// log expense';
-  if (id) {
-    const spend = getSpends().find(s => s.id === id);
-    if (spend) {
-      document.getElementById('spendAmount').value   = spend.amount;
-      const bucketEl = document.getElementById('spendBucket');
-      if (bucketEl) bucketEl.value = spend.bucket || 'daily';
-      document.getElementById('spendCategory').value = spend.category;
-      document.getElementById('spendNote').value     = spend.note || '';
-      document.getElementById('spendDate').value     = spend.date;
-    }
-  } else {
-    document.getElementById('spendAmount').value   = '';
-    const bucketEl = document.getElementById('spendBucket');
-    if (bucketEl) bucketEl.value = 'daily';
-    document.getElementById('spendCategory').value = 'food';
-    document.getElementById('spendNote').value     = '';
-    document.getElementById('spendDate').value     = TODAY;
-  }
-  // Hide friction notice
-  const fn = document.getElementById('frictionNotice');
-  if (fn) fn.classList.remove('visible');
-  overlay.classList.remove('hidden');
-  setTimeout(() => document.getElementById('spendAmount').focus(), 100);
-}
-
-function closeSpendModal() {
-  document.getElementById('spendModalOverlay').classList.add('hidden');
-}
-
-function saveSpend() {
-  const amount = parseFloat(document.getElementById('spendAmount').value);
-  const date   = document.getElementById('spendDate').value;
-  if (isNaN(amount) || amount <= 0) { showToast('enter a valid amount'); return; }
-  if (!date) { showToast('select a date'); return; }
-
-  const spends = getSpends();
-  const editId = document.getElementById('spendEditId').value;
-  const rawAmount = Math.round(amount * 100) / 100;
-  const spend  = {
-    id:       editId || 'sp_' + Date.now(),
-    amount:   rawAmount,
-    bucket:   document.getElementById('spendBucket')?.value || 'daily',
-    category: document.getElementById('spendCategory').value,
-    note:     document.getElementById('spendNote').value.trim(),
-    date,
-    flagged:  false,
-  };
-
-  function doSave(flagged) {
-    if (flagged) spend.flagged = true;
-    if (editId) {
-      const idx = spends.findIndex(s => s.id === editId);
-      if (idx > -1) spends[idx] = spend; else spends.push(spend);
-    } else {
-      spends.push(spend);
-    }
-    spends.sort((a,b) => b.date.localeCompare(a.date));
-    saveSpends(spends);
-    closeSpendModal();
-    renderBudgetTab();
-    renderDailyCard();
-    renderBucketCards();
-    const bucketName = BUCKET_DEFS[spend.bucket]?.label || spend.bucket;
-    announce('Expense logged: $' + spend.amount.toFixed(2) + ' from ' + bucketName + ' bucket.');
-    hapticSuccess();
-  }
-  checkFriction(rawAmount, doSave);
-}
-
-function deleteSpend(id) {
-  const spends = getSpends().filter(s => s.id !== id);
-  saveSpends(spends);
+function filterSpendByBucket(bucket) {
+  const sel = document.getElementById('bucketFilter');
+  if (sel) sel.value = bucket;
   renderBudgetTab();
 }
 
@@ -6114,433 +6056,212 @@ function renderBudgetTab() {
   renderBucketCards();
   renderDopamineList();
   renderDailyCard();
+
   const budgetCfg = getBudgetConfig();
   const spends    = getSpends();
   const now       = new Date();
   const monthKey  = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   const daysInMonth   = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
   const daysRemaining = daysInMonth - now.getDate() + 1;
+  const budget        = budgetCfg.monthly || 0;
 
-  // Filter this month's spends
+  // Get active bucket filter
+  const filterEl = document.getElementById('bucketFilter');
+  const activeFilter = filterEl?.value || '';
+
+  // Month spends (all buckets for totals)
   const monthSpends = spends.filter(s => s.date.startsWith(monthKey));
   const monthTotal  = monthSpends.reduce((s,e) => s + e.amount, 0);
-  const budget      = budgetCfg.monthly || 0;
+  const avgDaily    = now.getDate() > 0 ? monthTotal / now.getDate() : 0;
   const remaining   = budget > 0 ? budget - monthTotal : null;
-  const avgDaily    = monthSpends.length > 0
-    ? monthTotal / (now.getDate()) : 0;
-  const dailyLeft   = remaining !== null && daysRemaining > 0
-    ? remaining / daysRemaining : null;
+  const dailyLeft   = remaining !== null && daysRemaining > 0 ? remaining / daysRemaining : null;
 
-  // Update stat cards
-  const fmt = n => '$' + Math.abs(n).toFixed(0);
+  // Show/hide dashboard
+  const prompt    = document.getElementById('budgetSetupPrompt');
+  const dashboard = document.getElementById('budgetStatsDashboard');
+  const hasSetup  = budget > 0 || monthSpends.length > 0;
+  if (prompt)    prompt.style.display    = hasSetup ? 'none' : 'block';
+  if (dashboard) dashboard.style.display = hasSetup ? 'block' : 'none';
+  if (!hasSetup) return;
+
+  // Stat cards
+  const fmt = n => '$' + Math.abs(n).toFixed(2);
   const el  = id => document.getElementById(id);
-  if (el('budgetSpent'))    { el('budgetSpent').textContent    = fmt(monthTotal); }
-  if (el('budgetRemaining')){ el('budgetRemaining').textContent = remaining !== null ? fmt(remaining) : '—';
-    el('budgetRemaining').style.color = remaining !== null && remaining < 0 ? 'var(--danger)' : 'var(--accent)'; }
-  if (el('budgetAvgDaily')) { el('budgetAvgDaily').textContent  = avgDaily > 0 ? fmt(avgDaily) : '—'; }
-  if (el('budgetDailyLeft')){ el('budgetDailyLeft').textContent = dailyLeft !== null ? fmt(dailyLeft) : '—';
-    el('budgetDailyLeft').style.color = dailyLeft !== null && dailyLeft < avgDaily ? 'var(--danger)' : 'var(--success)'; }
 
-  // Budget bar
-  const bar     = document.getElementById('budgetBar');
-  const barLabel = document.getElementById('budgetBarLabel');
-  if (bar && budget > 0) {
-    const pct = Math.min(100, (monthTotal / budget) * 100);
-    bar.style.width = pct + '%';
-    bar.style.background = pct > 90 ? 'var(--danger)' : pct > 70 ? 'var(--warning)' : 'var(--success)';
-    if (barLabel) barLabel.textContent = fmt(monthTotal) + ' of $' + budget.toFixed(0);
-  } else if (barLabel) {
-    barLabel.textContent = budget > 0 ? 'set a budget in settings' : 'set a budget in settings → data & storage';
+  if (el('budgetSpent'))    el('budgetSpent').textContent    = fmt(monthTotal);
+  if (el('budgetRemaining')) {
+    el('budgetRemaining').textContent = remaining !== null ? fmt(remaining) : '—';
+    el('budgetRemaining').style.color = remaining !== null && remaining < 0 ? 'var(--danger)' : 'var(--accent)';
+  }
+  if (el('budgetAvgDaily'))  el('budgetAvgDaily').textContent  = avgDaily > 0 ? fmt(avgDaily) : '$0';
+  if (el('budgetDailyLeft')) {
+    el('budgetDailyLeft').textContent = dailyLeft !== null ? fmt(dailyLeft) : '—';
+    el('budgetDailyLeft').style.color = dailyLeft !== null && dailyLeft < avgDaily ? 'var(--danger)' : 'var(--success)';
   }
 
-  // Today's spends
-  const todayEl = document.getElementById('todaySpendList');
-  const todaySpends = spends.filter(s => s.date === TODAY);
+  // Progress bar
+  const pct     = budget > 0 ? Math.min(100, (monthTotal / budget) * 100) : 0;
+  const barFill = el('budgetBarFill');
+  const barLabel = el('budgetBarLabel');
+  const barTotal = el('budgetBarTotal');
+  if (barFill) {
+    barFill.style.width = pct + '%';
+    barFill.style.background = pct > 90 ? 'var(--danger)' : pct > 70 ? 'var(--warning)' : 'var(--success)';
+    barFill.setAttribute('aria-valuenow', Math.round(pct));
+  }
+  if (barLabel) barLabel.textContent = pct.toFixed(1) + '% used';
+  if (barTotal) barTotal.textContent = budget > 0 ? fmt(monthTotal) + ' of $' + budget.toFixed(0) : '';
+
+  // Category breakdown
+  renderCategoryBreakdown(monthSpends);
+
+  // Today's spends (filtered by bucket if active)
+  const todayEl    = el('todaySpendList');
+  const todaySpends = spends.filter(s =>
+    s.date === TODAY && (!activeFilter || s.bucket === activeFilter));
   if (todayEl) {
-    todayEl.innerHTML = todaySpends.length === 0
-      ? `<p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:8px">nothing logged today</p>`
-      : todaySpends.map(s => `
-        <div class="history-entry" style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:1.2rem" aria-hidden="true">${CATEGORY_ICONS[s.category]||'📦'}</span>
-          <div style="flex:1">
-            <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text)">${s.note || s.category}</div>
-            <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">${s.category}</div>
-          </div>
-          <span style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)">$${s.amount.toFixed(2)}</span>
-          <button class="del-btn" onclick="deleteSpend('${s.id}')" aria-label="Delete expense">×</button>
-        </div>`).join('');
+    if (todaySpends.length === 0) {
+      todayEl.innerHTML = `<p style="font-family:var(--font-mono);font-size:var(--text-base);color:var(--text3);margin-bottom:var(--sp-3)">nothing logged today${activeFilter ? ' in this bucket' : ''}</p>`;
+    } else {
+      todayEl.innerHTML = todaySpends.map(s => spendCard(s)).join('');
+    }
   }
 
-  // Monthly list grouped by date
-  const monthEl = document.getElementById('monthSpendList');
+  // Monthly log (filtered)
+  const monthEl = el('monthSpendList');
+  const filtered = monthSpends.filter(s => !activeFilter || s.bucket === activeFilter);
   if (monthEl) {
-    if (monthSpends.length === 0) {
-      monthEl.innerHTML = `<p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3)">no spending logged this month</p>`;
+    if (filtered.length === 0) {
+      monthEl.innerHTML = `<p style="font-family:var(--font-mono);font-size:var(--text-base);color:var(--text3)">no spending logged this month${activeFilter ? ' in this bucket' : ''}</p>`;
     } else {
       // Group by date
       const byDate = {};
-      monthSpends.forEach(s => { (byDate[s.date] = byDate[s.date]||[]).push(s); });
-      monthEl.innerHTML = Object.entries(byDate).map(([date, items]) => {
-        const dayTotal = items.reduce((t,s)=>t+s.amount,0);
-        return `<div style="margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:4px">
-            <span>${date}</span><span>$${dayTotal.toFixed(2)}</span>
-          </div>
-          ${items.map(s=>`
-          <div class="history-entry" style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-            <span style="font-size:1rem" aria-hidden="true">${CATEGORY_ICONS[s.category]||'📦'}</span>
-            <div style="flex:1">
-              <div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text)">${s.note||s.category}</div>
+      filtered.forEach(s => { (byDate[s.date] = byDate[s.date]||[]).push(s); });
+      monthEl.innerHTML = Object.entries(byDate)
+        .sort((a,b) => b[0].localeCompare(a[0]))
+        .map(([date, items]) => {
+          const dayTotal = items.reduce((t,s)=>t+s.amount,0);
+          return `<div style="margin-bottom:var(--sp-4)">
+            <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text3);margin-bottom:var(--sp-2);padding-bottom:4px;border-bottom:0.5px solid var(--border)">
+              <span>${date}</span><span>$${dayTotal.toFixed(2)}</span>
             </div>
-            <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text2)">$${s.amount.toFixed(2)}</span>
-            <button class="del-btn" onclick="deleteSpend('${s.id}')" aria-label="Delete">×</button>
-          </div>`).join('')}
-        </div>`;
-      }).join('');
-    }
-  }
-
-  // Load budget setting into input
-  const budgetInput = document.getElementById('monthlyBudget');
-  if (budgetInput && budget > 0) budgetInput.value = budget;
-}
-
-// ── Budget — four buckets, dopamine list, friction flag ───────────────────
-
-const BUCKET_KEY   = 'tracker-buckets';
-const DOPAMINE_KEY = 'tracker-dopamine';
-const BIG_SPEND_THRESHOLD_DEFAULT = 50;
-
-// ── Bucket config ─────────────────────────────────────────────────────────
-const BUCKET_DEFS = {
-  essentials: { label: 'essentials', icon: '🏠', color: '#4a9e6b' },
-  daily:      { label: 'daily',      icon: '💳', color: '#c8a96e' },
-  shortterm:  { label: 'short term', icon: '🎯', color: '#8fb8d4' },
-  longterm:   { label: 'long term',  icon: '🚀', color: '#a080e0' },
-};
-
-function getBuckets() {
-  try {
-    return JSON.parse(localStorage.getItem(BUCKET_KEY) || 'null') || {
-      essentials: { limit: 0, spent: 0 },
-      daily:      { limit: 0, spent: 0 },
-      shortterm:  { limit: 0, spent: 0 },
-      longterm:   { limit: 0, spent: 0 },
-    };
-  } catch(e) {
-    return { essentials:{limit:0,spent:0}, daily:{limit:0,spent:0}, shortterm:{limit:0,spent:0}, longterm:{limit:0,spent:0} };
-  }
-}
-
-function saveBuckets(b) { localStorage.setItem(BUCKET_KEY, JSON.stringify(b)); }
-
-function openBucketDetail(bucket) {
-  // For now, open spend modal pre-filled with this bucket
-  openSpendModal();
-  setTimeout(() => {
-    const sel = document.getElementById('spendBucket');
-    if (sel) sel.value = bucket;
-  }, 100);
-}
-
-// ── Dopamine / want list ──────────────────────────────────────────────────
-function getDopamineList() {
-  try { return JSON.parse(localStorage.getItem(DOPAMINE_KEY) || '[]'); }
-  catch(e) { return []; }
-}
-function saveDopamineList(list) { localStorage.setItem(DOPAMINE_KEY, JSON.stringify(list)); }
-
-let _currentWantLevel = 3;
-
-function openDopamineModal(id) {
-  _currentWantLevel = 3;
-  document.getElementById('dopamineEditId').value = id || '';
-  document.getElementById('dopamineModalTitle').textContent = id ? '// edit want' : '// add to want list';
-  if (id) {
-    const item = getDopamineList().find(d => d.id === id);
-    if (item) {
-      document.getElementById('dopamineName').value    = item.name;
-      document.getElementById('dopamineCost').value    = item.cost || '';
-      document.getElementById('dopamineBucket').value  = item.bucket || 'daily';
-      _currentWantLevel = item.want || 3;
-    }
-  } else {
-    document.getElementById('dopamineName').value   = '';
-    document.getElementById('dopamineCost').value   = '';
-    document.getElementById('dopamineBucket').value = 'daily';
-  }
-  updateWantStars(_currentWantLevel);
-  document.getElementById('dopamineModalOverlay').classList.remove('hidden');
-  setTimeout(() => document.getElementById('dopamineName').focus(), 100);
-}
-
-function closeDopamineModal() {
-  document.getElementById('dopamineModalOverlay').classList.add('hidden');
-}
-
-function setWantLevel(level) {
-  _currentWantLevel = level;
-  updateWantStars(level);
-}
-
-function updateWantStars(level) {
-  for (let i = 1; i <= 5; i++) {
-    const el = document.getElementById('wantStar' + i);
-    if (el) {
-      el.classList.toggle('lit', i <= level);
-      el.setAttribute('aria-pressed', i <= level ? 'true' : 'false');
+            ${items.map(s => spendCard(s)).join('')}
+          </div>`;
+        }).join('');
     }
   }
 }
 
-function saveDopamineItem() {
-  const name = document.getElementById('dopamineName')?.value.trim();
-  if (!name) { showToast('name it first'); return; }
-  const list   = getDopamineList();
-  const editId = document.getElementById('dopamineEditId').value;
-  const item   = {
-    id:     editId || 'dop_' + Date.now(),
-    name,
-    cost:   parseFloat(document.getElementById('dopamineCost')?.value || '0') || 0,
-    bucket: document.getElementById('dopamineBucket')?.value || 'daily',
-    want:   _currentWantLevel,
-    gotIt:  false,
-    added:  new Date().toISOString().split('T')[0],
-  };
-  if (editId) {
-    const idx = list.findIndex(d => d.id === editId);
-    if (idx > -1) list[idx] = { ...list[idx], ...item }; else list.push(item);
-  } else {
-    list.unshift(item);
-  }
-  saveDopamineList(list);
-  closeDopamineModal();
-  renderDopamineList();
-  announce(name + ' added to want list.');
-  hap('task');
-}
-
-function markGotIt(id) {
-  const list = getDopamineList();
-  const item = list.find(d => d.id === id);
-  if (!item) return;
-  item.gotIt   = !item.gotIt;
-  item.gotDate = item.gotIt ? new Date().toISOString().split('T')[0] : null;
-  saveDopamineList(list);
-  renderDopamineList();
-  if (item.gotIt) {
-    playSuccess();
-    hap('allDone');
-    fireConfetti(1200);
-    announce('You got it — ' + item.name + ' marked as purchased. Nice one.');
-  }
-}
-
-function deleteDopamineItem(id) {
-  saveDopamineList(getDopamineList().filter(d => d.id !== id));
-  renderDopamineList();
-}
-
-function renderDopamineList() {
-  const el = document.getElementById('dopamineList');
-  if (!el) return;
-  const list = getDopamineList();
-  if (list.length === 0) {
-    el.innerHTML = `<p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:8px">nothing on the want list yet</p>`;
-    return;
-  }
-  el.innerHTML = list.map(item => {
-    const stars  = '★'.repeat(item.want || 3) + '☆'.repeat(5 - (item.want || 3));
-    const bucket = BUCKET_DEFS[item.bucket] || BUCKET_DEFS.daily;
-    return `
-    <div class="dopamine-item${item.gotIt ? ' got-it' : ''}"
-         role="article" aria-label="${item.name}${item.gotIt ? ', purchased' : ''}">
-      <div class="dopamine-want" aria-label="Want level ${item.want || 3} of 5" aria-hidden="true">
-        ${[1,2,3,4,5].map(i => `<span class="want-star${i <= (item.want||3) ? ' lit' : ''}"
-          style="cursor:default">★</span>`).join('')}
+function spendCard(s) {
+  const bucket = BUCKET_DEFS[s.bucket] || { icon:'📦', label: s.bucket || 'other' };
+  const flagged = s.flagged ? '<span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--warning);margin-left:4px">⚑ big purchase</span>' : '';
+  return `<div class="history-entry" style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-2)"
+               role="listitem" aria-label="${escHtml(s.note||s.category)}, $${s.amount.toFixed(2)}, ${bucket.label}">
+    <span style="font-size:1.1rem;flex-shrink:0" aria-hidden="true">${CATEGORY_ICONS[s.category]||'📦'}</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-family:var(--font-mono);font-size:var(--text-base);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        ${escHtml(s.note||s.category)}${flagged}
       </div>
-      <div class="dopamine-info">
-        <div class="dopamine-name">${escHtml(item.name)}</div>
-        <div class="dopamine-meta">${bucket.icon} ${bucket.label}${item.gotIt ? ' · got it ' + (item.gotDate||'') : ''}</div>
-      </div>
-      ${item.cost > 0 ? `<div class="dopamine-cost">$${item.cost.toFixed(0)}</div>` : ''}
-      <div class="dopamine-actions">
-        ${!item.gotIt ? `<button class="dopamine-btn got" onclick="markGotIt('${item.id}')"
-                aria-label="Mark ${escHtml(item.name)} as purchased">got it</button>` : ''}
-        <button class="dopamine-btn" onclick="openDopamineModal('${item.id}')"
-                aria-label="Edit ${escHtml(item.name)}">edit</button>
-        <button class="dopamine-btn" onclick="deleteDopamineItem('${item.id}')"
-                aria-label="Remove ${escHtml(item.name)} from want list"
-                style="color:var(--text3)">×</button>
+      <div style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text3)">${bucket.icon} ${bucket.label}</div>
+    </div>
+    <span style="font-family:var(--font-mono);font-size:var(--text-md);color:var(--accent);flex-shrink:0">$${s.amount.toFixed(2)}</span>
+    <button class="del-btn" onclick="deleteSpend('${s.id}')" aria-label="Delete expense">×</button>
+  </div>`;
+}
+
+function renderCategoryBreakdown(monthSpends) {
+  const el = document.getElementById('categoryBreakdown');
+  if (!el || monthSpends.length === 0) { if(el) el.innerHTML=''; return; }
+
+  // Total by category
+  const byCategory = {};
+  monthSpends.forEach(s => {
+    byCategory[s.category] = (byCategory[s.category]||0) + s.amount;
+  });
+  const total  = monthSpends.reduce((t,s)=>t+s.amount,0);
+  const sorted = Object.entries(byCategory).sort((a,b)=>b[1]-a[1]);
+  const maxVal = sorted[0]?.[1] || 1;
+
+  el.innerHTML = sorted.map(([cat, amt]) => {
+    const pct = Math.round((amt / maxVal) * 100);
+    const ofTotal = ((amt/total)*100).toFixed(0);
+    return `<div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)"
+                 role="listitem" aria-label="${cat}: $${amt.toFixed(2)}, ${ofTotal}% of total">
+      <span style="font-size:1rem;flex-shrink:0" aria-hidden="true">${CATEGORY_ICONS[cat]||'📦'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:var(--text-sm);margin-bottom:3px">
+          <span style="color:var(--text2)">${cat}</span>
+          <span style="color:var(--accent)">$${amt.toFixed(2)}</span>
+        </div>
+        <div style="height:4px;background:var(--bg3);border-radius:var(--radius-pill);overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:var(--radius-pill);opacity:0.7"></div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text3);margin-top:2px">${ofTotal}% of total</div>
       </div>
     </div>`;
   }).join('');
 }
 
-// ── Big purchase friction flag ────────────────────────────────────────────
-function checkFriction(amount, callback) {
-  const cfg2    = getBudgetConfig();
-  const thresh  = cfg2.bigSpendThreshold || BIG_SPEND_THRESHOLD_DEFAULT;
-  if (amount < thresh) { callback(); return; }
-
-  const notice = document.getElementById('frictionNotice');
-  if (notice) {
-    notice.textContent = `$${amount.toFixed(2)} is a big purchase. It's been flagged. Still logging it — no judgment, just noting it.`;
-    notice.classList.add('visible');
-    setTimeout(() => notice.classList.remove('visible'), 6000);
-  }
-  // Log it but also mark as flagged
-  callback(true); // true = is flagged
-}
-
-// ── Daily card on Today tab ───────────────────────────────────────────────
-function renderDailyCard() {
-  const card = document.getElementById('dailySpendCard');
-  if (!card) return;
-
-  const buckets  = getBuckets();
-  const dailyLim = buckets.daily?.limit || 0;
-
-  if (dailyLim === 0) { card.style.display = 'none'; return; }
-  card.style.display = 'block';
-
-  const spends     = getSpends();
-  const todayTotal = spends
-    .filter(s => s.date === TODAY && s.bucket === 'daily')
-    .reduce((t, s) => t + s.amount, 0);
-
-  const remaining = Math.max(0, dailyLim - todayTotal);
-  const pct       = Math.min(100, (todayTotal / dailyLim) * 100);
-  const tight     = pct > 80;
-
-  const remEl  = document.getElementById('dailyRemaining');
-  const barEl  = document.getElementById('dailyBar');
-  const spentEl = document.getElementById('dailySpent');
-  const limEl  = document.getElementById('dailyLimit');
-
-  if (remEl)   { remEl.textContent = '$' + remaining.toFixed(0); remEl.classList.toggle('tight', tight); }
-  if (barEl)   { barEl.style.width = pct + '%'; barEl.style.background = tight ? 'var(--warning)' : 'var(--success)'; }
-  if (spentEl) spentEl.textContent = '$' + todayTotal.toFixed(2) + ' spent today';
-  if (limEl)   limEl.textContent   = 'of $' + dailyLim.toFixed(0) + ' limit';
-}
-
-// ── Bucket cards ──────────────────────────────────────────────────────────
 function renderBucketCards() {
   const buckets = getBuckets();
   const spends  = getSpends();
   const now     = new Date();
   const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-  // Show setup prompt if no limits set
+
+  // Show/hide setup prompt based on any limits set
   const hasAnyLimit = Object.values(buckets).some(b => b.limit > 0);
   const promptEl = document.getElementById('budgetSetupPrompt');
-  if (promptEl) promptEl.style.display = hasAnyLimit ? 'none' : 'block';
+  if (promptEl && (getBudgetConfig().monthly > 0 || getSpends().length > 0)) {
+    promptEl.style.display = 'none';
+  }
+
+  const amtIds = { essentials:'bucketEssAmount', daily:'bucketDayAmount', shortterm:'bucketSTAmount', longterm:'bucketLTAmount' };
+  const limIds = { essentials:'bucketEssLimit',  daily:'bucketDayLimit',  shortterm:'bucketSTLimit',  longterm:'bucketLTLimit'  };
 
   Object.entries(BUCKET_DEFS).forEach(([key, def]) => {
-    const limit   = buckets[key]?.limit || 0;
-    const spent   = spends
+    const limit = buckets[key]?.limit || 0;
+    const spent = spends
       .filter(s => s.date.startsWith(monthKey) && s.bucket === key)
       .reduce((t,s) => t + s.amount, 0);
     const remaining = limit > 0 ? limit - spent : null;
 
-    const amtId = { essentials:'bucketEssAmount', daily:'bucketDayAmount', shortterm:'bucketSTAmount', longterm:'bucketLTAmount' }[key];
-    const limId = { essentials:'bucketEssLimit',  daily:'bucketDayLimit',  shortterm:'bucketSTLimit',  longterm:'bucketLTLimit'  }[key];
-
-    const amtEl = document.getElementById(amtId);
-    const limEl = document.getElementById(limId);
-    if (amtEl) amtEl.textContent = remaining !== null ? '$' + remaining.toFixed(0) : '$' + spent.toFixed(0);
-    if (limEl) limEl.textContent = limit > 0 ? 'of $' + limit.toFixed(0) : 'tap to set limit';
+    const amtEl = document.getElementById(amtIds[key]);
+    const limEl = document.getElementById(limIds[key]);
+    if (amtEl) {
+      amtEl.textContent = remaining !== null
+        ? '$' + remaining.toFixed(0) + ' left'
+        : '$' + spent.toFixed(0) + ' spent';
+      amtEl.style.color = remaining !== null && remaining < 0 ? 'var(--danger)' : '';
+    }
+    if (limEl) limEl.textContent = limit > 0
+      ? 'of $' + limit.toFixed(0)
+      : 'tap to filter';
   });
 }
 
-// ── Mood vs spending correlation (Stats tab) ──────────────────────────────
-function renderSpendMoodCorrelation() {
-  const el = document.getElementById('spendMoodCorrelation');
-  if (!el) return;
-
-  const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
-  const spends  = getSpends();
-  if (history.length < 3 || spends.length < 3) {
-    el.innerHTML = `<p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">log a few more days of spending to see patterns</p>`;
-    return;
-  }
-
-  const moodMap = { dark:-2, low:-1, flat:0, ok:1, good:2, high:3 };
-
-  // Build day-level data
-  const byDay = {};
-  history.forEach(e => {
-    byDay[e.date] = { mood: moodMap[e.mood] ?? null, energy: e.energy };
-  });
-  spends.forEach(s => {
-    if (!byDay[s.date]) byDay[s.date] = {};
-    byDay[s.date].spent = (byDay[s.date].spent || 0) + s.amount;
-  });
-
-  // Days with both mood and spending
-  const paired = Object.entries(byDay)
-    .filter(([, d]) => d.mood !== null && d.mood !== undefined && d.spent > 0)
-    .map(([date, d]) => ({ date, mood: d.mood, spent: d.spent }));
-
-  if (paired.length < 3) {
-    el.innerHTML = `<p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">need more days with both mood logged and spending to show pattern</p>`;
-    return;
-  }
-
-  // Simple correlation: average spend by mood group
-  const groups = { low: [], mid: [], high: [] };
-  paired.forEach(d => {
-    if (d.mood <= -1)     groups.low.push(d.spent);
-    else if (d.mood <= 1) groups.mid.push(d.spent);
-    else                  groups.high.push(d.spent);
-  });
-
-  const avg = arr => arr.length ? (arr.reduce((s,v)=>s+v,0)/arr.length).toFixed(0) : null;
-  const lowAvg  = avg(groups.low);
-  const midAvg  = avg(groups.mid);
-  const highAvg = avg(groups.high);
-
-  const maxAvg = Math.max(lowAvg||0, midAvg||0, highAvg||0) || 1;
-
-  el.innerHTML = `
-    <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px">
-      average daily spending by mood — based on ${paired.length} days
-    </div>
-    ${[
-      { label: 'low mood',  val: lowAvg,  col: 'var(--danger)' },
-      { label: 'neutral',   val: midAvg,  col: 'var(--text2)'  },
-      { label: 'good mood', val: highAvg, col: 'var(--success)' },
-    ].filter(r => r.val !== null).map(row => `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <span style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);width:70px;flex-shrink:0">${row.label}</span>
-        <div style="flex:1;height:6px;background:var(--bg3);border-radius:var(--radius-pill);overflow:hidden">
-          <div style="height:100%;border-radius:var(--radius-pill);background:${row.col};width:${Math.round((row.val/maxAvg)*100)}%;transition:width 0.4s"></div>
-        </div>
-        <span style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text2);width:36px;text-align:right">$${row.val}</span>
-      </div>
-    `).join('')}
-    <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-top:8px;line-height:1.6">
-      This is a pattern, not a judgment. It's useful data for understanding your spending triggers.
-    </p>`;
-}
-
-// ── Bucket limit settings UI ──────────────────────────────────────────────
 function renderBucketLimitSettings() {
   const el = document.getElementById('bucketLimitSettings');
   if (!el) return;
   const buckets = getBuckets();
-  const cfg2    = getBudgetConfig();
+  const budgetCfg = getBudgetConfig();
   el.innerHTML = Object.entries(BUCKET_DEFS).map(([key, def]) => `
     <div class="settings-task-row" style="margin-bottom:6px;align-items:center">
       <span style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text2);flex-shrink:0;width:90px">${def.icon} ${def.label}</span>
-      <input type="number" id="bucketLimit_${key}" placeholder="limit $" min="0" step="1"
+      <input type="number" id="bucketLimit_${key}" placeholder="monthly $" min="0" step="1"
              value="${buckets[key]?.limit || ''}"
              style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:8px 10px;outline:none"
-             aria-label="${def.label} bucket monthly limit">
-    </div>`).join('');
+             aria-label="${def.label} monthly limit">
+    </div>`).join('') + `
+    <div class="settings-task-row" style="margin-bottom:6px;align-items:center;margin-top:8px">
+      <span style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text2);flex-shrink:0;width:90px">📅 monthly total</span>
+      <input type="number" id="monthlyBudget" placeholder="total $" min="0" step="1"
+             value="${budgetCfg.monthly || ''}"
+             style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:8px 10px;outline:none"
+             aria-label="Total monthly budget">
+    </div>`;
 
-  // Big spend threshold
   const threshEl = document.getElementById('bigSpendThreshold');
-  if (threshEl) threshEl.value = cfg2.bigSpendThreshold || BIG_SPEND_THRESHOLD_DEFAULT;
+  if (threshEl) threshEl.value = budgetCfg.bigSpendThreshold || BIG_SPEND_THRESHOLD_DEFAULT;
 }
 
 function saveBucketLimits() {
@@ -6550,116 +6271,29 @@ function saveBucketLimits() {
     buckets[key] = { ...buckets[key], limit: val || 0 };
   });
   saveBuckets(buckets);
+  // Also save monthly total if provided
+  const monthly = parseFloat(document.getElementById('monthlyBudget')?.value || '0');
+  if (monthly) {
+    const c = getBudgetConfig();
+    c.monthly = monthly;
+    localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
+  }
   renderBucketCards();
   renderDailyCard();
-  showToast('bucket limits saved ✓');
+  renderBudgetTab();
+  showToast('budget limits saved ✓');
   announce('Spending bucket limits saved.');
 }
 
 function saveBigSpendThreshold() {
-  const val  = parseFloat(document.getElementById('bigSpendThreshold')?.value || '50');
-  const cfg2 = getBudgetConfig();
-  cfg2.bigSpendThreshold = val;
-  localStorage.setItem(BUDGET_KEY, JSON.stringify(cfg2));
+  const val = parseFloat(document.getElementById('bigSpendThreshold')?.value || '50');
+  const c = getBudgetConfig();
+  c.bigSpendThreshold = val;
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
   showToast('big purchase flag set to $' + val.toFixed(0));
   announce('Big purchase flag set to $' + val.toFixed(0));
 }
 
-// ── Hamburger menu overlay ────────────────────────────────────────────────
-let _menuPrevFocus = null;
-
-function openMenu() {
-  _menuPrevFocus = document.activeElement;
-  const overlay = document.getElementById('menuOverlay');
-  overlay.classList.remove('hidden');
-  syncMenuUI();
-  // Focus close button
-  setTimeout(() => {
-    const close = overlay.querySelector('.menu-close-btn');
-    if (close) close.focus();
-  }, 50);
-  announce('Menu opened.');
-}
-
-function closeMenu() {
-  const overlay = document.getElementById('menuOverlay');
-  if (overlay) {
-    overlay.classList.add('hidden');
-    overlay.classList.remove('shifted');
-    overlay.setAttribute('aria-hidden', 'true');
-  }
-  if (_activeSubPage) {
-    const active = document.getElementById('subpage-' + _activeSubPage);
-    if (active) active.classList.remove('active');
-    _activeSubPage = null;
-  }
-}
-
-function syncMenuUI() {
-  const a11y  = cfg.a11y || {};
-  const theme = cfg.theme || 'system';
-  const dnd   = getDNDConfig();
-
-  // Theme
-  ['system','light','dark'].forEach(t => {
-    const el = document.getElementById('menuTheme' + t.charAt(0).toUpperCase() + t.slice(1));
-    if (el) { el.classList.toggle('active', t === theme); el.setAttribute('aria-checked', t === theme ? 'true' : 'false'); }
-  });
-
-  // Text size
-  const size = a11y.textSize || 'normal';
-  ['Small','Normal','Large','XL'].forEach(s => {
-    const el = document.getElementById('menuSize' + s);
-    const key = s.toLowerCase();
-    if (el) { el.classList.toggle('active', key === size); el.setAttribute('aria-checked', key === size ? 'true' : 'false'); }
-  });
-
-  // Toggles
-  const hcEl = document.getElementById('menuHighContrast');
-  if (hcEl) hcEl.checked = !!a11y.highContrast;
-
-  const rmEl = document.getElementById('menuReduceMotion');
-  if (rmEl) rmEl.checked = !!a11y.reduceMotion;
-
-  const ltEl = document.getElementById('menuLargeTargets');
-  if (ltEl) ltEl.checked = !!a11y.largeTouchTargets;
-
-  const dndEl = document.getElementById('menuDND');
-  if (dndEl) dndEl.checked = dnd.enabled;
-
-  // Font
-  const font = a11y.font || 'default';
-  ['Default','Ibmplexmono','Atkinson','Opendyslexic','Comic'].forEach(f => {
-    const el = document.getElementById('menuFont' + f);
-    const key = f.toLowerCase();
-    if (el) { el.classList.toggle('active', key === font); el.setAttribute('aria-checked', key === font ? 'true' : 'false'); }
-  });
-}
-
-function updateMenuThemeUI() {
-  const theme = cfg.theme || 'system';
-  ['system','light','dark'].forEach(t => {
-    const el = document.getElementById('menuTheme' + t.charAt(0).toUpperCase() + t.slice(1));
-    if (el) { el.classList.toggle('active', t === theme); el.setAttribute('aria-checked', t === theme ? 'true' : 'false'); }
-  });
-  // Also sync settings panel theme buttons
-  ['System','Light','Dark'].forEach(t => {
-    const el = document.getElementById('themeOpt' + t);
-    if (el) { el.classList.toggle('active', t.toLowerCase() === theme); el.setAttribute('aria-checked', t.toLowerCase() === theme ? 'true' : 'false'); }
-  });
-}
-
-// Close menu on Escape
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    const menuEl = document.getElementById('menuOverlay');
-    if (menuEl && !menuEl.classList.contains('hidden')) closeMenu();
-  }
-});
-
-// Also sync menu when opened — override setTextSize to keep menu in sync
-const _origSetTextSize = setTextSize;
-// Note: setTextSize is already defined above, menu syncs on open
 
 // ── Journal system ────────────────────────────────────────────────────────
 
