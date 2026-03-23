@@ -8667,9 +8667,14 @@ const lockScreen = (() => {
   function buildPad(containerId, onKey) {
     const pad    = document.getElementById(containerId);
     if (!pad) return;
-    const keys   = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+    const keys   = ['1','2','3','4','5','6','7','8','9','✓','0','⌫'];
     pad.innerHTML = keys.map(k => {
-      if (k === '') return '<div class="pin-key empty" aria-hidden="true"></div>';
+      if (k === '✓') {
+        // Manual submit — allows submission for PINs of any valid length (min 4)
+        return `<button class="pin-key" style="color:var(--success);font-weight:bold;"
+          onclick="lockScreen.submit('${containerId}' === 'setupPINPad')"
+          aria-label="Submit PIN">✓</button>`;
+      }
       if (k === '⌫') return `<button class="pin-key delete"
         onclick="lockScreen._key('${containerId}','del')"
         aria-label="Delete last digit">⌫</button>`;
@@ -8938,6 +8943,52 @@ document.addEventListener('DOMContentLoaded', () => {
   // Show lock screen
   lockScreen.show();
 });
+
+
+// ── Security: Inactivity timeout & visibility lock ────────────────────────
+// Calls SecureStore.lock() (wipes in-memory key) then re-shows lock screen.
+// Does nothing if the lock screen is already visible.
+
+const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes
+let _idleTimer = null;
+
+function _isLocked() {
+  const el = document.getElementById('lockScreen');
+  return el && el.style.display !== 'none';
+}
+
+function _hardLock() {
+  if (_isLocked()) return;
+  SecureStore.lock();          // wipes in-memory AES key
+  lockScreen.show();
+  console.log('[Security] Session locked.');
+}
+
+function _resetIdleTimer() {
+  if (_isLocked()) return;     // don't bother counting when already locked
+  clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(_hardLock, INACTIVITY_LIMIT);
+}
+
+// Activity events that reset the idle clock
+['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(evt => {
+  document.addEventListener(evt, _resetIdleTimer, { passive: true, capture: true });
+});
+
+// Visibility lock — lock after 30 s of the tab being hidden
+let _visTimer = null;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    _visTimer = setTimeout(() => {
+      if (document.hidden) _hardLock();
+    }, 30000);
+  } else {
+    clearTimeout(_visTimer);
+  }
+});
+
+// Start idle clock once DOM is ready
+document.addEventListener('DOMContentLoaded', _resetIdleTimer);
 
 
 // ── Timer utilities ──────────────────────────────────────────────────────
