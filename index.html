@@ -1599,14 +1599,26 @@
   .milestone-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.88);
+    background: rgba(0,0,0,0.92);
     z-index: 9500;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    padding: 1.5rem;
+  }
+  .milestone-card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 2rem 1.5rem;
+    max-width: 340px;
+    width: 100%;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
   }
   .milestone-overlay.hidden { display: none; }
   .milestone-emoji { font-size: 64px; margin-bottom: 16px; line-height: 1; }
@@ -2428,14 +2440,16 @@
 <!-- Milestone celebration overlay -->
 <div class="milestone-overlay hidden" id="milestoneOverlay"
      role="dialog" aria-modal="true" aria-labelledby="milestoneTitleEl">
-  <div class="milestone-emoji" id="milestoneEmoji" aria-hidden="true">🎉</div>
-  <div class="milestone-title" id="milestoneTitleEl"></div>
-  <div class="milestone-msg"   id="milestoneMsgEl"></div>
-  <div class="milestone-points" id="milestonePointsEl" aria-live="polite"></div>
-  <button class="btn primary" style="min-width:160px"
-          onclick="closeMilestone()" aria-label="Close celebration">
-    let's go ✓
-  </button>
+  <div class="milestone-card">
+    <div class="milestone-emoji" id="milestoneEmoji" aria-hidden="true">🎉</div>
+    <div class="milestone-title" id="milestoneTitleEl"></div>
+    <div class="milestone-msg"   id="milestoneMsgEl"></div>
+    <div class="milestone-points" id="milestonePointsEl" aria-live="polite"></div>
+    <button class="btn primary" style="min-width:160px;margin-top:1.5rem"
+            onclick="closeMilestone()" aria-label="Close celebration">
+      let's go ✓
+    </button>
+  </div>
 </div>
 
 <!-- ARIA live regions — screen readers announce changes here without focus moving -->
@@ -3416,8 +3430,8 @@
 
       <h3 class="settings-section-title" style="margin-top:0">backup &amp; restore</h3>
       <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
-        Export saves everything — tasks, history, appointments, streak, badges, settings.<br>
-        Import restores it all. QR code transfers to another device.
+        Export saves everything — encrypted with a passphrase only you know.<br>
+        QR transfers your <em>config only</em> (tasks, symptoms, settings) — small enough to fit.
       </p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <button class="add-btn" onclick="exportBackup()"
@@ -3426,20 +3440,41 @@
                 aria-label="Import backup from JSON file">↑ import backup</button>
         <input type="file" id="importFileInput" accept=".json"
                style="display:none" onchange="importBackup(this)">
-        <button class="add-btn" onclick="showQRExport()"
-                aria-label="Generate QR code for cross-device transfer">⬡ QR transfer</button>
+        <button class="add-btn" onclick="showQRConfig()"
+                aria-label="Generate QR code for config transfer">⬡ QR config</button>
+        <button class="add-btn" onclick="exportEncryptedBackup()"
+                aria-label="Export encrypted backup">🔒 encrypted export</button>
       </div>
       <div id="backupStatus" role="status" aria-live="polite"
            style="font-family:var(--font-mono);font-size:0.625rem;margin-bottom:10px"></div>
       <div id="qrSection" style="display:none;margin-bottom:12px;text-align:center">
-        <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px">
-          Scan on another device to import your data.
+        <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:4px;line-height:1.6">
+          Scan on another device to import your <strong style="color:var(--text2)">config</strong> (tasks, symptoms, settings).<br>
+          Full data backup: use encrypted export instead.
         </p>
         <canvas id="qrCanvas" style="border-radius:8px;max-width:220px"
-                aria-label="QR code for data transfer"></canvas>
-        <div style="margin-top:8px">
-          <button class="add-btn" onclick="hideQR()">close QR</button>
+                aria-label="QR code for config transfer"></canvas>
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button class="add-btn" onclick="hideQR()">close</button>
         </div>
+      </div>
+
+      <!-- Encrypted export passphrase prompt -->
+      <div id="encryptSection" style="display:none;margin-bottom:12px">
+        <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px;line-height:1.6">
+          Set a passphrase to encrypt your backup. You'll need it to import.
+        </p>
+        <div class="settings-task-row" style="margin-bottom:6px">
+          <input type="password" id="encryptPassphrase"
+                 placeholder="passphrase" autocomplete="new-password"
+                 style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:6px 10px;outline:none"
+                 aria-label="Encryption passphrase">
+          <button class="add-btn" onclick="doEncryptedExport()">export</button>
+          <button class="add-btn" onclick="hideEncrypt()">cancel</button>
+        </div>
+        <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3)">
+          AES-256 encryption. If you forget your passphrase, the backup cannot be recovered.
+        </p>
       </div>
 
       <div class="settings-divider"></div>
@@ -3738,7 +3773,7 @@
 </div>
 
 <div class="footer" style="text-align:center;padding:1rem;font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">
-  daily structure tracker &mdash; v3.8 &mdash; add to home screen to install
+  daily structure tracker &mdash; v4.0 &mdash; add to home screen to install
 </div>
 
 <!-- Screenshot preview modal -->
@@ -3790,7 +3825,7 @@
   if (!('serviceWorker' in navigator)) return;
 
   const swCode = `
-const CACHE = 'tracker-v3.7';
+const CACHE = 'tracker-v4.0';
 
 self.addEventListener('install', e => {
   e.waitUntil(self.skipWaiting());
@@ -3933,7 +3968,10 @@ let cfg = loadConfig() || {
   customTimers: []
 };
 // Ensure older saved configs get new keys
-if (!cfg.reminderInterval)  cfg.reminderInterval = '30';
+if (!cfg.critical)           cfg.critical  = DEFAULT_CRITICAL;
+if (!cfg.daily)              cfg.daily     = DEFAULT_DAILY;
+if (!cfg.symptoms)           cfg.symptoms  = DEFAULT_SYMPTOMS;
+if (!cfg.reminderInterval)   cfg.reminderInterval = '30';
 if (!cfg.tgToken)            cfg.tgToken = '';
 if (!cfg.tgChatId)           cfg.tgChatId = '';
 if (!cfg.windowCloseTime)    cfg.windowCloseTime = '';
@@ -3952,9 +3990,9 @@ if (!cfg.vibPatterns) cfg.vibPatterns = {
 };
 
 // Live arrays (used throughout)
-let CRITICAL  = cfg.critical;
-let DAILY     = cfg.daily;
-let SYMPTOMS  = cfg.symptoms;
+let CRITICAL  = cfg.critical  || DEFAULT_CRITICAL;
+let DAILY     = cfg.daily     || DEFAULT_DAILY;
+let SYMPTOMS  = cfg.symptoms  || DEFAULT_SYMPTOMS;
 
 // ── Theme ─────────────────────────────────────────────────────────────────
 function applyTheme(theme) {
@@ -5777,85 +5815,7 @@ function backupStatus(msg, color) {
   setTimeout(() => { if (el) el.textContent = ''; }, 5000);
 }
 
-// ── QR code export ────────────────────────────────────────────────────────
-function showQRExport() {
-  const section = document.getElementById('qrSection');
-  const canvas  = document.getElementById('qrCanvas');
-  if (!section || !canvas) return;
-
-  try {
-    const data = collectAllData();
-    const json = JSON.stringify(data);
-
-    // QR codes have a data limit — if too large, export a stripped version
-    // (omit individual day states, keep config + history summary)
-    let payload = json;
-    if (json.length > 2953) {
-      // QR v40 max at medium error correction
-      const stripped = {
-        version:  data.version,
-        exported: data.exported,
-        config:   data.config,
-        history:  data.history,
-        appts:    data.appts,
-        points:   data.points,
-        badges:   data.badges,
-        streak:   data.streak,
-        _note:    'day states omitted due to size — use JSON export for full backup'
-      };
-      payload = JSON.stringify(stripped);
-    }
-
-    if (payload.length > 2953) {
-      backupStatus('data too large for QR — use JSON export instead', 'var(--warning)');
-      announce('Data is too large for a QR code. Use the JSON export instead.');
-      return;
-    }
-
-    // Clear canvas and generate QR
-    canvas.width  = 220;
-    canvas.height = 220;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 220, 220);
-
-    // Use QRCode library
-    if (typeof QRCode !== 'undefined') {
-      const qr = new QRCode(document.createElement('div'), {
-        text:          payload,
-        width:         220,
-        height:        220,
-        colorDark:     '#0f0f0f',
-        colorLight:    '#ffffff',
-        correctLevel:  QRCode.CorrectLevel.M
-      });
-      // Get the image from the QR object and draw to canvas
-      setTimeout(() => {
-        const img = qr._el.querySelector('img') || qr._el.querySelector('canvas');
-        if (img) {
-          if (img.tagName === 'CANVAS') {
-            ctx.drawImage(img, 0, 0, 220, 220);
-          } else {
-            const i = new Image();
-            i.onload = () => ctx.drawImage(i, 0, 0, 220, 220);
-            i.src = img.src;
-          }
-        }
-      }, 100);
-    } else {
-      // Fallback: show text instruction
-      backupStatus('QR library not loaded — use JSON export', 'var(--warning)');
-      return;
-    }
-
-    section.style.display = 'block';
-    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    announce('QR code generated. Scan it on another device to transfer your data.');
-    backupStatus('scan QR on another device to import', 'var(--text2)');
-  } catch(e) {
-    backupStatus('QR generation failed: ' + e.message, 'var(--danger)');
-  }
-}
+// QR export replaced by showQRConfig and exportEncryptedBackup
 
 function hideQR() {
   const section = document.getElementById('qrSection');
@@ -7250,6 +7210,224 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// ── Encrypted backup system ──────────────────────────────────────────────
+
+// AES-256-GCM encryption using Web Crypto API
+async function deriveKey(passphrase, salt) {
+  const enc     = new TextEncoder();
+  const keyMat  = await crypto.subtle.importKey(
+    'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMat,
+    { name: 'AES-GCM', length: 256 },
+    false, ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptData(data, passphrase) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await deriveKey(passphrase, salt);
+  const enc  = new TextEncoder();
+  const ct   = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(data));
+  // Pack: salt(16) + iv(12) + ciphertext
+  const packed = new Uint8Array(16 + 12 + ct.byteLength);
+  packed.set(salt, 0);
+  packed.set(iv, 16);
+  packed.set(new Uint8Array(ct), 28);
+  // Base64 encode
+  return btoa(String.fromCharCode(...packed));
+}
+
+async function decryptData(b64, passphrase) {
+  const packed = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const salt   = packed.slice(0, 16);
+  const iv     = packed.slice(16, 28);
+  const ct     = packed.slice(28);
+  const key    = await deriveKey(passphrase, salt);
+  const dec    = new TextDecoder();
+  const plain  = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+  return dec.decode(plain);
+}
+
+function showEncryptSection() {
+  const el = document.getElementById('encryptSection');
+  if (el) { el.style.display = 'block'; el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  setTimeout(() => document.getElementById('encryptPassphrase')?.focus(), 100);
+}
+
+function hideEncrypt() {
+  const el = document.getElementById('encryptSection');
+  if (el) el.style.display = 'none';
+  const pw = document.getElementById('encryptPassphrase');
+  if (pw) pw.value = '';
+}
+
+async function exportEncryptedBackup() {
+  showEncryptSection();
+}
+
+async function doEncryptedExport() {
+  const passphrase = document.getElementById('encryptPassphrase')?.value?.trim();
+  if (!passphrase || passphrase.length < 4) {
+    backupStatus('passphrase must be at least 4 characters', 'var(--danger)');
+    return;
+  }
+  try {
+    backupStatus('encrypting...', 'var(--text3)');
+    const data      = collectAllData();
+    const json      = JSON.stringify(data);
+    const encrypted = await encryptData(json, passphrase);
+    const payload   = JSON.stringify({ v: 1, enc: true, data: encrypted });
+    const blob      = new Blob([payload], { type: 'application/json' });
+    const filename  = 'tracker-encrypted-' + TODAY + '.json';
+
+    const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isMobile && navigator.share && navigator.canShare) {
+      const file = new File([blob], filename, { type: 'application/json' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Encrypted tracker backup' });
+        backupStatus('encrypted backup shared ✓', 'var(--success)');
+        hideEncrypt();
+        announce('Encrypted backup exported successfully.');
+        return;
+      }
+    }
+    downloadBlob(blob, filename);
+    backupStatus('encrypted backup saved ✓ — check Downloads', 'var(--success)');
+    hideEncrypt();
+    announce('Encrypted backup saved. Keep your passphrase safe.');
+    hap('allDone');
+  } catch(e) {
+    backupStatus('encryption failed: ' + e.message, 'var(--danger)');
+  }
+}
+
+// ── Import handles both encrypted and plain backups ───────────────────────
+async function importBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  try {
+    const text    = await file.text();
+    const payload = JSON.parse(text);
+
+    // Check if encrypted
+    if (payload.enc && payload.data) {
+      const passphrase = prompt('This backup is encrypted. Enter your passphrase:');
+      if (!passphrase) return;
+      try {
+        const decrypted = await decryptData(payload.data, passphrase);
+        const data = JSON.parse(decrypted);
+        await doRestore(data);
+      } catch(e) {
+        backupStatus('wrong passphrase or corrupted backup', 'var(--danger)');
+        announce('Import failed: wrong passphrase or corrupted file.', true);
+      }
+      return;
+    }
+
+    // Plain backup
+    await doRestore(payload);
+  } catch(e) {
+    backupStatus('import failed: ' + e.message, 'var(--danger)');
+    announce('Import failed: ' + e.message, true);
+  }
+}
+
+async function doRestore(data) {
+  if (!data || data.version !== BACKUP_VERSION) {
+    throw new Error('Invalid or incompatible backup file.');
+  }
+
+  const confirmed = confirm(
+    'This will replace ALL your current data with the backup from ' +
+    (data.exported ? new Date(data.exported).toLocaleDateString() : 'unknown date') +
+    '.\n\nThis cannot be undone. Continue?'
+  );
+  if (!confirmed) return;
+
+  restoreAllData(data);
+
+  const newCfg = loadConfig();
+  if (newCfg) {
+    Object.assign(cfg, newCfg);
+    CRITICAL = cfg.critical || DEFAULT_CRITICAL;
+    DAILY    = cfg.daily    || DEFAULT_DAILY;
+    SYMPTOMS = cfg.symptoms || DEFAULT_SYMPTOMS;
+  }
+  loadState();
+  applyA11yPrefs();
+  applyTheme(cfg.theme || 'system');
+  applyName(cfg.name);
+  render();
+  renderSettingsPanel();
+
+  backupStatus('backup restored ✓ — all data loaded', 'var(--success)');
+  announce('Backup restored successfully.', true);
+  hap('allDone');
+  playSuccess();
+}
+
+// ── Config-only QR (small enough to always fit) ───────────────────────────
+function showQRConfig() {
+  const section = document.getElementById('qrSection');
+  const canvas  = document.getElementById('qrCanvas');
+  if (!section || !canvas) return;
+
+  try {
+    // Config only — tasks, symptoms, settings (no history/journal/budget data)
+    const configOnly = {
+      version:  BACKUP_VERSION,
+      exported: new Date().toISOString(),
+      config:   localStorage.getItem('tracker-config'),
+      _note:    'config transfer only — import restores tasks, symptoms, and settings'
+    };
+    const payload = JSON.stringify(configOnly);
+
+    if (payload.length > 2953) {
+      backupStatus('config too large for QR — simplify your task list', 'var(--warning)');
+      announce('Config is too large for QR. Try shortening task names.');
+      return;
+    }
+
+    // Generate QR
+    canvas.width  = 220;
+    canvas.height = 220;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 220, 220);
+
+    if (typeof QRCode !== 'undefined') {
+      const div = document.createElement('div');
+      new QRCode(div, {
+        text: payload, width: 220, height: 220,
+        colorDark: '#0c0c0c', colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      setTimeout(() => {
+        const img = div.querySelector('img') || div.querySelector('canvas');
+        if (img) {
+          if (img.tagName === 'CANVAS') ctx.drawImage(img, 0, 0, 220, 220);
+          else { const i = new Image(); i.onload = () => ctx.drawImage(i, 0, 0, 220, 220); i.src = img.src; }
+        }
+      }, 100);
+    } else {
+      backupStatus('QR library not loaded — use encrypted export', 'var(--warning)');
+      return;
+    }
+
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    backupStatus('config QR ready — scan on another device to import tasks and settings', 'var(--text2)');
+    announce('Config QR code generated. Scan it on another device to transfer your settings.');
+  } catch(e) {
+    backupStatus('QR generation failed: ' + e.message, 'var(--danger)');
+  }
+}
+
 // ── Screen reader announcements ───────────────────────────────────────────
 // ── Notification preferences ─────────────────────────────────────────────
 function saveNotifPrefs() {
@@ -7499,7 +7677,7 @@ function saveAll() {
 }
 
 function saveHistoryEntry() {
-  const all = [...CRITICAL, ...DAILY];
+  const all = [...(CRITICAL||[]), ...(DAILY||[])];
   const done = all.filter(t => state.tasks[t.id]).length;
   const entry = {
     date: TODAY, done, total: all.length,
@@ -7851,7 +8029,7 @@ function render() {
   document.getElementById('statMissed').setAttribute('aria-label',  'tasks missed: ' + missed);
   document.getElementById('statStreak').setAttribute('aria-label',  'medication streak: ' + (state.medStreak || 0) + ' days');
 
-  const nagItems = CRITICAL.filter(t => !state.tasks[t.id]);
+  const nagItems = (CRITICAL||[]).filter(t => !state.tasks[t.id]);
   const banner   = document.getElementById('nagBanner');
   if (nagItems.length > 0) {
     banner.classList.add('visible');
@@ -7903,8 +8081,8 @@ function render() {
     }).join('');
   }
 
-  renderList(CRITICAL, 'criticalTasks', true);
-  renderList(DAILY,    'dailyTasks',    false);
+  renderList(CRITICAL||[], 'criticalTasks', true);
+  renderList(DAILY||[],    'dailyTasks',    false);
 
   document.getElementById('symptomGrid').innerHTML = SYMPTOMS.map(s => {
     const active = state.symptoms.includes(s);
@@ -7941,7 +8119,13 @@ function render() {
   } catch(e) {}
 }
 
-initOnboarding();
+try {
+  initOnboarding();
+} catch(e) {
+  console.error('[INIT ERROR]', e);
+  // Emergency fallback — show basic UI even if init fails
+  document.getElementById('page-today')?.classList.add('active');
+}
 
 // ── Timer utilities ──────────────────────────────────────────────────────
 
