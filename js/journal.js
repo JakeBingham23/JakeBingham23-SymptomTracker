@@ -1,8 +1,7 @@
-// ═════════════════════════════════════════════════════════════════
-// JOURNAL MODULE — Daily Structure Tracker
-// ═════════════════════════════════════════════════════════════════
-
-// ── Journal system ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// JOURNAL MODULE — Entries, Voice Input, Prompts
+// Daily Structure Tracker
+// ═══════════════════════════════════════════════════════════════════════════
 
 const JOURNAL_KEY  = 'tracker-journal';
 const JOURNAL_DRAFT_KEY = 'tracker-journal-draft';
@@ -30,11 +29,6 @@ function getJournalEntries() {
 function saveJournalEntries(entries) {
   localStorage.setItem(JOURNAL_KEY, JSON.stringify(entries));
 }
-
-// ── Composer ──────────────────────────────────────────────────────────────
-let _editingEntryId = null;
-let _draftTimer = null;
-let _voiceRecognition = null;
 
 function newJournalEntry() {
   _editingEntryId = null;
@@ -149,7 +143,6 @@ function editJournalEntry(id) {
   document.getElementById('journalComposer')?.scrollIntoView({ behavior: 'smooth' });
 }
 
-// ── Writing prompts ────────────────────────────────────────────────────────
 function showWritingPrompt() {
   const el    = document.getElementById('journalPrompt');
   const textEl = document.getElementById('journalPromptText');
@@ -180,7 +173,6 @@ function dismissPrompt() {
   hideWritingPrompt();
 }
 
-// ── Voice input ────────────────────────────────────────────────────────────
 function toggleVoiceInput() {
   if (_voiceRecognition) { stopVoiceInput(); return; }
 
@@ -241,9 +233,6 @@ function stopVoiceInput() {
   if (btn) { btn.classList.remove('recording'); btn.textContent = '🎤'; }
   announce('Voice input stopped.');
 }
-
-// ── Render ────────────────────────────────────────────────────────────────
-let _journalFilter = '';
 
 function filterJournalEntries(query) {
   _journalFilter = query.toLowerCase().trim();
@@ -327,7 +316,6 @@ function toggleEntryExpand(id) {
   announce(expanded ? 'Entry expanded.' : 'Entry collapsed.');
 }
 
-// ── Journal in pre-appointment summary ────────────────────────────────────
 function getRecentJournalForSummary() {
   const entries = getJournalEntries();
   const last3   = entries.slice(0, 3);
@@ -338,3 +326,4 @@ function getRecentJournalForSummary() {
     return `[${d}] ${preview}`;
   }).join('\n\n');
 }
+

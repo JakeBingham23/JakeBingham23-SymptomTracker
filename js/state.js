@@ -1,6 +1,18 @@
-// ═════════════════════════════════════════════════════════════════
-// STATE MODULE — Daily Structure Tracker
-// ═════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// STATE MODULE — App State, TODAY, CRITICAL/DAILY/SYMPTOMS
+// Daily Structure Tracker
+// ═══════════════════════════════════════════════════════════════════════════
+
+// TODAY — used throughout the app
+const TODAY = new Date().toISOString().split('T')[0];
+
+// Task and symptom lists — populated from config after config.js loads
+// Defaults applied in config.js via DEFAULT_CRITICAL etc
+let CRITICAL  = cfg.critical  || DEFAULT_CRITICAL;
+let DAILY     = cfg.daily     || DEFAULT_DAILY;
+let SYMPTOMS  = cfg.symptoms  || DEFAULT_SYMPTOMS;
+
+// ── Theme ─────────────────────────────────────
 
 // ── App state ─────────────────────────────────────────────────────────────
 let state = {
@@ -180,7 +192,6 @@ function closePreview() {
 }
 
 // Persisted folder handle for direct gallery saves
-
 // ── Persistent folder handle (survives page reloads via IndexedDB) ────────
 let _galleryDirHandle = null;
 const IDB_NAME    = 'tracker-fs';

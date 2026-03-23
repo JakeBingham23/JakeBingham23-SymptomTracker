@@ -1,6 +1,9 @@
-// ═════════════════════════════════════════════════════════════════
-// BUDGET MODULE — Daily Structure Tracker
-// ═════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// BUDGET MODULE — Four Buckets, Spending, Dopamine List
+// Daily Structure Tracker
+// ═══════════════════════════════════════════════════════════════════════════
+
+
 
 // ── Budget system ──────────────────────────────────────────────────────────
 const BUDGET_KEY  = 'tracker-budget';
@@ -281,4 +284,203 @@ function saveBigSpendThreshold() {
   localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
   showToast('big purchase flag set to $' + val.toFixed(0));
   announce('Big purchase flag set to $' + val.toFixed(0));
+}
+
+// ── Dopamine / want list ──────────────────────────────────────────────────
+function renderDopamineList() {
+  const el = document.getElementById('dopamineList');
+  if (!el) return;
+  const list = getDopamineList ? getDopamineList() : [];
+  if (list.length === 0) {
+    el.innerHTML = '<p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:8px">nothing on the want list yet</p>';
+    return;
+  }
+  el.innerHTML = list.map(item => {
+    const bucket = BUCKET_DEFS[item.bucket] || BUCKET_DEFS.daily;
+    return `
+    <div class="dopamine-item${item.gotIt ? ' got-it' : ''}"
+         role="article" aria-label="${escHtml(item.name)}${item.gotIt ? ', purchased' : ''}">
+      <div class="dopamine-want" aria-hidden="true">
+        ${[1,2,3,4,5].map(i => `<span class="want-star${i<=(item.want||3)?' lit':''}" style="cursor:default">★</span>`).join('')}
+      </div>
+      <div class="dopamine-info">
+        <div class="dopamine-name">${escHtml(item.name)}</div>
+        <div class="dopamine-meta">${bucket.icon} ${bucket.label}${item.gotIt ? ' · got it '+(item.gotDate||'') : ''}</div>
+      </div>
+      ${item.cost > 0 ? `<div class="dopamine-cost">$${item.cost.toFixed(0)}</div>` : ''}
+      <div class="dopamine-actions">
+        ${!item.gotIt ? `<button class="dopamine-btn got" onclick="markGotIt('${item.id}')" aria-label="Mark as purchased">got it</button>` : ''}
+        <button class="dopamine-btn" onclick="openDopamineModal('${item.id}')" aria-label="Edit">edit</button>
+        <button class="dopamine-btn" onclick="deleteDopamineItem('${item.id}')" aria-label="Remove">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Close menus on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const menuEl = document.getElementById('menuOverlay');
+    if (menuEl && !menuEl.classList.contains('hidden')) { closeMenu(); return; }
+    if (_activeSubPage) { closeMenuSubPage(_activeSubPage); return; }
+    const apptEl = document.getElementById('apptModalOverlay');
+    if (apptEl && !apptEl.classList.contains('hidden')) { closeApptModal(); return; }
+    const spendEl = document.getElementById('spendModalOverlay');
+    if (spendEl && !spendEl.classList.contains('hidden')) { closeSpendModal(); return; }
+  }
+});
+
+function saveMonthlyBudget() {
+  const val = parseFloat(document.getElementById('monthlyBudgetSettings')?.value || document.getElementById('monthlyBudget')?.value || '0');
+  const c = getBudgetConfig();
+  c.monthly = val;
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
+  renderBudgetTab();
+  announce('Monthly budget set to $' + val.toFixed(2));
+  showToast('budget saved ✓');
+}
+
+function filterSpendByBucket(bucket) {
+  const sel = document.getElementById('bucketFilter');
+  if (sel) sel.value = bucket;
+  renderBudgetTab();
+}
+
+function renderCategoryBreakdown(monthSpends) {
+  const el = document.getElementById('categoryBreakdown');
+  if (!el || monthSpends.length === 0) { if(el) el.innerHTML=''; return; }
+
+  // Total by category
+  const byCategory = {};
+  monthSpends.forEach(s => {
+    byCategory[s.category] = (byCategory[s.category]||0) + s.amount;
+  });
+  const total  = monthSpends.reduce((t,s)=>t+s.amount,0);
+  const sorted = Object.entries(byCategory).sort((a,b)=>b[1]-a[1]);
+  const maxVal = sorted[0]?.[1] || 1;
+
+  el.innerHTML = sorted.map(([cat, amt]) => {
+    const pct = Math.round((amt / maxVal) * 100);
+    const ofTotal = ((amt/total)*100).toFixed(0);
+    return `<div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)"
+                 role="listitem" aria-label="${cat}: $${amt.toFixed(2)}, ${ofTotal}% of total">
+      <span style="font-size:1rem;flex-shrink:0" aria-hidden="true">${CATEGORY_ICONS[cat]||'📦'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:var(--text-sm);margin-bottom:3px">
+          <span style="color:var(--text2)">${cat}</span>
+          <span style="color:var(--accent)">$${amt.toFixed(2)}</span>
+        </div>
+        <div style="height:4px;background:var(--bg3);border-radius:var(--radius-pill);overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:var(--radius-pill);opacity:0.7"></div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text3);margin-top:2px">${ofTotal}% of total</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBucketCards() {
+  const buckets = getBuckets();
+  const spends  = getSpends();
+  const now     = new Date();
+  const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+
+  // Show/hide setup prompt based on any limits set
+  const hasAnyLimit = Object.values(buckets).some(b => b.limit > 0);
+  const promptEl = document.getElementById('budgetSetupPrompt');
+  if (promptEl && (getBudgetConfig().monthly > 0 || getSpends().length > 0)) {
+    promptEl.style.display = 'none';
+  }
+
+  const amtIds = { essentials:'bucketEssAmount', daily:'bucketDayAmount', shortterm:'bucketSTAmount', longterm:'bucketLTAmount' };
+  const limIds = { essentials:'bucketEssLimit',  daily:'bucketDayLimit',  shortterm:'bucketSTLimit',  longterm:'bucketLTLimit'  };
+
+  Object.entries(BUCKET_DEFS).forEach(([key, def]) => {
+    const limit = buckets[key]?.limit || 0;
+    const spent = spends
+      .filter(s => s.date.startsWith(monthKey) && s.bucket === key)
+      .reduce((t,s) => t + s.amount, 0);
+    const remaining = limit > 0 ? limit - spent : null;
+
+    const amtEl = document.getElementById(amtIds[key]);
+    const limEl = document.getElementById(limIds[key]);
+    if (amtEl) {
+      amtEl.textContent = remaining !== null
+        ? '$' + remaining.toFixed(0) + ' left'
+        : '$' + spent.toFixed(0) + ' spent';
+      amtEl.style.color = remaining !== null && remaining < 0 ? 'var(--danger)' : '';
+    }
+    if (limEl) limEl.textContent = limit > 0
+      ? 'of $' + limit.toFixed(0)
+      : 'tap to filter';
+  });
+}
+
+function renderBucketLimitSettings() {
+  const el = document.getElementById('bucketLimitSettings');
+  if (!el) return;
+  const buckets = getBuckets();
+  const budgetCfg = getBudgetConfig();
+  el.innerHTML = Object.entries(BUCKET_DEFS).map(([key, def]) => `
+    <div class="settings-task-row" style="margin-bottom:6px;align-items:center">
+      <span style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text2);flex-shrink:0;width:90px">${def.icon} ${def.label}</span>
+      <input type="number" id="bucketLimit_${key}" placeholder="monthly $" min="0" step="1"
+             value="${buckets[key]?.limit || ''}"
+             style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:8px 10px;outline:none"
+             aria-label="${def.label} monthly limit">
+    </div>`).join('') + `
+    <div class="settings-task-row" style="margin-bottom:6px;align-items:center;margin-top:8px">
+      <span style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text2);flex-shrink:0;width:90px">📅 monthly total</span>
+      <input type="number" id="monthlyBudgetSettings" placeholder="total $" min="0" step="1"
+             value="${budgetCfg.monthly || ''}"
+             style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:8px 10px;outline:none"
+             aria-label="Total monthly budget">
+    </div>`;
+
+  const threshEl = document.getElementById('bigSpendThreshold');
+  if (threshEl) threshEl.value = budgetCfg.bigSpendThreshold || BIG_SPEND_THRESHOLD_DEFAULT;
+}
+
+function saveBucketLimits() {
+  const buckets = getBuckets();
+  Object.keys(BUCKET_DEFS).forEach(key => {
+    const val = parseFloat(document.getElementById('bucketLimit_' + key)?.value || '0');
+    buckets[key] = { ...buckets[key], limit: val || 0 };
+  });
+  saveBuckets(buckets);
+  // Also save monthly total if provided
+  const monthly = parseFloat(document.getElementById('monthlyBudget')?.value || '0');
+  if (monthly) {
+    const c = getBudgetConfig();
+    c.monthly = monthly;
+    localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
+  }
+  renderBucketCards();
+  renderDailyCard();
+  renderBudgetTab();
+  showToast('budget limits saved ✓');
+  announce('Spending bucket limits saved.');
+}
+
+function saveBigSpendThreshold() {
+  const val = parseFloat(document.getElementById('bigSpendThreshold')?.value || '50');
+  const c = getBudgetConfig();
+  c.bigSpendThreshold = val;
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
+  showToast('big purchase flag set to $' + val.toFixed(0));
+  announce('Big purchase flag set to $' + val.toFixed(0));
+}
+
+function getBudgetConfig() {
+  try { return JSON.parse(localStorage.getItem(BUDGET_KEY) || '{"monthly":0}'); }
+  catch(e) { return { monthly: 0 }; }
+}
+
+function getSpends() {
+  try { return JSON.parse(localStorage.getItem(SPEND_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+
+function saveSpends(spends) {
+  localStorage.setItem(SPEND_KEY, JSON.stringify(spends));
 }
