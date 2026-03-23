@@ -342,8 +342,16 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-  }
+  
+    /* Added transition for smooth sliding */
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
   .menu-overlay.hidden { display: none; }
+
+  /* Added class to handle the shift smoothly */
+  .menu-overlay.shifted {
+    transform: translateX(-30%);
+  }
 
   .menu-overlay-inner {
     padding: var(--sp-4) var(--sp-4) var(--sp-7);
@@ -5158,13 +5166,20 @@ function updateTextSizeUI(size) {
   if (lblEl)  lblEl.textContent  = 'text';
   const btn = document.getElementById('navTextSizeBtn');
   if (btn) btn.setAttribute('aria-label', 'Text size: ' + size + '. Click to cycle.');
-  // Sync settings pills
+
+  // Sync settings and menu pills
   ['small','normal','large','xl'].forEach(s => {
-    const el = document.getElementById('textSize' + s.charAt(0).toUpperCase() + s.slice(1));
+    // Ensures XL is capitalized correctly for both IDs
+    const key = s === 'xl' ? 'XL' : s.charAt(0).toUpperCase() + s.slice(1);
+
+    // Settings page
+    const el = document.getElementById('textSize' + key);
     if (el) { el.classList.toggle('active', s === size); el.setAttribute('aria-checked', s === size ? 'true' : 'false'); }
+
+    // Hamburger menu
+    const menuEl = document.getElementById('menuSize' + key);
+    if (menuEl) { menuEl.classList.toggle('active', s === size); menuEl.setAttribute('aria-checked', s === size ? 'true' : 'false'); }
   });
-  // Sync settings toggle
-  const settEl = document.getElementById('textSize' + size.charAt(0).toUpperCase() + size.slice(1));
 }
 
 function applyHighContrast(on) {
@@ -5895,10 +5910,19 @@ async function setFont(font) {
 function updateFontUI(font) {
   ['default','ibmplexmono','atkinson','opendyslexic','comic','mono'].forEach(f => {
     const key = f.charAt(0).toUpperCase() + f.slice(1);
+
+    // Settings page
     const el  = document.getElementById('fontOpt' + key);
     if (el) {
       el.classList.toggle('active', f === font);
       el.setAttribute('aria-checked', f === font ? 'true' : 'false');
+    }
+
+    // Hamburger menu
+    const menuEl = document.getElementById('menuFont' + key);
+    if (menuEl) {
+      menuEl.classList.toggle('active', f === font);
+      menuEl.setAttribute('aria-checked', f === font ? 'true' : 'false');
     }
   });
 }
@@ -6598,9 +6622,17 @@ function openMenu() {
 }
 
 function closeMenu() {
-  document.getElementById('menuOverlay').classList.add('hidden');
-  if (_menuPrevFocus) _menuPrevFocus.focus();
-  announce('Menu closed.');
+  const overlay = document.getElementById('menuOverlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('shifted');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+  if (_activeSubPage) {
+    const active = document.getElementById('subpage-' + _activeSubPage);
+    if (active) active.classList.remove('active');
+    _activeSubPage = null;
+  }
 }
 
 function syncMenuUI() {
@@ -7014,12 +7046,9 @@ function openMenuSubPage(name) {
   if (!el) return;
   _activeSubPage = name;
 
-  // Push menu left, slide sub-page in from right
-  const rm2 = (cfg.a11y||{}).reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const menu = document.getElementById('menuOverlay');
-  if (menu && !rm2) {
-    menu.style.transform = 'translateX(-30%)';
-    menu.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+  if (menu) {
+    menu.classList.add('shifted');
   }
 
   // Populate sub-page content
@@ -7039,11 +7068,10 @@ function closeMenuSubPage(name) {
 
   el.classList.remove('active');
 
-  // Restore menu
+  // Restore menu smoothly via CSS transition
   const menu = document.getElementById('menuOverlay');
   if (menu) {
-    menu.style.transform = '';
-    menu.style.transition = '';
+    menu.classList.remove('shifted');
   }
   _activeSubPage = null;
   // Return focus to the menu item that opened this
