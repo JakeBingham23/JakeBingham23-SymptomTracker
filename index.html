@@ -3981,7 +3981,41 @@ const SecureStore = (() => {
   const DB_VERSION   = 1;
   const STORE_DATA   = 'data';
   const STORE_META   = 'meta';
-  const PBKDF2_ITERS = 310000;   // OWASP 2023 recommendation
+  // Adaptive PBKDF2 iterations — calibrates to device speed on first run
+  // Target: ~300ms per derivation (makes brute force expensive on fast hardware)
+  // Minimum: 310,000 (OWASP 2023 recommendation)
+  // Stored in IDB meta so calibration only runs once
+  const PBKDF2_MIN_ITERS   = 310000;
+  const PBKDF2_TARGET_MS   = 300;
+  const PBKDF2_ITERS_KEY   = '__pbkdf2_iters';
+  let   PBKDF2_ITERS        = 310000; // Updated after calibration
+
+  async function calibratePBKDF2() {
+    // Check if already calibrated
+    const stored = await idbGet(STORE_META, PBKDF2_ITERS_KEY);
+    if (stored) { PBKDF2_ITERS = stored; return stored; }
+
+    // Measure time for baseline iterations
+    const salt   = crypto.getRandomValues(new Uint8Array(32));
+    const enc    = new TextEncoder();
+    const keyMat = await crypto.subtle.importKey(
+      'raw', enc.encode('calibration'), 'PBKDF2', false, ['deriveKey']);
+
+    const t0 = performance.now();
+    await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: PBKDF2_MIN_ITERS, hash: 'SHA-256' },
+      keyMat, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    const baseMs = performance.now() - t0;
+
+    // Scale to hit target
+    const ratio    = PBKDF2_TARGET_MS / baseMs;
+    const iters    = Math.max(PBKDF2_MIN_ITERS, Math.round(PBKDF2_MIN_ITERS * ratio));
+    PBKDF2_ITERS   = iters;
+
+    await idbSet(STORE_META, PBKDF2_ITERS_KEY, iters);
+    console.log(`[SecureStore] PBKDF2 calibrated: ${iters.toLocaleString()} iterations (${Math.round(baseMs * ratio)}ms target on this device)`);
+    return iters;
+  }
   const SALT_KEY     = '__salt';
   const WEBAUTHN_KEY = '__webauthn_cred';
   const PIN_HASH_KEY = '__pin_hash';
@@ -4127,6 +4161,8 @@ const SecureStore = (() => {
   // ── Auth: first time setup ────────────────────────────────────────────
   async function isFirstRun() {
     await openDB();
+    // Calibrate PBKDF2 iterations for this device
+    await calibratePBKDF2();
     const hash = await idbGet(STORE_META, PIN_HASH_KEY);
     return !hash;
   }
@@ -4153,66 +4189,108 @@ const SecureStore = (() => {
   }
 
   // ── Auth: WebAuthn setup ──────────────────────────────────────────────
+  // ── Auth: WebAuthn + PRF (true biometric key derivation) ─────────────────
+  // Chrome 116+ / Android 14+ / Safari 17+ support PRF extension
+  // PRF derives a deterministic 32-byte secret from the authenticator
+  // This secret derives the AES key — fingerprint IS the key, PIN not needed
+  // Falls back gracefully: presence-only WebAuthn → PIN still required
+
+  const PRF_SALT_1 = new TextEncoder().encode('tracker-prf-salt-v1');
+
   async function setupWebAuthn(pin) {
     if (!window.PublicKeyCredential) throw new Error('WebAuthn not supported');
-    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-    if (!available) throw new Error('No platform authenticator available');
+    const available = await PublicKeyCredential
+      .isUserVerifyingPlatformAuthenticatorAvailable();
+    if (!available) throw new Error('No biometric authenticator found');
 
-    // Store a random credential ID — we use the PIN-derived key,
-    // WebAuthn just proves user presence/verification
-    const credId     = crypto.getRandomValues(new Uint8Array(32));
-    const b64CredId  = btoa(String.fromCharCode(...credId));
+    const credId = crypto.getRandomValues(new Uint8Array(32));
+    const rpId   = location.hostname || 'localhost';
 
     const pubKeyOpts = {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
-      rp:        { name: 'Daily Structure Tracker', id: location.hostname },
-      user:      { id: credId, name: 'tracker-user', displayName: 'Tracker User' },
+      rp:   { name: 'Daily Structure Tracker', id: rpId },
+      user: { id: credId, name: 'tracker-user', displayName: 'Tracker User' },
       pubKeyCredParams: [
-        { type: 'public-key', alg: -7  },   // ES256
-        { type: 'public-key', alg: -257 },  // RS256
+        { type: 'public-key', alg: -7   },  // ES256
+        { type: 'public-key', alg: -257 },  // RS256 fallback
       ],
       authenticatorSelection: {
         authenticatorAttachment: 'platform',
         userVerification:        'required',
         residentKey:             'preferred',
       },
+      // Request PRF extension — the key feature
+      extensions: { prf: { eval: { first: PRF_SALT_1 } } },
       timeout: 60000,
     };
 
-    const cred = await navigator.credentials.create({ publicKey: pubKeyOpts });
-    // Store credential ID + raw ID for future assertions
+    const cred      = await navigator.credentials.create({ publicKey: pubKeyOpts });
+    const prfResult = cred.getClientExtensionResults()?.prf?.results?.first;
+    const hasPRF    = !!(prfResult && prfResult.byteLength === 32);
+
     await idbSet(STORE_META, WEBAUTHN_KEY, {
-      credId:   b64CredId,
-      rawId:    btoa(String.fromCharCode(...new Uint8Array(cred.rawId))),
-      pinHash:  await hashPIN(pin, await getOrCreateSalt()),
+      rawId:  btoa(String.fromCharCode(...new Uint8Array(cred.rawId))),
+      hasPRF,
+      pinHash: hasPRF ? null : await hashPIN(pin, await getOrCreateSalt()),
     });
-    return b64CredId;
+
+    if (hasPRF) {
+      // True biometric: derive key directly from fingerprint
+      _key      = await _keyFromPRF(new Uint8Array(prfResult));
+      _unlocked = true;
+    }
+
+    return { hasPRF };
+  }
+
+  async function _keyFromPRF(prfBytes) {
+    const salt   = await getOrCreateSalt();
+    const keyMat = await crypto.subtle.importKey(
+      'raw', prfBytes, 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+      keyMat,
+      { name: 'AES-GCM', length: 256 },
+      false, ['encrypt', 'decrypt']
+    );
   }
 
   async function unlockWithWebAuthn() {
     if (!window.PublicKeyCredential) throw new Error('WebAuthn not supported');
     const stored = await idbGet(STORE_META, WEBAUTHN_KEY);
-    if (!stored) throw new Error('WebAuthn not set up');
+    if (!stored)  throw new Error('Biometric not set up — use PIN');
 
-    const rawId = Uint8Array.from(atob(stored.rawId), c => c.charCodeAt(0));
-
-    const assertion = await navigator.credentials.get({
+    const rawId   = Uint8Array.from(atob(stored.rawId), c => c.charCodeAt(0));
+    const rpId    = location.hostname || 'localhost';
+    const getOpts = {
       publicKey: {
         challenge:        crypto.getRandomValues(new Uint8Array(32)),
-        rpId:             location.hostname,
+        rpId,
         allowCredentials: [{ type: 'public-key', id: rawId }],
         userVerification: 'required',
         timeout:          60000,
       }
-    });
+    };
 
-    // WebAuthn verified — now we need to derive the key
-    // We store a PIN hash encrypted with a device-bound key
-    // For simplicity: WebAuthn proves identity, we use stored pinHash to verify
-    // In production: use PRF extension to derive key directly from authenticator
-    // For this implementation: prompt for PIN once during WebAuthn setup, cache hash
-    return stored; // Caller uses this to complete unlock
+    // Request PRF on assertion if credential supports it
+    if (stored.hasPRF) {
+      getOpts.publicKey.extensions = { prf: { eval: { first: PRF_SALT_1 } } };
+    }
+
+    const assertion = await navigator.credentials.get(getOpts);
+    const prfResult = assertion.getClientExtensionResults()?.prf?.results?.first;
+
+    if (stored.hasPRF && prfResult) {
+      // True biometric unlock — fingerprint derives the key
+      _key      = await _keyFromPRF(new Uint8Array(prfResult));
+      _unlocked = true;
+      return { method: 'prf', needsPIN: false };
+    } else {
+      // PRF not available — biometric verified presence but PIN still needed for key
+      return { method: 'presence', needsPIN: true };
+    }
   }
+
 
   // ── Migration: localStorage → encrypted IndexedDB ─────────────────────
   async function migrateFromLocalStorage() {
@@ -8679,11 +8757,15 @@ const lockScreen = (() => {
         );
         if (wantBio) {
           try {
-            await SecureStore.setupWebAuthn(pin);
-            announce('Biometric unlock set up successfully.');
+            const bio = await SecureStore.setupWebAuthn(pin);
+            if (bio.hasPRF) {
+              announce('Biometric unlock set up. Your fingerprint now unlocks your data directly.');
+            } else {
+              announce('Biometric set up. You will still need your PIN to decrypt data on this device.');
+            }
           } catch(e) {
-            // Not critical — PIN still works
             console.warn('WebAuthn setup failed:', e.message);
+            announce('Biometric setup failed. PIN only will be used.');
           }
         }
       }
@@ -8732,19 +8814,25 @@ const lockScreen = (() => {
   // ── Biometric unlock ──────────────────────────────────────────────────
   async function tryBiometric() {
     const btn = document.getElementById('biometricBtn');
-    if (btn) btn.textContent = '...verifying...';
+    if (btn) { btn.textContent = 'verifying...'; btn.disabled = true; }
     try {
-      await SecureStore.unlockWithWebAuthn();
-      // WebAuthn verified — still need PIN to derive key
-      // Show PIN pad with message
-      setError('unlockPINError', 'biometric verified — enter PIN to decrypt');
-      if (btn) btn.style.display = 'none';
-      announce('Biometric verified. Enter your PIN to decrypt your data.');
-      // In a full implementation with PRF extension, we'd skip PIN here
-      // For now: WebAuthn proves presence, PIN derives the key
+      const result = await SecureStore.unlockWithWebAuthn();
+
+      if (result.needsPIN === false) {
+        // PRF success — key derived from fingerprint, fully unlocked
+        announce('Biometric unlock successful.');
+        dismiss();
+      } else {
+        // Presence-only — biometric verified but PIN still needed for key
+        setError('unlockPINError', 'biometric verified — enter PIN to decrypt');
+        if (btn) btn.style.display = 'none';
+        announce('Biometric verified. Enter your PIN to decrypt your data.');
+      }
     } catch(e) {
-      if (btn) btn.textContent = 'fingerprint / face unlock';
-      if (e.name !== 'NotAllowedError') {
+      if (btn) { btn.textContent = 'fingerprint / face unlock'; btn.disabled = false; }
+      if (e.name === 'NotAllowedError' || e.name === 'AbortError') {
+        // User cancelled — silent
+      } else {
         setError('unlockPINError', 'biometric failed — use your PIN');
         announce('Biometric failed. Please use your PIN.');
       }
