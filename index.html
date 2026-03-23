@@ -6037,7 +6037,7 @@ function saveSpends(spends) {
 }
 
 function saveMonthlyBudget() {
-  const val = parseFloat(document.getElementById('monthlyBudget')?.value || '0');
+  const val = parseFloat(document.getElementById('monthlyBudgetSettings')?.value || document.getElementById('monthlyBudget')?.value || '0');
   const c = getBudgetConfig();
   c.monthly = val;
   localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
@@ -6254,7 +6254,7 @@ function renderBucketLimitSettings() {
     </div>`).join('') + `
     <div class="settings-task-row" style="margin-bottom:6px;align-items:center;margin-top:8px">
       <span style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text2);flex-shrink:0;width:90px">📅 monthly total</span>
-      <input type="number" id="monthlyBudget" placeholder="total $" min="0" step="1"
+      <input type="number" id="monthlyBudgetSettings" placeholder="total $" min="0" step="1"
              value="${budgetCfg.monthly || ''}"
              style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:8px 10px;outline:none"
              aria-label="Total monthly budget">
@@ -6294,6 +6294,220 @@ function saveBigSpendThreshold() {
   announce('Big purchase flag set to $' + val.toFixed(0));
 }
 
+
+// ── Hamburger menu ───────────────────────────────────────────────────────
+let _menuPrevFocus = null;
+
+function openMenu() {
+  _menuPrevFocus = document.activeElement;
+  const overlay = document.getElementById('menuOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('hidden');
+  syncMenuUI();
+  setTimeout(() => {
+    const close = overlay.querySelector('.menu-close-btn');
+    if (close) close.focus();
+  }, 50);
+  announce('Menu opened.');
+}
+
+function closeMenu() {
+  const overlay = document.getElementById('menuOverlay');
+  if (overlay) overlay.classList.add('hidden');
+  if (_menuPrevFocus) _menuPrevFocus.focus();
+  announce('Menu closed.');
+}
+
+function syncMenuUI() {
+  const a11y  = cfg.a11y || {};
+  const theme = cfg.theme || 'system';
+  const dnd   = getDNDConfig ? getDNDConfig() : { enabled: false };
+
+  ['system','light','dark'].forEach(t => {
+    const el = document.getElementById('menuTheme' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el) { el.classList.toggle('active', t === theme); el.setAttribute('aria-checked', t === theme ? 'true' : 'false'); }
+  });
+
+  const size = a11y.textSize || 'normal';
+  ['Small','Normal','Large','XL'].forEach(s => {
+    const el = document.getElementById('menuSize' + s);
+    const key = s.toLowerCase();
+    if (el) { el.classList.toggle('active', key === size); el.setAttribute('aria-checked', key === size ? 'true' : 'false'); }
+  });
+
+  const hcEl = document.getElementById('menuHighContrast');   if (hcEl) hcEl.checked = !!a11y.highContrast;
+  const rmEl = document.getElementById('menuReduceMotion');   if (rmEl) rmEl.checked = !!a11y.reduceMotion;
+  const ltEl = document.getElementById('menuLargeTargets');   if (ltEl) ltEl.checked = !!a11y.largeTouchTargets;
+  const dndEl = document.getElementById('menuDND');           if (dndEl) dndEl.checked = dnd.enabled;
+
+  const font = a11y.font || 'default';
+  ['Default','Ibmplexmono','Atkinson','Opendyslexic','Comic'].forEach(f => {
+    const el = document.getElementById('menuFont' + f);
+    if (el) { el.classList.toggle('active', f.toLowerCase() === font); el.setAttribute('aria-checked', f.toLowerCase() === font ? 'true' : 'false'); }
+  });
+}
+
+function updateMenuThemeUI() {
+  const theme = cfg.theme || 'system';
+  ['system','light','dark'].forEach(t => {
+    const el = document.getElementById('menuTheme' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el) { el.classList.toggle('active', t === theme); el.setAttribute('aria-checked', t === theme ? 'true' : 'false'); }
+    const el2 = document.getElementById('themeOpt' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el2) { el2.classList.toggle('active', t === theme); el2.setAttribute('aria-checked', t === theme ? 'true' : 'false'); }
+  });
+}
+
+// ── Spend modal ───────────────────────────────────────────────────────────
+function openSpendModal(id) {
+  const overlay = document.getElementById('spendModalOverlay');
+  if (!overlay) return;
+  document.getElementById('spendEditId').value = id || '';
+  document.getElementById('spendModalTitle').textContent = id ? '// edit expense' : '// log expense';
+  if (id) {
+    const spend = getSpends().find(s => s.id === id);
+    if (spend) {
+      document.getElementById('spendAmount').value   = spend.amount;
+      const bucketEl = document.getElementById('spendBucket');
+      if (bucketEl) bucketEl.value = spend.bucket || 'daily';
+      document.getElementById('spendCategory').value = spend.category || 'other';
+      document.getElementById('spendNote').value     = spend.note || '';
+      document.getElementById('spendDate').value     = spend.date;
+    }
+  } else {
+    document.getElementById('spendAmount').value   = '';
+    const bucketEl = document.getElementById('spendBucket');
+    if (bucketEl) bucketEl.value = 'daily';
+    document.getElementById('spendCategory').value = 'food';
+    document.getElementById('spendNote').value     = '';
+    document.getElementById('spendDate').value     = TODAY;
+  }
+  const fn = document.getElementById('frictionNotice');
+  if (fn) fn.classList.remove('visible');
+  overlay.classList.remove('hidden');
+  setTimeout(() => document.getElementById('spendAmount')?.focus(), 100);
+}
+
+function closeSpendModal() {
+  const overlay = document.getElementById('spendModalOverlay');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+function saveSpend() {
+  const amount = parseFloat(document.getElementById('spendAmount')?.value);
+  const date   = document.getElementById('spendDate')?.value;
+  if (isNaN(amount) || amount <= 0) { showToast('enter a valid amount'); return; }
+  if (!date) { showToast('select a date'); return; }
+
+  const spends  = getSpends();
+  const editId  = document.getElementById('spendEditId')?.value;
+  const rawAmount = Math.round(amount * 100) / 100;
+  const spend   = {
+    id:       editId || 'sp_' + Date.now(),
+    amount:   rawAmount,
+    bucket:   document.getElementById('spendBucket')?.value || 'daily',
+    category: document.getElementById('spendCategory')?.value || 'other',
+    note:     document.getElementById('spendNote')?.value?.trim() || '',
+    date,
+    flagged:  false,
+  };
+
+  function doSave(flagged) {
+    if (flagged) spend.flagged = true;
+    if (editId) {
+      const idx = spends.findIndex(s => s.id === editId);
+      if (idx > -1) spends[idx] = spend; else spends.push(spend);
+    } else {
+      spends.push(spend);
+    }
+    spends.sort((a,b) => b.date.localeCompare(a.date));
+    saveSpends(spends);
+    closeSpendModal();
+    renderBudgetTab();
+    renderDailyCard();
+    renderBucketCards();
+    const bucketName = BUCKET_DEFS[spend.bucket]?.label || spend.bucket;
+    announce('Expense logged: $' + spend.amount.toFixed(2) + ' from ' + bucketName + ' bucket.');
+    hapticSuccess();
+  }
+  checkFriction(rawAmount, doSave);
+}
+
+function deleteSpend(id) {
+  saveSpends(getSpends().filter(s => s.id !== id));
+  renderBudgetTab();
+  announce('Expense deleted.');
+}
+
+// ── Daily card on Today tab ───────────────────────────────────────────────
+function renderDailyCard() {
+  const card = document.getElementById('dailySpendCard');
+  if (!card) return;
+  const buckets  = getBuckets();
+  const dailyLim = buckets.daily?.limit || 0;
+  if (dailyLim === 0) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const spends     = getSpends();
+  const todayTotal = spends
+    .filter(s => s.date === TODAY && s.bucket === 'daily')
+    .reduce((t,s) => t + s.amount, 0);
+  const remaining = Math.max(0, dailyLim - todayTotal);
+  const pct       = Math.min(100, (todayTotal / dailyLim) * 100);
+  const tight     = pct > 80;
+
+  const remEl   = document.getElementById('dailyRemaining');
+  const barEl   = document.getElementById('dailyBar');
+  const spentEl = document.getElementById('dailySpent');
+  const limEl   = document.getElementById('dailyLimit');
+  if (remEl)   { remEl.textContent = '$' + remaining.toFixed(0); remEl.classList.toggle('tight', tight); }
+  if (barEl)   { barEl.style.width = pct + '%'; barEl.style.background = tight ? 'var(--warning)' : 'var(--success)'; }
+  if (spentEl) spentEl.textContent = '$' + todayTotal.toFixed(2) + ' spent today';
+  if (limEl)   limEl.textContent   = 'of $' + dailyLim.toFixed(0) + ' limit';
+}
+
+// ── Dopamine / want list ──────────────────────────────────────────────────
+function renderDopamineList() {
+  const el = document.getElementById('dopamineList');
+  if (!el) return;
+  const list = getDopamineList ? getDopamineList() : [];
+  if (list.length === 0) {
+    el.innerHTML = '<p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:8px">nothing on the want list yet</p>';
+    return;
+  }
+  el.innerHTML = list.map(item => {
+    const bucket = BUCKET_DEFS[item.bucket] || BUCKET_DEFS.daily;
+    return `
+    <div class="dopamine-item${item.gotIt ? ' got-it' : ''}"
+         role="article" aria-label="${escHtml(item.name)}${item.gotIt ? ', purchased' : ''}">
+      <div class="dopamine-want" aria-hidden="true">
+        ${[1,2,3,4,5].map(i => `<span class="want-star${i<=(item.want||3)?' lit':''}" style="cursor:default">★</span>`).join('')}
+      </div>
+      <div class="dopamine-info">
+        <div class="dopamine-name">${escHtml(item.name)}</div>
+        <div class="dopamine-meta">${bucket.icon} ${bucket.label}${item.gotIt ? ' · got it '+(item.gotDate||'') : ''}</div>
+      </div>
+      ${item.cost > 0 ? `<div class="dopamine-cost">$${item.cost.toFixed(0)}</div>` : ''}
+      <div class="dopamine-actions">
+        ${!item.gotIt ? `<button class="dopamine-btn got" onclick="markGotIt('${item.id}')" aria-label="Mark as purchased">got it</button>` : ''}
+        <button class="dopamine-btn" onclick="openDopamineModal('${item.id}')" aria-label="Edit">edit</button>
+        <button class="dopamine-btn" onclick="deleteDopamineItem('${item.id}')" aria-label="Remove">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Close menus on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const menuEl = document.getElementById('menuOverlay');
+    if (menuEl && !menuEl.classList.contains('hidden')) { closeMenu(); return; }
+    if (_activeSubPage) { closeMenuSubPage(_activeSubPage); return; }
+    const apptEl = document.getElementById('apptModalOverlay');
+    if (apptEl && !apptEl.classList.contains('hidden')) { closeApptModal(); return; }
+    const spendEl = document.getElementById('spendModalOverlay');
+    if (spendEl && !spendEl.classList.contains('hidden')) { closeSpendModal(); return; }
+  }
+});
 
 // ── Journal system ────────────────────────────────────────────────────────
 
