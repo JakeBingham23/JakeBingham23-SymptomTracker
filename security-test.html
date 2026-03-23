@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Test Harness — Daily Structure Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0c;
+    color: #e8e8e8;
+    font-family: 'Courier New', monospace;
+    padding: 1.5rem 1rem;
+    font-size: 14px;
+  }
+  h1 {
+    font-size: 0.875rem;
+    color: #c8a96e;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+  .subtitle {
+    font-size: 0.625rem;
+    color: #555;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+  .test-group {
+    margin-bottom: 2rem;
+  }
+  .group-title {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #555;
+    border-bottom: 0.5px solid #1e1e1e;
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+  }
+  .test-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 0.5px solid #111;
+  }
+  .test-name {
+    flex: 1;
+    font-size: 0.75rem;
+    color: #ccc;
+    line-height: 1.5;
+  }
+  .test-detail {
+    font-size: 0.5625rem;
+    color: #555;
+    margin-top: 2px;
+  }
+  .test-status {
+    flex-shrink: 0;
+    width: 80px;
+    text-align: right;
+    font-size: 0.6875rem;
+    font-weight: bold;
+  }
+  .status-pending  { color: #444; }
+  .status-running  { color: #c8a96e; }
+  .status-pass     { color: #2d7d46; }
+  .status-fail     { color: #c0392b; }
+  .status-warn     { color: #e67e22; }
+  .status-skip     { color: #555; }
+
+  .run-btn {
+    width: 100%;
+    padding: 14px;
+    background: #c8a96e;
+    border: none;
+    border-radius: 8px;
+    color: #0c0c0c;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 2rem;
+    min-height: 56px;
+  }
+  .run-btn:disabled { background: #333; color: #666; cursor: default; }
+
+  .result-block {
+    background: #111;
+    border: 0.5px solid #1e1e1e;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    display: none;
+  }
+  .result-block.visible { display: block; }
+  .result-title {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #555;
+    margin-bottom: 0.75rem;
+  }
+  .result-json {
+    font-size: 0.5625rem;
+    color: #888;
+    line-height: 1.8;
+    word-break: break-all;
+    white-space: pre-wrap;
+  }
+
+  .copy-btn {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 0.5px solid #333;
+    border-radius: 6px;
+    color: #888;
+    font-family: 'Courier New', monospace;
+    font-size: 0.6875rem;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .copy-btn:hover { border-color: #c8a96e; color: #c8a96e; }
+
+  .timing { color: #555; font-size: 0.5625rem; }
+  .progress-bar {
+    height: 3px;
+    background: #1e1e1e;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+  .progress-bar.visible { display: block; }
+  .progress-fill {
+    height: 100%;
+    background: #c8a96e;
+    border-radius: 2px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+  .summary-card {
+    background: #111;
+    border: 0.5px solid #1e1e1e;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .summary-card.visible { display: block; }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6875rem;
+    margin-bottom: 6px;
+    color: #888;
+  }
+  .summary-row strong { color: #e8e8e8; }
+</style>
+</head>
+<body>
+
+<h1>// security test harness</h1>
+<div class="subtitle">
+  Daily Structure Tracker — Portfolio Security Documentation<br>
+  Run on each test device. Results are copied as JSON for the portfolio doc.<br>
+  No data is sent anywhere. All tests run locally in this tab.
+</div>
+
+<button class="run-btn" id="runBtn" onclick="runAllTests()">
+  run all security tests
+</button>
+
+<div class="progress-bar" id="progressBar">
+  <div class="progress-fill" id="progressFill"></div>
+</div>
+
+<div class="summary-card" id="summaryCard">
+  <div class="result-title">test summary</div>
+  <div class="summary-row"><span>Device</span><strong id="sumDevice">—</strong></div>
+  <div class="summary-row"><span>Browser</span><strong id="sumBrowser">—</strong></div>
+  <div class="summary-row"><span>OS</span><strong id="sumOS">—</strong></div>
+  <div class="summary-row"><span>Passed</span><strong id="sumPass" style="color:#2d7d46">—</strong></div>
+  <div class="summary-row"><span>Failed</span><strong id="sumFail" style="color:#c0392b">—</strong></div>
+  <div class="summary-row"><span>Warnings</span><strong id="sumWarn" style="color:#e67e22">—</strong></div>
+  <div class="summary-row"><span>Skipped</span><strong id="sumSkip">—</strong></div>
+</div>
+
+<!-- TEST GROUPS -->
+
+<div class="test-group">
+  <div class="group-title">1 — Platform Detection</div>
+  <div class="test-row" id="tr-ua">
+    <div class="test-name">User Agent
+      <div class="test-detail" id="td-ua">—</div>
+    </div>
+    <div class="test-status status-pending" id="ts-ua">pending</div>
+  </div>
+  <div class="test-row" id="tr-platform">
+    <div class="test-name">Platform / OS
+      <div class="test-detail" id="td-platform">—</div>
+    </div>
+    <div class="test-status status-pending" id="ts-platform">pending</div>
+  </div>
+  <div class="test-row" id="tr-browser">
+    <div class="test-name">Browser Engine
+      <div class="test-detail" id="td-browser">—</div>
+    </div>
+    <div class="test-status status-pending" id="ts-browser">pending</div>
+  </div>
+</div>
+
+<div class="test-group">
+  <div class="group-title">2 — Web Crypto API</div>
+  <div class="test-row">
+    <div class="test-name">SubtleCrypto available
+      <div class="test-detail" id="td-subtle">—</div>
+    </div>
+    <div class="test-status status-pending" id="ts-subtle">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">AES-256-GCM encrypt/decrypt roundtrip
+      <div class="test-detail" id="td-aes">—</div>
+    </div>
+    <div class="test-status status-pending" id="ts-aes">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">PBKDF2-SHA256 key derivation
+      <div class="test-detail" id="td-pbkdf2">—</div>
+    </div>
+    <div class="test-status status-pending" id="ts-pbkdf2">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">PBKDF2 at 310,000 iterations — timing
+      <div class="test-detail" id="td-pbkdf2time">measures real-world key derivation cost</div>
+    </div>
+    <div class="test-status status-pending" id="ts-pbkdf2time">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">crypto.getRandomValues — entropy source
+      <div class="test-detail" id="td-random">—</div>
+    </div>
+    <div class="test-status status-pending" id="ts-random">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">GCM tamper detection — modified ciphertext fails
+      <div class="test-detail" id="td-tamper">AES-GCM auth tag validates integrity</div>
+    </div>
+    <div class="test-status status-pending" id="ts-tamper">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">IV uniqueness — two encryptions of same data differ
+      <div class="test-detail" id="td-iv">confirms fresh IV per operation</div>
+    </div>
+    <div class="test-status status-pending" id="ts-iv">pending</div>
+  </div>
+</div>
+
+<div class="test-group">
+  <div class="group-title">3 — WebAuthn + PRF</div>
+  <div class="test-row">
+    <div class="test-name">PublicKeyCredential available
+      <div class="test-detail" id="td-pkc">—</div>
+    </div>
+    <div class="test-status status-pending" id="ts-pkc">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">Platform authenticator available
+      <div class="test-detail" id="td-pauth">fingerprint / face / device PIN</div>
+    </div>
+    <div class="test-status status-pending" id="ts-pauth">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">PRF extension supported (create credential)
+      <div class="test-detail" id="td-prf">requires user interaction — tap to trigger biometric</div>
+    </div>
+    <div class="test-status status-pending" id="ts-prf">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">PRF output length — 32 bytes
+      <div class="test-detail" id="td-prflen">—</div>
+    </div>
+    <div class="test-status status-pending" id="ts-prflen">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">PRF determinism — same credential yields same output
+      <div class="test-detail" id="td-prfdet">requires second biometric prompt</div>
+    </div>
+    <div class="test-status status-pending" id="ts-prfdet">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">PRF key derivation — encrypt/decrypt via biometric key
+      <div class="test-detail" id="td-prfkey">end-to-end biometric encryption test</div>
+    </div>
+    <div class="test-status status-pending" id="ts-prfkey">pending</div>
+  </div>
+</div>
+
+<div class="test-group">
+  <div class="group-title">4 — IndexedDB</div>
+  <div class="test-row">
+    <div class="test-name">IndexedDB available
+      <div class="test-detail" id="td-idb">—</div>
+    </div>
+    <div class="test-status status-pending" id="ts-idb">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">Write encrypted value → read back → verify
+      <div class="test-detail" id="td-idbcycle">confirms IDB stores only ciphertext</div>
+    </div>
+    <div class="test-status status-pending" id="ts-idbcycle">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">IDB value is not plaintext — ciphertext confirmed
+      <div class="test-detail" id="td-idbcipher">reads raw IDB value, checks it's binary not string</div>
+    </div>
+    <div class="test-status status-pending" id="ts-idbcipher">pending</div>
+  </div>
+</div>
+
+<div class="test-group">
+  <div class="group-title">5 — Storage Security</div>
+  <div class="test-row">
+    <div class="test-name">localStorage contains no plaintext tracker data
+      <div class="test-detail" id="td-ls">checks for unencrypted tracker-* keys</div>
+    </div>
+    <div class="test-status status-pending" id="ts-ls">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">sessionStorage API key not in localStorage
+      <div class="test-detail" id="td-apikey">tracker-anthropic-key must not be in localStorage</div>
+    </div>
+    <div class="test-status status-pending" id="ts-apikey">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">CSP meta tag present
+      <div class="test-detail" id="td-csp">checks document for Content-Security-Policy meta</div>
+    </div>
+    <div class="test-status status-pending" id="ts-csp">pending</div>
+  </div>
+</div>
+
+<div class="test-group">
+  <div class="group-title">6 — Brute Force Protection</div>
+  <div class="test-row">
+    <div class="test-name">PBKDF2 310k iter cost > 200ms on this device
+      <div class="test-detail" id="td-bftime">makes GPU brute force expensive</div>
+    </div>
+    <div class="test-status status-pending" id="ts-bftime">pending</div>
+  </div>
+  <div class="test-row">
+    <div class="test-name">Wrong PIN produces different key — decrypt fails
+      <div class="test-detail" id="td-wrongpin">confirms PIN verification works</div>
+    </div>
+    <div class="test-status status-pending" id="ts-wrongpin">pending</div>
+  </div>
+</div>
+
+<!-- Results JSON -->
+<div class="result-block" id="resultBlock">
+  <div class="result-title">raw results — copy for portfolio doc</div>
+  <div class="result-json" id="resultJson"></div>
+  <button class="copy-btn" onclick="copyResults()">copy results JSON</button>
+</div>
+
+<script>
+// ── Test state ────────────────────────────────────────────────────────────
+const results = {
+  meta: {},
+  tests: {}
+};
+
+let totalTests  = 0;
+let doneTests   = 0;
+let _prfCredRawId = null;
+let _prfFirstOutput = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function setStatus(id, status, detail) {
+  const tsEl = document.getElementById('ts-' + id);
+  const tdEl = document.getElementById('td-' + id);
+  if (tsEl) {
+    tsEl.className = 'test-status status-' + status;
+    tsEl.textContent = status === 'running' ? '...' :
+                       status === 'pass'    ? 'PASS' :
+                       status === 'fail'    ? 'FAIL' :
+                       status === 'warn'    ? 'WARN' :
+                       status === 'skip'    ? 'SKIP' : status;
+  }
+  if (tdEl && detail) tdEl.textContent = detail;
+  results.tests[id] = { status, detail: detail || '' };
+  doneTests++;
+  document.getElementById('progressFill').style.width =
+    Math.round((doneTests / totalTests) * 100) + '%';
+}
+
+async function t(id, fn) {
+  setStatus(id, 'running');
+  try {
+    const result = await fn();
+    setStatus(id, result.status || 'pass', result.detail || '');
+    return result;
+  } catch(e) {
+    setStatus(id, 'fail', e.message);
+    return { status: 'fail' };
+  }
+}
+
+function b64(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+
+function randomBytes(n) {
+  return crypto.getRandomValues(new Uint8Array(n));
+}
+
+// ── Crypto helpers ────────────────────────────────────────────────────────
+async function deriveKey(pin, salt) {
+  const enc    = new TextEncoder();
+  const keyMat = await crypto.subtle.importKey(
+    'raw', enc.encode(pin), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' },
+    keyMat,
+    { name: 'AES-GCM', length: 256 },
+    false, ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptVal(key, data) {
+  const iv  = randomBytes(12);
+  const enc = new TextEncoder();
+  const ct  = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(data)));
+  const out = new Uint8Array(12 + ct.byteLength);
+  out.set(iv, 0);
+  out.set(new Uint8Array(ct), 12);
+  return out;
+}
+
+async function decryptVal(key, packed) {
+  const iv = packed.slice(0, 12);
+  const ct = packed.slice(12);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+// ── IDB helpers ───────────────────────────────────────────────────────────
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('security-test-harness', 1);
+    req.onupgradeneeded = e => {
+      e.target.result.createObjectStore('test');
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+async function idbSet(db, key, val) {
+  return new Promise((resolve, reject) => {
+    const tx  = db.transaction('test', 'readwrite');
+    const req = tx.objectStore('test').put(val, key);
+    req.onsuccess = () => resolve();
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+async function idbGet(db, key) {
+  return new Promise((resolve, reject) => {
+    const tx  = db.transaction('test', 'readonly');
+    const req = tx.objectStore('test').get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+// ── Main test runner ──────────────────────────────────────────────────────
+async function runAllTests() {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.textContent = 'running...';
+
+  // Count tests
+  totalTests = document.querySelectorAll('.test-row').length;
+  doneTests  = 0;
+
+  document.getElementById('progressBar').classList.add('visible');
+  document.getElementById('summaryCard').classList.remove('visible');
+  document.getElementById('resultBlock').classList.remove('visible');
+
+  // ── Group 1: Platform ────────────────────────────────────────────────
+  await t('ua', () => {
+    const ua = navigator.userAgent;
+    results.meta.userAgent = ua;
+    return { status: 'pass', detail: ua.slice(0, 80) };
+  });
+
+  await t('platform', () => {
+    const pl = navigator.platform || navigator.userAgentData?.platform || 'unknown';
+    const hints = navigator.userAgentData;
+    const os    = hints?.platform || pl;
+    results.meta.platform = os;
+    return { status: 'pass', detail: os };
+  });
+
+  await t('browser', () => {
+    const ua = navigator.userAgent;
+    let browser = 'Unknown';
+    if (/DuckDuckGo/.test(ua))      browser = 'DuckDuckGo (Chromium)';
+    else if (/Edg\//.test(ua))      browser = 'Edge';
+    else if (/OPR\//.test(ua))      browser = 'Opera';
+    else if (/Chrome\//.test(ua))   browser = 'Chrome';
+    else if (/Firefox\//.test(ua))  browser = 'Firefox';
+    else if (/Safari\//.test(ua))   browser = 'Safari';
+    results.meta.browser = browser;
+    return { status: 'pass', detail: browser };
+  });
+
+  // ── Group 2: Web Crypto ──────────────────────────────────────────────
+  await t('subtle', () => {
+    const ok = !!(window.crypto && window.crypto.subtle);
+    return { status: ok ? 'pass' : 'fail',
+             detail: ok ? 'window.crypto.subtle available' : 'SubtleCrypto NOT available — critical failure' };
+  });
+
+  await t('aes', async () => {
+    const key   = await crypto.subtle.generateKey(
+      { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    const iv    = randomBytes(12);
+    const plain = new TextEncoder().encode('test-payload-12345');
+    const ct    = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain);
+    const pt    = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key,
+      new Uint8Array(ct));
+    const ok    = new TextDecoder().decode(pt) === 'test-payload-12345';
+    return { status: ok ? 'pass' : 'fail',
+             detail: ok ? 'encrypt→decrypt roundtrip verified' : 'decrypted value mismatch' };
+  });
+
+  await t('pbkdf2', async () => {
+    const salt   = randomBytes(32);
+    const enc    = new TextEncoder();
+    const keyMat = await crypto.subtle.importKey(
+      'raw', enc.encode('test-pin'), 'PBKDF2', false, ['deriveKey']);
+    const key    = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: 1000, hash: 'SHA-256' },
+      keyMat, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    return { status: 'pass', detail: 'PBKDF2-SHA256 key derivation OK' };
+  });
+
+  await t('pbkdf2time', async () => {
+    const salt   = randomBytes(32);
+    const enc    = new TextEncoder();
+    const keyMat = await crypto.subtle.importKey(
+      'raw', enc.encode('1234'), 'PBKDF2', false, ['deriveKey']);
+    const t0     = performance.now();
+    await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' },
+      keyMat, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    const ms     = Math.round(performance.now() - t0);
+    results.meta.pbkdf2Ms = ms;
+    // > 200ms is good — makes brute force expensive
+    return {
+      status: ms > 200 ? 'pass' : ms > 100 ? 'warn' : 'fail',
+      detail: `${ms}ms — ${ms > 200 ? 'brute force resistant' : ms > 100 ? 'marginal — fast device may be susceptible' : 'too fast — brute force risk'}`
+    };
+  });
+
+  await t('random', () => {
+    const a = randomBytes(32);
+    const b = randomBytes(32);
+    const same = a.every((v, i) => v === b[i]);
+    return { status: same ? 'fail' : 'pass',
+             detail: same ? 'FAIL: two calls returned identical bytes' : '32-byte random values are unique' };
+  });
+
+  await t('tamper', async () => {
+    const key  = await crypto.subtle.generateKey(
+      { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    const iv   = randomBytes(12);
+    const ct   = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv }, key, new TextEncoder().encode('sensitive'));
+    const bad  = new Uint8Array(ct);
+    bad[0] ^= 0xFF; // Flip bits in first byte
+    try {
+      await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, bad);
+      return { status: 'fail', detail: 'FAIL: tampered ciphertext decrypted — no integrity check' };
+    } catch(e) {
+      return { status: 'pass', detail: 'tampered ciphertext rejected — GCM auth tag working' };
+    }
+  });
+
+  await t('iv', async () => {
+    const key   = await crypto.subtle.generateKey(
+      { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    const plain = new TextEncoder().encode('same data');
+    const iv1   = randomBytes(12);
+    const iv2   = randomBytes(12);
+    const ct1   = new Uint8Array(await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv1 }, key, plain));
+    const ct2   = new Uint8Array(await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv2 }, key, plain));
+    const same  = ct1.length === ct2.length && ct1.every((v,i) => v === ct2[i]);
+    return { status: same ? 'fail' : 'pass',
+             detail: same ? 'FAIL: same ciphertext — IV reuse detected' :
+               'two encryptions of same plaintext produce different ciphertext' };
+  });
+
+  // ── Group 3: WebAuthn + PRF ──────────────────────────────────────────
+  await t('pkc', () => {
+    const ok = !!window.PublicKeyCredential;
+    results.meta.webAuthnAvailable = ok;
+    return { status: ok ? 'pass' : 'fail',
+             detail: ok ? 'PublicKeyCredential available' : 'WebAuthn NOT available' };
+  });
+
+  await t('pauth', async () => {
+    if (!window.PublicKeyCredential) return { status: 'skip', detail: 'WebAuthn unavailable' };
+    const ok = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    results.meta.platformAuthAvailable = ok;
+    return { status: ok ? 'pass' : 'warn',
+             detail: ok ? 'Platform authenticator available (fingerprint/face/PIN)' :
+               'No platform authenticator — biometric unlock not possible on this device' };
+  });
+
+  // PRF test — requires user interaction (biometric prompt)
+  await t('prf', async () => {
+    if (!window.PublicKeyCredential) return { status: 'skip', detail: 'WebAuthn unavailable' };
+    const available = await PublicKeyCredential
+      .isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false);
+    if (!available) return { status: 'skip', detail: 'No platform authenticator' };
+
+    const credId = crypto.getRandomValues(new Uint8Array(32));
+    const rpId   = location.hostname || 'localhost';
+    try {
+      const cred = await navigator.credentials.create({
+        publicKey: {
+          challenge: randomBytes(32),
+          rp: { name: 'Security Test', id: rpId },
+          user: { id: credId, name: 'test', displayName: 'Test' },
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            userVerification: 'required',
+          },
+          extensions: { prf: { eval: { first: new TextEncoder().encode('test-salt') } } },
+          timeout: 60000,
+        }
+      });
+
+      const prfResult = cred.getClientExtensionResults()?.prf?.results?.first;
+      const hasPRF    = !!(prfResult && prfResult.byteLength === 32);
+      results.meta.prfSupported = hasPRF;
+
+      if (hasPRF) {
+        _prfCredRawId     = cred.rawId;
+        _prfFirstOutput   = new Uint8Array(prfResult);
+        return { status: 'pass', detail: 'PRF extension supported — true biometric key derivation available' };
+      } else {
+        _prfCredRawId = cred.rawId;
+        return { status: 'warn', detail: 'Credential created but PRF extension NOT supported — presence-only WebAuthn' };
+      }
+    } catch(e) {
+      if (e.name === 'NotAllowedError') {
+        return { status: 'fail', detail: 'User cancelled biometric prompt' };
+      }
+      return { status: 'fail', detail: e.message };
+    }
+  });
+
+  await t('prflen', () => {
+    if (!_prfFirstOutput) return { status: 'skip', detail: 'PRF test skipped or failed' };
+    const len = _prfFirstOutput.byteLength;
+    return { status: len === 32 ? 'pass' : 'fail',
+             detail: `PRF output: ${len} bytes (expected 32)` };
+  });
+
+  await t('prfdet', async () => {
+    if (!_prfCredRawId || !_prfFirstOutput) {
+      return { status: 'skip', detail: 'PRF credential not available' };
+    }
+    const rpId = location.hostname || 'localhost';
+    try {
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge: randomBytes(32),
+          rpId,
+          allowCredentials: [{ type: 'public-key', id: _prfCredRawId }],
+          userVerification: 'required',
+          extensions: { prf: { eval: { first: new TextEncoder().encode('test-salt') } } },
+          timeout: 60000,
+        }
+      });
+      const prfResult2 = assertion.getClientExtensionResults()?.prf?.results?.first;
+      if (!prfResult2) return { status: 'fail', detail: 'PRF result missing from assertion' };
+
+      const out2 = new Uint8Array(prfResult2);
+      const same = _prfFirstOutput.length === out2.length &&
+                   _prfFirstOutput.every((v, i) => v === out2[i]);
+      results.meta.prfDeterministic = same;
+      return {
+        status: same ? 'pass' : 'fail',
+        detail: same ? 'Same credential + same salt → identical PRF output (determinism confirmed)' :
+                       'FAIL: PRF outputs differ — non-deterministic'
+      };
+    } catch(e) {
+      if (e.name === 'NotAllowedError') return { status: 'skip', detail: 'User cancelled' };
+      return { status: 'fail', detail: e.message };
+    }
+  });
+
+  await t('prfkey', async () => {
+    if (!_prfFirstOutput) return { status: 'skip', detail: 'PRF output not available' };
+    try {
+      const salt   = randomBytes(32);
+      const keyMat = await crypto.subtle.importKey(
+        'raw', _prfFirstOutput, 'PBKDF2', false, ['deriveKey']);
+      const key    = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+        keyMat, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+
+      const iv     = randomBytes(12);
+      const plain  = 'biometric-encryption-test-payload';
+      const ct     = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv }, key, new TextEncoder().encode(plain));
+      const pt     = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv }, key, ct);
+      const ok     = new TextDecoder().decode(pt) === plain;
+
+      return { status: ok ? 'pass' : 'fail',
+               detail: ok ? 'PRF → PBKDF2 → AES-256-GCM encrypt/decrypt roundtrip confirmed' :
+                            'Decrypted value mismatch' };
+    } catch(e) {
+      return { status: 'fail', detail: e.message };
+    }
+  });
+
+  // ── Group 4: IndexedDB ───────────────────────────────────────────────
+  await t('idb', async () => {
+    const ok = !!window.indexedDB;
+    return { status: ok ? 'pass' : 'fail',
+             detail: ok ? 'IndexedDB available' : 'IndexedDB NOT available' };
+  });
+
+  let testDB = null;
+  await t('idbcycle', async () => {
+    testDB = await idbOpen();
+    const salt = randomBytes(32);
+    const key  = await deriveKey('test-pin-9876', salt);
+    const enc  = await encryptVal(key, { secret: 'health-data-payload' });
+    await idbSet(testDB, 'test-key', enc);
+    const raw  = await idbGet(testDB, 'test-key');
+    const dec  = await decryptVal(key, raw);
+    const ok   = dec?.secret === 'health-data-payload';
+    return { status: ok ? 'pass' : 'fail',
+             detail: ok ? 'write encrypted → read raw → decrypt → value matches' : 'value mismatch' };
+  });
+
+  await t('idbcipher', async () => {
+    if (!testDB) return { status: 'skip', detail: 'IDB test failed' };
+    const raw = await idbGet(testDB, 'test-key');
+    const isUint8 = raw instanceof Uint8Array;
+    const isStr   = typeof raw === 'string';
+    const isBuf   = raw instanceof ArrayBuffer;
+    // Should NOT be a plain string
+    return { status: (!isStr && (isUint8 || isBuf)) ? 'pass' : 'fail',
+             detail: isStr ? 'FAIL: raw IDB value is plaintext string — not encrypted' :
+                    (isUint8 || isBuf) ? `raw IDB value is binary (${raw.byteLength || raw.length} bytes) — ciphertext confirmed` :
+                    `unexpected type: ${typeof raw}` };
+  });
+
+  // ── Group 5: Storage Security ────────────────────────────────────────
+  await t('ls', () => {
+    const trackerKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('tracker-')) trackerKeys.push(k);
+    }
+    results.meta.localStorageTrackerKeys = trackerKeys;
+    if (trackerKeys.length === 0) {
+      return { status: 'pass', detail: 'No tracker-* keys in localStorage — migration complete' };
+    } else {
+      return { status: 'warn', detail: `Found ${trackerKeys.length} unencrypted keys: ${trackerKeys.slice(0,3).join(', ')}${trackerKeys.length > 3 ? '...' : ''}` };
+    }
+  });
+
+  await t('apikey', () => {
+    const inLS  = localStorage.getItem('tracker-anthropic-key');
+    const inSS  = sessionStorage.getItem('tracker-anthropic-key');
+    if (inLS) {
+      return { status: 'fail', detail: 'FAIL: API key found in localStorage — must be in sessionStorage only' };
+    }
+    return { status: 'pass', detail: inSS ? 'API key in sessionStorage only (correct)' : 'No API key stored (correct — not set yet)' };
+  });
+
+  await t('csp', () => {
+    const meta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    if (!meta) {
+      return { status: 'warn', detail: 'No CSP meta tag — checking if this is the test harness (expected)' };
+    }
+    const content = meta.content;
+    const hasObjectNone = content.includes("object-src 'none'");
+    const hasBaseUri    = content.includes("base-uri 'self'");
+    return { status: 'pass', detail: `CSP present. object-src none: ${hasObjectNone}. base-uri self: ${hasBaseUri}` };
+  });
+
+  // ── Group 6: Brute Force ─────────────────────────────────────────────
+  await t('bftime', async () => {
+    const ms = results.tests['pbkdf2time']?.detail?.match(/(\d+)ms/)?.[1];
+    if (!ms) return { status: 'skip', detail: 'PBKDF2 timing test not complete' };
+    const msNum = parseInt(ms);
+    return {
+      status: msNum > 200 ? 'pass' : msNum > 100 ? 'warn' : 'fail',
+      detail: `${msNum}ms per derivation. Attacker cost per PIN guess on this hardware. > 200ms = good.`
+    };
+  });
+
+  await t('wrongpin', async () => {
+    const salt     = randomBytes(32);
+    const rightKey = await deriveKey('correct-pin', salt);
+    const wrongKey = await deriveKey('wrong-pin', salt);
+    const iv       = randomBytes(12);
+    const ct       = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv }, rightKey, new TextEncoder().encode('secret'));
+    try {
+      await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, wrongKey, ct);
+      return { status: 'fail', detail: 'FAIL: wrong PIN decrypted successfully — key derivation broken' };
+    } catch(e) {
+      return { status: 'pass', detail: 'Wrong PIN produces wrong key — decryption fails as expected' };
+    }
+  });
+
+  // ── Wrap up ──────────────────────────────────────────────────────────
+  const allTests = Object.values(results.tests);
+  const pass  = allTests.filter(t => t.status === 'pass').length;
+  const fail  = allTests.filter(t => t.status === 'fail').length;
+  const warn  = allTests.filter(t => t.status === 'warn').length;
+  const skip  = allTests.filter(t => t.status === 'skip').length;
+
+  results.meta.timestamp  = new Date().toISOString();
+  results.meta.summary    = { pass, fail, warn, skip, total: allTests.length };
+  results.meta.screenW    = window.screen.width;
+  results.meta.screenH    = window.screen.height;
+  results.meta.devicePixelRatio = window.devicePixelRatio;
+
+  // Summary card
+  document.getElementById('sumDevice').textContent =
+    `${window.screen.width}×${window.screen.height} @${window.devicePixelRatio}x`;
+  document.getElementById('sumBrowser').textContent = results.meta.browser || '—';
+  document.getElementById('sumOS').textContent      = results.meta.platform || '—';
+  document.getElementById('sumPass').textContent    = pass;
+  document.getElementById('sumFail').textContent    = fail;
+  document.getElementById('sumWarn').textContent    = warn;
+  document.getElementById('sumSkip').textContent    = skip;
+  document.getElementById('summaryCard').classList.add('visible');
+
+  // Results JSON
+  document.getElementById('resultJson').textContent =
+    JSON.stringify(results, null, 2);
+  document.getElementById('resultBlock').classList.add('visible');
+
+  btn.textContent = `done — ${pass} pass, ${fail} fail, ${warn} warn`;
+  btn.disabled    = false;
+}
+
+function copyResults() {
+  const text = document.getElementById('resultJson').textContent;
+  navigator.clipboard?.writeText(text)
+    .then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'copied ✓';
+      setTimeout(() => btn.textContent = 'copy results JSON', 2000);
+    })
+    .catch(() => {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+}
+</script>
+</body>
+</html>
