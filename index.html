@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="app-version" content="4.0">
+  <meta name="theme-color" content="#0c0c0c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tracker">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.cdnfonts.com; font-src 'self' https://fonts.gstatic.com https://fonts.cdnfonts.com; img-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com https://api.telegram.org; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="no-referrer">
+
+  <title>Daily Structure Tracker</title>
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- Icons -->
+  <link rel="icon" type="image/png" sizes="48x48"   href="./icons/icon-48.png">
+  <link rel="apple-touch-icon" sizes="192x192"       href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512"       href="./icons/icon-512.png">
+
+  <!-- Styles — load order matters -->
+  <link rel="stylesheet" href="./css/tokens.css">
+  <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/components.css">
+  <link rel="stylesheet" href="./css/animations.css">
+  <link rel="stylesheet" href="./css/toast.css">
+
+  <!-- Material Web Components (MD3) — core only -->
+  <script type="importmap">
+  {
+    "imports": {
+      "@material/web/": "https://esm.run/@material/web/"
+    }
+  }
+  </script>
+  <script type="module">
+    import '@material/web/ripple/ripple.js';
+    import '@material/web/focus/md-focus-ring.js';
+  </script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     LOCK SCREEN — shown before app renders, blocks all content
+     First run: PIN setup flow
+     Subsequent: PIN entry or biometric
+═══════════════════════════════════════════════════════════════════ -->
+<div id="lockScreen" style="
+  position:fixed;inset:0;background:var(--bg);z-index:99999;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:2rem;
+  font-family:var(--font-mono);
+" role="main" aria-label="App locked">
+
+  <!-- Brand -->
+  <div style="font-size:0.625rem;color:var(--accent);letter-spacing:0.2em;
+               text-transform:uppercase;margin-bottom:3rem">
+    // daily structure tracker
+  </div>
+
+  <!-- Setup flow (first run) -->
+  <div id="lockSetup" style="display:none;width:100%;max-width:320px;text-align:center">
+    <h1 style="font-size:1rem;color:var(--text);margin-bottom:0.5rem;font-weight:500">
+      set up your PIN
+    </h1>
+    <p style="font-size:0.625rem;color:var(--text3);margin-bottom:2rem;line-height:1.7">
+      your data is encrypted with this PIN.<br>
+      if you forget it, your data cannot be recovered.
+    </p>
+    <div id="setupPINDots" class="pin-dots" aria-label="PIN entry" aria-live="polite"></div>
+    <div id="setupPINError" class="pin-error" role="alert" aria-live="assertive"></div>
+    <div class="pin-pad" role="group" aria-label="Number pad" id="setupPINPad"></div>
+    <p id="setupStep" style="font-size:0.5625rem;color:var(--text3);margin-top:1.5rem"></p>
+  </div>
+
+  <!-- Unlock flow -->
+  <div id="lockUnlock" style="display:none;width:100%;max-width:320px;text-align:center">
+    <div style="font-size:2.5rem;margin-bottom:1.5rem" aria-hidden="true">⬡</div>
+    <h1 style="font-size:1rem;color:var(--text);margin-bottom:0.5rem;font-weight:500">
+      locked
+    </h1>
+    <p style="font-size:0.625rem;color:var(--text3);margin-bottom:2rem">
+      enter your PIN or use biometrics
+    </p>
+
+    <!-- Biometric button (shown if available) -->
+    <button id="biometricBtn" style="display:none;
+      width:100%;padding:var(--sp-4);margin-bottom:var(--sp-4);
+      background:var(--bg2);border:0.5px solid var(--accent);
+      border-radius:var(--radius-lg);color:var(--accent);
+      font-family:var(--font-mono);font-size:0.875rem;
+      cursor:pointer;min-height:56px;transition:all 0.15s"
+      onclick="lockScreen.tryBiometric()"
+      aria-label="Unlock with fingerprint or biometrics">
+      fingerprint / face unlock
+    </button>
+
+    <div id="unlockPINDots" class="pin-dots" aria-label="PIN entry" aria-live="polite"></div>
+    <div id="unlockPINError" class="pin-error" role="alert" aria-live="assertive"></div>
+    <div class="pin-pad" role="group" aria-label="Number pad" id="unlockPINPad"></div>
+  </div>
+
+</div>
+
+
+<!-- Skip to main content (screen readers / keyboard users) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<!-- Confetti canvas -->
+<canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+<!-- Milestone celebration overlay -->
+<div class="milestone-overlay hidden" id="milestoneOverlay"
+     role="dialog" aria-modal="true" aria-labelledby="milestoneTitleEl">
+  <div class="milestone-card">
+    <div class="milestone-emoji" id="milestoneEmoji" aria-hidden="true">🎉</div>
+    <div class="milestone-title" id="milestoneTitleEl"></div>
+    <div class="milestone-msg"   id="milestoneMsgEl"></div>
+    <div class="milestone-points" id="milestonePointsEl" aria-live="polite"></div>
+    <button class="btn primary" style="min-width:160px;margin-top:1.5rem"
+            onclick="closeMilestone()" aria-label="Close celebration">
+      let's go ✓
+    </button>
+  </div>
+</div>
+
+<!-- ARIA live regions — screen readers announce changes here without focus moving -->
+<div id="ariaStatus"   role="status"   aria-live="polite"   aria-atomic="true" class="sr-only">&#8203;</div>
+<div id="ariaAlert"    role="alert"    aria-live="assertive" aria-atomic="true" class="sr-only">&#8203;</div>
+
+<!-- First-run onboarding -->
+<div class="onboarding hidden" id="onboarding" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+  <div class="onboarding-card">
+    <h2 id="onboardingTitle">daily structure tracker</h2>
+    <p>This app helps you track non-negotiables, log symptoms, and build structure. It stays on your device — nothing leaves it.</p>
+    <label for="nameInput">What should it call you?</label>
+    <input type="text" id="nameInput" placeholder="your name" maxlength="40" autocomplete="off">
+    <button class="btn primary" style="width:100%;margin-top:4px" onclick="completeOnboarding()">get started</button>
+  </div>
+</div>
+
+<!-- Top nav bar -->
+<nav class="navbar" role="navigation" aria-label="Main navigation">
+  <!-- Row 1: brand + main tabs -->
+  <div class="navbar-row1">
+    <span class="navbar-brand" aria-hidden="true">// tracker</span>
+    <div class="navbar-tabs" role="tablist">
+      <button class="nav-tab active" id="tab-today"    role="tab" aria-selected="true"  aria-controls="page-today"    onclick="switchTab('today')">
+        <span class="tab-icon" aria-hidden="true">◈</span><span>today</span>
+      </button>
+      <button class="nav-tab" id="tab-history" role="tab" aria-selected="false" aria-controls="page-history" onclick="switchTab('history')">
+        <span class="tab-icon" aria-hidden="true">▤</span><span>history</span>
+      </button>
+      <button class="nav-tab" id="tab-stats"   role="tab" aria-selected="false" aria-controls="page-stats"   onclick="switchTab('stats')">
+        <span class="tab-icon" aria-hidden="true">◎</span><span>stats</span>
+      </button>
+      <button class="nav-tab" id="tab-budget" role="tab" aria-selected="false" aria-controls="page-budget" onclick="switchTab('budget')">
+        <span class="tab-icon" aria-hidden="true">$</span><span>budget</span>
+      </button>
+      <button class="nav-tab" id="tab-journal" role="tab" aria-selected="false" aria-controls="page-journal" onclick="switchTab('journal')">
+        <span class="tab-icon" aria-hidden="true">✎</span><span>journal</span>
+      </button>
+    </div>
+    <button class="hamburger-btn" onclick="openMenu()"
+            aria-label="Open menu" aria-haspopup="dialog"
+            aria-controls="menuOverlay">
+      <span aria-hidden="true">☰</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ── Accessibility / menu overlay ── -->
+<div class="menu-overlay hidden" id="menuOverlay"
+     role="dialog" aria-modal="true" aria-labelledby="menuOverlayTitle">
+  <div class="menu-overlay-inner">
+    <div class="menu-overlay-header">
+      <h2 id="menuOverlayTitle">// menu</h2>
+      <button class="menu-close-btn" onclick="closeMenu()"
+              aria-label="Close menu">✕</button>
+    </div>
+
+    <!-- Appearance -->
+    <div class="menu-section">
+      <div class="menu-section-title">appearance</div>
+      <div class="menu-row">
+        <span class="menu-row-label">theme</span>
+        <div class="theme-pill" role="radiogroup" aria-label="Colour theme" style="gap:2px">
+          <button class="theme-opt" id="menuThemeSystem" onclick="setTheme('system');updateMenuThemeUI()"
+                  role="radio" aria-checked="true">system</button>
+          <button class="theme-opt" id="menuThemeLight"  onclick="setTheme('light');updateMenuThemeUI()"
+                  role="radio" aria-checked="false">light</button>
+          <button class="theme-opt" id="menuThemeDark"   onclick="setTheme('dark');updateMenuThemeUI()"
+                  role="radio" aria-checked="false">dark</button>
+        </div>
+      </div>
+      <div class="menu-row">
+        <span class="menu-row-label">text size</span>
+        <div class="theme-pill" role="radiogroup" aria-label="Text size" style="gap:2px">
+          <button class="theme-opt" id="menuSizeSmall"  onclick="setTextSize('small')"
+                  role="radio" aria-checked="false">S</button>
+          <button class="theme-opt active" id="menuSizeNormal" onclick="setTextSize('normal')"
+                  role="radio" aria-checked="true">A</button>
+          <button class="theme-opt" id="menuSizeLarge"  onclick="setTextSize('large')"
+                  role="radio" aria-checked="false">A+</button>
+          <button class="theme-opt" id="menuSizeXL"     onclick="setTextSize('xl')"
+                  role="radio" aria-checked="false">A++</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accessibility -->
+    <div class="menu-section">
+      <div class="menu-section-title">accessibility</div>
+      <div class="menu-toggle-row">
+        <div class="menu-toggle-info">
+          <span class="menu-toggle-label">high contrast</span>
+          <span class="menu-toggle-sub">stronger colours for low vision</span>
+        </div>
+        <label class="toggle-switch" aria-label="High contrast">
+          <input type="checkbox" id="menuHighContrast"
+                 onchange="setHighContrast(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="menu-toggle-row">
+        <div class="menu-toggle-info">
+          <span class="menu-toggle-label">reduce motion</span>
+          <span class="menu-toggle-sub">disables animations and confetti</span>
+        </div>
+        <label class="toggle-switch" aria-label="Reduce motion">
+          <input type="checkbox" id="menuReduceMotion"
+                 onchange="toggleReduceMotion(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="menu-toggle-row">
+        <div class="menu-toggle-info">
+          <span class="menu-toggle-label">larger touch targets</span>
+          <span class="menu-toggle-sub">56px minimum tap area</span>
+        </div>
+        <label class="toggle-switch" aria-label="Larger touch targets">
+          <input type="checkbox" id="menuLargeTargets"
+                 onchange="setLargeTouchTargets(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="menu-toggle-row">
+        <div class="menu-toggle-info">
+          <span class="menu-toggle-label">do not disturb</span>
+          <span class="menu-toggle-sub">silence all notifications now</span>
+        </div>
+        <label class="toggle-switch" aria-label="Do not disturb">
+          <input type="checkbox" id="menuDND"
+                 onchange="saveDND()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Quick nav -->
+    <div class="menu-section">
+      <div class="menu-section-title">go to</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="add-btn" onclick="closeMenu();switchTab('today')"
+                aria-label="Go to Today tab">today</button>
+        <button class="add-btn" onclick="closeMenu();switchTab('history')"
+                aria-label="Go to History tab">history</button>
+        <button class="add-btn" onclick="closeMenu();switchTab('stats')"
+                aria-label="Go to Stats tab">stats</button>
+        <button class="add-btn" onclick="closeMenu();switchTab('budget')"
+                aria-label="Go to Budget tab">budget</button>
+        <button class="add-btn" onclick="closeMenu();switchTab('journal')"
+                aria-label="Go to Journal tab">journal</button>
+      </div>
+    </div>
+
+    <!-- Settings navigation -->
+    <div class="menu-section">
+      <div class="menu-section-title">settings</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <button class="menu-settings-item" onclick="openMenuSubPage('tasks')"
+                aria-label="Tasks and symptoms settings">
+          <span>tasks &amp; symptoms</span><span aria-hidden="true">›</span>
+        </button>
+        <button class="menu-settings-item" onclick="openMenuSubPage('notifications')"
+                aria-label="Notification settings">
+          <span>notifications</span><span aria-hidden="true">›</span>
+        </button>
+        <button class="menu-settings-item" onclick="openMenuSubPage('timers')"
+                aria-label="Timers and schedule settings">
+          <span>timers &amp; schedule</span><span aria-hidden="true">›</span>
+        </button>
+        <button class="menu-settings-item" onclick="openMenuSubPage('integrations')"
+                aria-label="Integrations settings">
+          <span>integrations</span><span aria-hidden="true">›</span>
+        </button>
+        <button class="menu-settings-item" onclick="openMenuSubPage('data')"
+                aria-label="Data and backup">
+          <span>data &amp; backup</span><span aria-hidden="true">›</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Font picker -->
+    <div class="menu-section">
+      <div class="menu-section-title">font</div>
+      <div class="theme-pill" role="radiogroup" aria-label="Font"
+           style="flex-wrap:wrap;height:auto;padding:4px;gap:3px">
+        <button class="theme-opt active" id="menuFontDefault"
+                onclick="setFont('default')" role="radio" aria-checked="true">system</button>
+        <button class="theme-opt" id="menuFontIbmplexmono"
+                onclick="setFont('ibmplexmono')" role="radio" aria-checked="false"
+                style="font-family:'IBM Plex Mono',monospace">ibm mono</button>
+        <button class="theme-opt" id="menuFontAtkinson"
+                onclick="setFont('atkinson')" role="radio" aria-checked="false">atkinson ↓</button>
+        <button class="theme-opt" id="menuFontOpendyslexic"
+                onclick="setFont('opendyslexic')" role="radio" aria-checked="false">opendyslexic ↓</button>
+        <button class="theme-opt" id="menuFontComic"
+                onclick="setFont('comic')" role="radio" aria-checked="false"
+                style="font-family:'Comic Sans MS',cursive">comic sans</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── TODAY ── -->
+<div class="page active" id="page-today" role="tabpanel" aria-labelledby="tab-today">
+  <div class="container" id="main-content">
+    <div class="header">
+      <div class="header-top">
+        <h1 id="headerTitle">daily check-in</h1>
+        <span class="date" id="dateDisplay"></span>
+      </div>
+      <div class="window-timer" id="windowTimer" aria-live="polite" aria-atomic="true"></div>
+    </div>
+
+    <!-- Quote of the day -->
+    <div class="quote-card" id="quoteCard" aria-label="Quote of the day" role="region">
+      <div class="quote-loading" id="quoteLoading">generating your daily message...</div>
+      <p class="quote-text" id="quoteText" style="display:none"></p>
+      <div class="quote-meta" id="quoteMeta" style="display:none">
+        <span id="quoteSource"></span>
+        <div class="quote-actions">
+          <button class="quote-action-btn" id="quoteLikeBtn"
+                  onclick="likeQuote()" aria-label="Save quote to favourites">♡</button>
+          <button class="quote-action-btn" onclick="refreshQuote()"
+                  aria-label="Get a different quote">↻</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="nag-banner" id="nagBanner" role="alert" aria-live="assertive" aria-atomic="true">
+      <p id="nagText"></p>
+      <span>these are not optional. do them and come back.</span>
+      <div class="nag-encouragement" id="nagEncouragement"></div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat">
+        <span class="stat-num accent" id="statDone" aria-label="tasks done today: 0">0</span>
+        <span class="stat-label" aria-hidden="true">done today</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="statStreak" aria-label="medication streak: 0 days">0</span>
+        <span class="stat-label" aria-hidden="true">med streak</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num danger" id="statMissed" aria-label="tasks missed: 0">0</span>
+        <span class="stat-label" aria-hidden="true">missed</span>
+      </div>
+    </div>
+
+    <!-- Daily spending card -->
+    <div class="daily-card" id="dailySpendCard" style="display:none"
+         role="region" aria-label="Daily spending">
+      <div class="daily-card-header">
+        <span class="daily-card-label">daily limit</span>
+        <span class="daily-card-amount" id="dailyRemaining">—</span>
+      </div>
+      <div class="daily-card-bar" aria-hidden="true">
+        <div class="daily-card-bar-fill" id="dailyBar" style="width:0%"></div>
+      </div>
+      <div class="daily-card-sub">
+        <span id="dailySpent">$0 spent today</span>
+        <span id="dailyLimit">of $— limit</span>
+      </div>
+      <button class="daily-card-log-btn" onclick="openSpendModal()"
+              aria-label="Log a quick expense">+ log expense</button>
+    </div>
+
+    <div class="custom-timers" id="customTimersWidget"></div>
+
+    <div class="section">
+      <h2 class="section-label">non-negotiables</h2>
+      <div id="criticalTasks"></div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-label">daily structure</h2>
+      <div id="dailyTasks"></div>
+    </div>
+
+    <div class="symptom-block" id="symptomBlock">
+      <h2 class="symptom-header">symptom check <span class="sr-only">— screenshot this section if something is flagged</span><span aria-hidden="true"> — screenshot this if something's flagged</span></h2>
+
+      <div class="mood-row">
+        <span class="mood-type">energy</span>
+        <div class="mood-opts" id="energyOpts">
+          <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: crashed">crashed</button>
+          <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: low">low</button>
+          <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: ok">ok</button>
+          <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: elevated">elevated</button>
+          <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: racing">racing</button>
+        </div>
+      </div>
+
+      <div class="mood-row">
+        <span class="mood-type">mood</span>
+        <div class="mood-opts" id="moodOpts">
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: dark">dark</button>
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: low">low</button>
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: flat">flat</button>
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: ok">ok</button>
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: good">good</button>
+          <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: high">high</button>
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="flag-label">flag if present</div>
+      <div class="symptom-grid" id="symptomGrid"></div>
+
+      <textarea id="symptomNotes" rows="2" placeholder="anything worth noting today" aria-label="notes for today's check-in"></textarea>
+
+      <div class="btn-row">
+        <button class="btn" onclick="takePhoto()" aria-label="capture and save symptom record image">screenshot record</button>
+        <button class="btn primary" onclick="saveAll()" aria-label="save today's check-in to history">save check-in</button>
+      </div>
+      <div class="confirm" id="saveConfirm" role="status" aria-live="polite">saved.</div>
+      <div class="checkin-msg" id="checkinMsg" role="status" aria-live="polite">
+        <p id="checkinMsgText"></p>
+        <div class="checkin-msg-source">
+          <span id="checkinMsgSource"></span>
+          <button class="quote-action-btn" onclick="likeCheckinMsg()"
+                  id="checkinLikeBtn" aria-label="Save this message to favourites">♡ save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HISTORY + APPOINTMENTS ── -->
+<div class="page" id="page-history" role="tabpanel" aria-labelledby="tab-history" aria-hidden="true">
+  <div class="container">
+    <div class="header">
+      <div class="header-top">
+        <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="history-heading">log &amp; appointments</h1>
+        <span class="date" id="historyDateDisplay"></span>
+      </div>
+    </div>
+
+    <!-- Next appointment banner -->
+    <div class="next-appt-banner" id="nextApptBanner">
+      <div id="nextApptBannerText"></div>
+      <span id="nextApptBannerSub"></span>
+    </div>
+
+    <!-- Appointments section -->
+    <div class="history-section-header">
+      <h2>upcoming appointments</h2>
+    </div>
+    <div id="apptList"></div>
+    <button class="add-btn" style="margin-bottom:1.5rem" onclick="openApptModal()"
+            aria-label="Add new appointment">+ add appointment</button>
+
+    <div class="history-section-header">
+      <h2>check-in history</h2>
+    </div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<!-- Appointment form modal -->
+<div class="appt-modal-overlay hidden" id="apptModalOverlay" role="dialog" aria-modal="true" aria-labelledby="apptModalTitle">
+  <div class="appt-modal">
+    <h3 id="apptModalTitle">// new appointment</h3>
+    <input type="hidden" id="apptEditId">
+
+    <div class="appt-field">
+      <label>title</label>
+      <input type="text" id="apptTitle" placeholder="e.g. psychiatrist, therapy, GP" maxlength="60">
+    </div>
+    <div class="appt-field">
+      <label>date &amp; time</label>
+      <input type="datetime-local" id="apptDateTime">
+    </div>
+    <div class="appt-field">
+      <label>location (optional)</label>
+      <input type="text" id="apptLocation" placeholder="clinic name or address" maxlength="80">
+    </div>
+    <div class="appt-field">
+      <label>notes</label>
+      <textarea id="apptNotes" rows="3" placeholder="what to discuss, questions to ask..."></textarea>
+    </div>
+    <div class="appt-reminder-row">
+      <input type="checkbox" id="apptReminder24" checked>
+      <span>remind me 24 hours before</span>
+    </div>
+    <div class="appt-reminder-row">
+      <input type="checkbox" id="apptReminder1" checked>
+      <span>remind me 1 hour before</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn primary" style="flex:1" onclick="saveAppt()">save</button>
+      <button class="btn" style="flex:1" onclick="closeApptModal()">cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary modal -->
+<div class="appt-modal-overlay hidden" id="summaryModalOverlay" role="dialog" aria-modal="true" aria-labelledby="summaryModalHeading">
+  <div class="summary-modal">
+    <h3 id="summaryModalHeading">pre-appointment summary</h3>
+    <div class="summary-text" id="summaryText"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" style="flex:1" onclick="shareSummary()">share</button>
+      <button class="btn" style="flex:1" onclick="closeSummaryModal()">close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATS ── -->
+<div class="page" id="page-stats" role="tabpanel" aria-labelledby="tab-stats" aria-hidden="true">
+  <div class="container">
+    <div class="header">
+      <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="stats-heading">your stats</h1>
+    </div>
+
+    <!-- Points banner -->
+    <div class="points-banner" aria-label="Total points">
+      <div>
+        <div class="points-total" id="totalPointsDisplay">0</div>
+        <div class="points-label">total points</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text2)" id="pointsMultiplier">×1 multiplier</div>
+        <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">streak bonus</div>
+      </div>
+    </div>
+
+    <!-- Core stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-num accent" id="bigStreak">0</span>
+        <span class="stat-label">med streak</span>
+        <span class="stat-sub">days in a row</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="bigDaysLogged">0</span>
+        <span class="stat-label">days logged</span>
+        <span class="stat-sub">last 14 days</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num success" id="bigAvgDone">—</span>
+        <span class="stat-label">avg tasks done</span>
+        <span class="stat-sub">per logged day</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num danger" id="bigAvgFlags">—</span>
+        <span class="stat-label">avg flags</span>
+        <span class="stat-sub">per logged day</span>
+      </div>
+    </div>
+
+    <!-- Badges -->
+    <h2 class="section-label" style="margin-bottom:10px">badges</h2>
+    <div class="badges-grid" id="badgesGrid" aria-label="Earned badges"></div>
+
+    <!-- Weekly summary card -->
+    <div id="weeklySummaryCard"></div>
+
+    <!-- Monthly summary card -->
+    <div id="monthlySummaryCard"></div>
+
+    <!-- Mood timeline -->
+    <!-- Favourite quotes -->
+    <div id="favQuotesSection" style="display:none">
+      <h2 class="section-label" style="margin-bottom:10px">saved quotes</h2>
+      <div id="favQuotesList" aria-label="Saved favourite quotes"></div>
+    </div>
+
+    <h2 class="section-label" style="margin-bottom:10px">mood over time</h2>
+    <div id="moodTimeline" aria-label="Mood timeline"></div>
+
+    <h2 class="section-label" style="margin:1.5rem 0 10px">spending &amp; mood</h2>
+    <div id="spendMoodCorrelation" aria-label="Spending and mood correlation"></div>
+  </div>
+</div>
+
+<!-- ── SETTINGS ── -->
+<div class="page" id="page-settings" role="tabpanel" aria-labelledby="tab-settings" aria-hidden="true">
+  <div class="container">
+    <div class="header">
+      <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="settings-heading">settings</h1>
+    </div>
+
+    <!-- ── Profile ── -->
+    <section class="settings-segment" aria-labelledby="seg-profile">
+      <div class="settings-segment-header">
+        <h2 id="seg-profile">profile</h2>
+      </div>
+      <div class="settings-task-row" style="margin-bottom:12px">
+        <input type="text" id="settingsName" placeholder="your name" maxlength="40"
+               aria-label="Your display name">
+        <button class="add-btn" onclick="saveName()" aria-label="Save name">save</button>
+      </div>
+      <div class="settings-divider"></div>
+      <div class="settings-segment-header" style="margin-top:12px;margin-bottom:10px;border:none;padding:0">
+        <h2 id="seg-appearance" style="color:var(--text2)">appearance</h2>
+      </div>
+      <div class="theme-row">
+        <div class="theme-pill" role="radiogroup" aria-label="Colour theme">
+          <button class="theme-opt" id="themeOptSystem" onclick="setTheme('system')"
+                  role="radio" aria-checked="true">system</button>
+          <button class="theme-opt" id="themeOptLight"  onclick="setTheme('light')"
+                  role="radio" aria-checked="false">light</button>
+          <button class="theme-opt" id="themeOptDark"   onclick="setTheme('dark')"
+                  role="radio" aria-checked="false">dark</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;margin-bottom:4px">
+        <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">font</div>
+        <div class="theme-pill" role="radiogroup" aria-label="Font choice"
+             style="flex-wrap:wrap;height:auto;padding:4px;gap:3px">
+          <button class="theme-opt active" id="fontOptDefault"
+                  onclick="setFont('default')" role="radio" aria-checked="true"
+                  style="font-family:'IBM Plex Sans',sans-serif">default</button>
+          <button class="theme-opt" id="fontOptSystem"
+                  onclick="setFont('system')" role="radio" aria-checked="false"
+                  style="font-family:system-ui,sans-serif">system</button>
+          <button class="theme-opt" id="fontOptAtkinson"
+                  onclick="setFont('atkinson')" role="radio" aria-checked="false"
+                  style="font-family:'Atkinson Hyperlegible',sans-serif">atkinson</button>
+          <button class="theme-opt" id="fontOptOpendyslexic"
+                  onclick="setFont('opendyslexic')" role="radio" aria-checked="false"
+                  style="font-family:'OpenDyslexic',sans-serif">opendyslexic</button>
+          <button class="theme-opt" id="fontOptComic"
+                  onclick="setFont('comic')" role="radio" aria-checked="false"
+                  style="font-family:'Comic Sans MS',cursive">comic sans</button>
+        </div>
+        <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-top:6px">
+          Atkinson Hyperlegible and OpenDyslexic are designed for low vision and dyslexia.
+        </p>
+      </div>
+
+      <div class="settings-divider"></div>
+      <div class="settings-segment-header" style="margin-top:12px;margin-bottom:10px;border:none;padding:0">
+        <h2 id="seg-accessibility" style="color:var(--text2)">accessibility</h2>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">text size</div>
+        <div class="theme-pill" role="radiogroup" aria-label="Text size">
+          <button class="theme-opt" id="textSizeSmall"  onclick="setTextSize('small')"  role="radio" aria-checked="false">S</button>
+          <button class="theme-opt active" id="textSizeNormal" onclick="setTextSize('normal')" role="radio" aria-checked="true">A</button>
+          <button class="theme-opt" id="textSizeLarge"  onclick="setTextSize('large')"  role="radio" aria-checked="false">A+</button>
+          <button class="theme-opt" id="textSizeXL"     onclick="setTextSize('xl')"     role="radio" aria-checked="false">A++</button>
+        </div>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          larger touch targets
+          <span>increases tap area to 56px minimum</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable larger touch targets">
+          <input type="checkbox" id="largeTouchTargets"
+                 onchange="setLargeTouchTargets(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          reduce motion
+          <span>disables animations and confetti</span>
+        </div>
+        <label class="toggle-switch" aria-label="Reduce motion">
+          <input type="checkbox" id="settingsReduceMotion"
+                 onchange="toggleReduceMotion(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          high contrast
+          <span>stronger colours for low vision</span>
+        </div>
+        <label class="toggle-switch" aria-label="High contrast mode">
+          <input type="checkbox" id="settingsHighContrast"
+                 onchange="setHighContrast(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- ── Tasks ── -->
+    <section class="settings-segment" aria-labelledby="seg-tasks">
+      <div class="settings-segment-header">
+        <h2 id="seg-tasks">tasks &amp; symptoms</h2>
+      </div>
+      <h3 class="settings-section-title" style="margin-top:0">non-negotiables</h3>
+      <div id="settingsCritical"></div>
+      <button class="add-btn" onclick="addTask('critical')" aria-label="Add non-negotiable task">+ add task</button>
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">daily structure</h3>
+      <div id="settingsDaily"></div>
+      <button class="add-btn" onclick="addTask('daily')" aria-label="Add daily structure task">+ add task</button>
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">symptom flags</h3>
+      <div class="sym-edit-grid" id="settingsSymptoms"></div>
+      <div class="sym-add-row">
+        <input type="text" id="newSymInput" placeholder="new symptom" maxlength="30"
+               aria-label="New symptom name">
+        <button class="add-btn" onclick="addSymptom()" aria-label="Add symptom">+ add</button>
+      </div>
+    </section>
+
+    <!-- ── Do Not Disturb ── -->
+    <section class="settings-segment" aria-labelledby="seg-dnd">
+      <div class="settings-segment-header">
+        <h2 id="seg-dnd">do not disturb</h2>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          do not disturb
+          <span>silence all notifications now</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable do not disturb">
+          <input type="checkbox" id="dndEnabled" onchange="saveDND()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">quiet hours schedule</h3>
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
+        No notifications during these windows. Add multiple windows per day.
+      </p>
+
+      <div style="margin-bottom:8px">
+        <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">active days</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap" id="dndDaysRow" role="group" aria-label="Days for quiet hours">
+          <button class="theme-opt active" id="dndDay0" onclick="toggleDNDDay(0)" aria-pressed="true">Sun</button>
+          <button class="theme-opt active" id="dndDay1" onclick="toggleDNDDay(1)" aria-pressed="true">Mon</button>
+          <button class="theme-opt active" id="dndDay2" onclick="toggleDNDDay(2)" aria-pressed="true">Tue</button>
+          <button class="theme-opt active" id="dndDay3" onclick="toggleDNDDay(3)" aria-pressed="true">Wed</button>
+          <button class="theme-opt active" id="dndDay4" onclick="toggleDNDDay(4)" aria-pressed="true">Thu</button>
+          <button class="theme-opt active" id="dndDay5" onclick="toggleDNDDay(5)" aria-pressed="true">Fri</button>
+          <button class="theme-opt active" id="dndDay6" onclick="toggleDNDDay(6)" aria-pressed="true">Sat</button>
+        </div>
+      </div>
+
+      <div id="dndWindowsList" style="margin-bottom:8px"></div>
+      <button class="add-btn" onclick="addDNDWindow()" aria-label="Add quiet hours window">+ add quiet hours</button>
+    </section>
+
+    <!-- ── Task Reminders ── -->
+    <section class="settings-segment" aria-labelledby="seg-task-notifs">
+      <div class="settings-segment-header">
+        <h2 id="seg-task-notifs">task reminders</h2>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          browser notifications
+          <span>buzzes when non-negotiables are incomplete</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable browser task reminders">
+          <input type="checkbox" id="notifTaskBrowser" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          telegram reminders
+          <span>sends message to your bot</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable Telegram task reminders">
+          <input type="checkbox" id="notifTaskTelegram" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="vibration-row" role="group" aria-label="Task reminder vibration pattern">
+        <label id="taskVibLabel">vibration</label>
+        <div class="vibration-pill" aria-labelledby="taskVibLabel">
+          <button class="vibration-opt active" id="taskVib-gentle"
+                  onclick="setVibPattern('task','gentle')" aria-pressed="true">gentle</button>
+          <button class="vibration-opt" id="taskVib-firm"
+                  onclick="setVibPattern('task','firm')" aria-pressed="false">firm</button>
+          <button class="vibration-opt" id="taskVib-urgent"
+                  onclick="setVibPattern('task','urgent')" aria-pressed="false">urgent</button>
+        </div>
+      </div>
+
+      <div class="audio-row" role="group" aria-label="Task reminder sound">
+        <label id="taskSndLabel">sound</label>
+        <div class="audio-pill" aria-labelledby="taskSndLabel">
+          <button class="audio-opt active" id="taskSnd-none"
+                  onclick="setAudioTone('task','none')" aria-pressed="true">off</button>
+          <button class="audio-opt" id="taskSnd-chime"
+                  onclick="setAudioTone('task','chime')" aria-pressed="false">chime</button>
+          <button class="audio-opt" id="taskSnd-beep"
+                  onclick="setAudioTone('task','beep')" aria-pressed="false">beep</button>
+          <button class="audio-opt" id="taskSnd-alarm"
+                  onclick="setAudioTone('task','alarm')" aria-pressed="false">alarm</button>
+          <button class="audio-opt" id="taskSnd-custom"
+                  onclick="setAudioTone('task','custom')" aria-pressed="false">custom</button>
+        </div>
+      </div>
+      <div class="audio-upload-row" id="taskCustomRow" style="display:none">
+        <label class="audio-upload-label" for="taskFileInput"
+               aria-label="Upload custom sound file">📁 upload sound</label>
+        <input type="file" id="taskFileInput" accept="audio/*"
+               style="display:none" onchange="uploadCustomSound('task', this)">
+        <span class="audio-file-name" id="taskFileName">no file chosen</span>
+        <button class="audio-preview-btn" onclick="previewTone('task')"
+                aria-label="Preview sound">▶</button>
+      </div>
+      <div class="volume-row">
+        <label for="taskVol">volume</label>
+        <input type="range" id="taskVol" min="0" max="100" value="80"
+               aria-label="Task reminder volume"
+               oninput="setVolume('task', this.value)">
+        <span class="volume-val" id="taskVolVal" aria-live="polite">80%</span>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">reminder interval</h3>
+      <div class="theme-row" style="align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="theme-pill" id="intervalPill" role="radiogroup" aria-label="Reminder interval">
+          <button class="theme-opt" id="interval15"  onclick="setInterval_('15')"
+                  role="radio" aria-checked="false">15 min</button>
+          <button class="theme-opt" id="interval30"  onclick="setInterval_('30')"
+                  role="radio" aria-checked="true">30 min</button>
+          <button class="theme-opt" id="interval60"  onclick="setInterval_('60')"
+                  role="radio" aria-checked="false">1 hr</button>
+          <button class="theme-opt" id="interval120" onclick="setInterval_('120')"
+                  role="radio" aria-checked="false">2 hr</button>
+        </div>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">task deadlines</h3>
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px;line-height:1.6">
+        Set a daily must-be-done-by time for each non-negotiable.
+      </p>
+      <div id="taskDeadlineSettings"></div>
+    </section>
+
+    <!-- ── Timer Notifications ── -->
+    <section class="settings-segment" aria-labelledby="seg-timer-notifs">
+      <div class="settings-segment-header">
+        <h2 id="seg-timer-notifs">timers &amp; check-in window</h2>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          check-in window alert
+          <span>notifies when daily window closes</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable check-in window alert">
+          <input type="checkbox" id="notifWindowBrowser" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          timer completion alert
+          <span>buzzes when a custom timer finishes</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable timer completion alert">
+          <input type="checkbox" id="notifTimerBrowser" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="vibration-row" role="group" aria-label="Timer vibration pattern">
+        <label id="timerVibLabel">vibration</label>
+        <div class="vibration-pill" aria-labelledby="timerVibLabel">
+          <button class="vibration-opt active" id="timerVib-gentle"
+                  onclick="setVibPattern('timer','gentle')" aria-pressed="true">gentle</button>
+          <button class="vibration-opt" id="timerVib-firm"
+                  onclick="setVibPattern('timer','firm')" aria-pressed="false">firm</button>
+          <button class="vibration-opt" id="timerVib-urgent"
+                  onclick="setVibPattern('timer','urgent')" aria-pressed="false">urgent</button>
+        </div>
+      </div>
+
+      <div class="audio-row" role="group" aria-label="Timer sound">
+        <label id="timerSndLabel">sound</label>
+        <div class="audio-pill" aria-labelledby="timerSndLabel">
+          <button class="audio-opt active" id="timerSnd-none"
+                  onclick="setAudioTone('timer','none')" aria-pressed="true">off</button>
+          <button class="audio-opt" id="timerSnd-chime"
+                  onclick="setAudioTone('timer','chime')" aria-pressed="false">chime</button>
+          <button class="audio-opt" id="timerSnd-beep"
+                  onclick="setAudioTone('timer','beep')" aria-pressed="false">beep</button>
+          <button class="audio-opt" id="timerSnd-alarm"
+                  onclick="setAudioTone('timer','alarm')" aria-pressed="false">alarm</button>
+          <button class="audio-opt" id="timerSnd-custom"
+                  onclick="setAudioTone('timer','custom')" aria-pressed="false">custom</button>
+        </div>
+      </div>
+      <div class="audio-upload-row" id="timerCustomRow" style="display:none">
+        <label class="audio-upload-label" for="timerFileInput"
+               aria-label="Upload custom sound file">📁 upload sound</label>
+        <input type="file" id="timerFileInput" accept="audio/*"
+               style="display:none" onchange="uploadCustomSound('timer', this)">
+        <span class="audio-file-name" id="timerFileName">no file chosen</span>
+        <button class="audio-preview-btn" onclick="previewTone('timer')"
+                aria-label="Preview sound">▶</button>
+      </div>
+      <div class="volume-row">
+        <label for="timerVol">volume</label>
+        <input type="range" id="timerVol" min="0" max="100" value="80"
+               aria-label="Timer volume"
+               oninput="setVolume('timer', this.value)">
+        <span class="volume-val" id="timerVolVal" aria-live="polite">80%</span>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">check-in window time</h3>
+      <div class="settings-task-row">
+        <input type="time" id="windowCloseTime"
+               style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:6px 10px;outline:none;flex:1"
+               aria-label="Daily check-in window closing time">
+        <button class="add-btn" onclick="saveWindowTime()" aria-label="Save window time">save</button>
+        <button class="add-btn" onclick="clearWindowTime()" aria-label="Clear window time">clear</button>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">custom timers</h3>
+      <div id="customTimerSettings"></div>
+      <div class="settings-task-row" style="margin-top:8px">
+        <input type="text" id="newTimerName" placeholder="timer name" maxlength="30"
+               style="flex:2" aria-label="New timer name">
+        <input type="number" id="newTimerMins" placeholder="mins" min="1" max="1440"
+               style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:6px 10px;outline:none"
+               aria-label="Timer duration in minutes">
+        <button class="add-btn" onclick="addCustomTimer()" aria-label="Add custom timer">+ add</button>
+      </div>
+    </section>
+
+    <!-- ── Appointment Notifications ── -->
+    <section class="settings-segment" aria-labelledby="seg-appt-notifs">
+      <div class="settings-segment-header">
+        <h2 id="seg-appt-notifs">appointment notifications</h2>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          browser notifications
+          <span>24hr and 1hr before appointments</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable browser appointment notifications">
+          <input type="checkbox" id="notifApptBrowser" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          telegram reminders
+          <span>sends appointment reminder to bot</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable Telegram appointment notifications">
+          <input type="checkbox" id="notifApptTelegram" checked
+                 onchange="saveNotifPrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="vibration-row" role="group" aria-label="Appointment vibration pattern">
+        <label id="apptVibLabel">vibration</label>
+        <div class="vibration-pill" aria-labelledby="apptVibLabel">
+          <button class="vibration-opt active" id="apptVib-gentle"
+                  onclick="setVibPattern('appt','gentle')" aria-pressed="true">gentle</button>
+          <button class="vibration-opt" id="apptVib-firm"
+                  onclick="setVibPattern('appt','firm')" aria-pressed="false">firm</button>
+          <button class="vibration-opt" id="apptVib-urgent"
+                  onclick="setVibPattern('appt','urgent')" aria-pressed="false">urgent</button>
+        </div>
+      </div>
+
+      <div class="audio-row" role="group" aria-label="Appointment sound">
+        <label id="apptSndLabel">sound</label>
+        <div class="audio-pill" aria-labelledby="apptSndLabel">
+          <button class="audio-opt active" id="apptSnd-none"
+                  onclick="setAudioTone('appt','none')" aria-pressed="true">off</button>
+          <button class="audio-opt" id="apptSnd-chime"
+                  onclick="setAudioTone('appt','chime')" aria-pressed="false">chime</button>
+          <button class="audio-opt" id="apptSnd-beep"
+                  onclick="setAudioTone('appt','beep')" aria-pressed="false">beep</button>
+          <button class="audio-opt" id="apptSnd-alarm"
+                  onclick="setAudioTone('appt','alarm')" aria-pressed="false">alarm</button>
+          <button class="audio-opt" id="apptSnd-custom"
+                  onclick="setAudioTone('appt','custom')" aria-pressed="false">custom</button>
+        </div>
+      </div>
+      <div class="audio-upload-row" id="apptCustomRow" style="display:none">
+        <label class="audio-upload-label" for="apptFileInput"
+               aria-label="Upload custom sound file">📁 upload sound</label>
+        <input type="file" id="apptFileInput" accept="audio/*"
+               style="display:none" onchange="uploadCustomSound('appt', this)">
+        <span class="audio-file-name" id="apptFileName">no file chosen</span>
+        <button class="audio-preview-btn" onclick="previewTone('appt')"
+                aria-label="Preview sound">▶</button>
+      </div>
+      <div class="volume-row">
+        <label for="apptVol">volume</label>
+        <input type="range" id="apptVol" min="0" max="100" value="80"
+               aria-label="Appointment volume"
+               oninput="setVolume('appt', this.value)">
+        <span class="volume-val" id="apptVolVal" aria-live="polite">80%</span>
+      </div>
+    </section>
+
+    <!-- ── AI Quotes ── -->
+    <section class="settings-segment" aria-labelledby="seg-quotes">
+      <div class="settings-segment-header">
+        <h2 id="seg-quotes">ai quotes &amp; messages</h2>
+      </div>
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
+        Personalised messages generated by Claude AI using your daily data.<br>
+        Get a free API key at <strong style="color:var(--text2)">console.anthropic.com</strong><br>
+        Your key is stored locally and never leaves your device.
+      </p>
+      <div class="settings-task-row" style="margin-bottom:6px">
+        <input type="password" id="anthropicKey" placeholder="sk-ant-..."
+               style="font-size:0.6875rem" autocomplete="off"
+               aria-label="Anthropic API key">
+        <button class="add-btn" onclick="saveApiKey()" aria-label="Save API key">save</button>
+      </div>
+      <div id="apiKeyStatus" role="status" aria-live="polite"
+           style="font-family:var(--font-mono);font-size:0.625rem;margin-bottom:8px"></div>
+      <div class="notif-toggle-row">
+        <div class="notif-toggle-label">
+          AI quotes enabled
+          <span>uses Claude when online, offline bank when not</span>
+        </div>
+        <label class="toggle-switch" aria-label="Enable AI quotes">
+          <input type="checkbox" id="aiQuotesEnabled" checked
+                 onchange="saveQuotePrefs()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- ── Telegram ── -->
+    <section class="settings-segment" aria-labelledby="seg-telegram">
+      <div class="settings-segment-header">
+        <h2 id="seg-telegram">telegram setup</h2>
+      </div>
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
+        1. Message <strong style="color:var(--text2)">@BotFather</strong> on Telegram → /newbot → copy the token<br>
+        2. Message your new bot once so it can reply to you<br>
+        3. Paste token below and tap connect
+      </p>
+      <div class="settings-task-row" style="margin-bottom:6px">
+        <input type="text" id="tgToken" placeholder="123456789:ABCdef..."
+               style="font-size:0.6875rem" autocomplete="off"
+               aria-label="Telegram bot token">
+        <button class="add-btn" onclick="connectTelegram()" aria-label="Connect Telegram bot">connect</button>
+      </div>
+      <div id="tgStatus" role="status" aria-live="polite"
+           style="font-family:var(--font-mono);font-size:0.625rem;margin-bottom:8px"></div>
+      <div class="settings-task-row">
+        <input type="text" id="tgTestMsg" placeholder="test message (optional)"
+               style="font-size:0.6875rem" aria-label="Optional test message">
+        <button class="add-btn" onclick="sendTelegramTest()" aria-label="Send test message">send test</button>
+      </div>
+    </section>
+
+    <!-- ── Data ── -->
+    <section class="settings-segment" aria-labelledby="seg-data">
+      <div class="settings-segment-header">
+        <h2 id="seg-data">data &amp; storage</h2>
+      </div>
+
+      <h3 class="settings-section-title" style="margin-top:0">backup &amp; restore</h3>
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:10px;line-height:1.8">
+        Export saves everything — encrypted with a passphrase only you know.<br>
+        QR transfers your <em>config only</em> (tasks, symptoms, settings) — small enough to fit.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="add-btn" onclick="exportBackup()"
+                aria-label="Export full backup as JSON file">↓ export backup</button>
+        <button class="add-btn" onclick="document.getElementById('importFileInput').click()"
+                aria-label="Import backup from JSON file">↑ import backup</button>
+        <input type="file" id="importFileInput" accept=".json"
+               style="display:none" onchange="importBackup(this)">
+        <button class="add-btn" onclick="showQRConfig()"
+                aria-label="Generate QR code for config transfer">⬡ QR config</button>
+        <button class="add-btn" onclick="exportEncryptedBackup()"
+                aria-label="Export encrypted backup">🔒 encrypted export</button>
+      </div>
+      <div id="backupStatus" role="status" aria-live="polite"
+           style="font-family:var(--font-mono);font-size:0.625rem;margin-bottom:10px"></div>
+      <div id="qrSection" style="display:none;margin-bottom:12px;text-align:center">
+        <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:4px;line-height:1.6">
+          Scan on another device to import your <strong style="color:var(--text2)">config</strong> (tasks, symptoms, settings).<br>
+          Full data backup: use encrypted export instead.
+        </p>
+        <canvas id="qrCanvas" style="border-radius:8px;max-width:220px"
+                aria-label="QR code for config transfer"></canvas>
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button class="add-btn" onclick="hideQR()">close</button>
+        </div>
+      </div>
+
+      <!-- Encrypted export passphrase prompt -->
+      <div id="encryptSection" style="display:none;margin-bottom:12px">
+        <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px;line-height:1.6">
+          Set a passphrase to encrypt your backup. You'll need it to import.
+        </p>
+        <div class="settings-task-row" style="margin-bottom:6px">
+          <input type="password" id="encryptPassphrase"
+                 placeholder="passphrase" autocomplete="new-password"
+                 style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:6px 10px;outline:none"
+                 aria-label="Encryption passphrase">
+          <button class="add-btn" onclick="doEncryptedExport()">export</button>
+          <button class="add-btn" onclick="hideEncrypt()">cancel</button>
+        </div>
+        <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3)">
+          AES-256 encryption. If you forget your passphrase, the backup cannot be recovered.
+        </p>
+      </div>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">screenshot save folder</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <button class="add-btn" onclick="changeSaveFolder()"
+                aria-label="Set or change screenshot save folder">📁 set save folder</button>
+      </div>
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);line-height:1.5">
+        Chrome/Edge only. DDG uses long-press method.
+      </p>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">monthly budget</h3>
+      <div class="settings-task-row" style="margin-bottom:6px">
+        <input type="number" id="monthlyBudget" placeholder="e.g. 1500"
+               min="0" step="1" style="flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.8125rem;padding:8px 10px;outline:none"
+               aria-label="Monthly budget amount">
+        <button class="add-btn" onclick="saveMonthlyBudget()" aria-label="Save monthly budget">save</button>
+      </div>
+      <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:8px">
+        Set your total monthly budget. Track daily spending on the Budget tab.
+      </p>
+
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">export history</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="add-btn" onclick="exportCSV()"
+                aria-label="Export check-in history as CSV">↓ export CSV</button>
+      </div>
+    </section>
+
+    <div style="padding-bottom:1rem">
+      <button class="btn primary" style="width:100%" onclick="saveSettings()"
+              aria-label="Save all settings">save settings</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── BUDGET ── -->
+<div class="page" id="page-budget" role="tabpanel" aria-labelledby="tab-budget" aria-hidden="true">
+  <div class="container">
+
+    <div class="header">
+      <div class="header-top">
+        <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="budget-heading">spending</h1>
+        <button class="add-btn" onclick="openSpendModal()" aria-label="Log a new expense">+ log expense</button>
+      </div>
+    </div>
+
+    <!-- Setup prompt — shown when no budget configured -->
+    <div id="budgetSetupPrompt" style="display:none">
+      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:var(--sp-5);text-align:center;margin-bottom:var(--sp-4)">
+        <p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text2);margin-bottom:var(--sp-3);line-height:1.7">
+          no budget set yet.<br>go to <strong style="color:var(--accent)">☰ menu → budget settings</strong><br>to set your monthly limits.
+        </p>
+        <button class="add-btn" onclick="openMenu();openMenuSubPage('data')" aria-label="Open budget settings">set up budget →</button>
+      </div>
+    </div>
+
+    <!-- Stats dashboard — shown when budget is configured -->
+    <div id="budgetStatsDashboard" style="display:none">
+
+      <!-- Four stat cards -->
+      <div class="stats-grid" style="margin-bottom:var(--sp-4)">
+        <div class="stat-card" aria-label="Total spent this month">
+          <span class="stat-num" id="budgetSpent">$0</span>
+          <span class="stat-label">spent</span>
+          <span class="stat-sub">this month</span>
+        </div>
+        <div class="stat-card" aria-label="Remaining budget">
+          <span class="stat-num accent" id="budgetRemaining">$0</span>
+          <span class="stat-label">remaining</span>
+          <span class="stat-sub">this month</span>
+        </div>
+        <div class="stat-card" aria-label="Average daily spending">
+          <span class="stat-num" id="budgetAvgDaily">$0</span>
+          <span class="stat-label">avg daily</span>
+          <span class="stat-sub">this month</span>
+        </div>
+        <div class="stat-card" aria-label="Daily allowance remaining">
+          <span class="stat-num success" id="budgetDailyLeft">$0</span>
+          <span class="stat-label">daily left</span>
+          <span class="stat-sub">days remaining</span>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div style="margin-bottom:var(--sp-5)">
+        <div style="height:8px;border-radius:var(--radius-pill);background:var(--bg3);overflow:hidden;margin-bottom:6px">
+          <div id="budgetBarFill" style="height:100%;width:0%;border-radius:var(--radius-pill);background:var(--success);transition:width 0.4s ease,background 0.3s"
+               role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Budget used"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text3)">
+          <span id="budgetBarLabel">0% used</span>
+          <span id="budgetBarTotal"></span>
+        </div>
+      </div>
+
+      <!-- Four buckets -->
+      <h2 class="section-label" style="margin-bottom:var(--sp-3)">buckets</h2>
+      <div class="bucket-grid" id="bucketGrid" role="list" aria-label="Spending buckets">
+        <div class="bucket-card essentials" role="listitem" onclick="filterSpendByBucket('essentials')" aria-label="Essentials bucket">
+          <div class="bucket-icon" aria-hidden="true">🏠</div>
+          <div class="bucket-name">essentials</div>
+          <div class="bucket-amount" id="bucketEssAmount">—</div>
+          <div class="bucket-limit"  id="bucketEssLimit">set limit</div>
+        </div>
+        <div class="bucket-card daily" role="listitem" onclick="filterSpendByBucket('daily')" aria-label="Daily bucket">
+          <div class="bucket-icon" aria-hidden="true">💳</div>
+          <div class="bucket-name">daily</div>
+          <div class="bucket-amount" id="bucketDayAmount">—</div>
+          <div class="bucket-limit"  id="bucketDayLimit">set limit</div>
+        </div>
+        <div class="bucket-card shortterm" role="listitem" onclick="filterSpendByBucket('shortterm')" aria-label="Short term bucket">
+          <div class="bucket-icon" aria-hidden="true">🎯</div>
+          <div class="bucket-name">short term</div>
+          <div class="bucket-amount" id="bucketSTAmount">—</div>
+          <div class="bucket-limit"  id="bucketSTLimit">set limit</div>
+        </div>
+        <div class="bucket-card longterm" role="listitem" onclick="filterSpendByBucket('longterm')" aria-label="Long term bucket">
+          <div class="bucket-icon" aria-hidden="true">🚀</div>
+          <div class="bucket-name">long term</div>
+          <div class="bucket-amount" id="bucketLTAmount">—</div>
+          <div class="bucket-limit"  id="bucketLTLimit">set limit</div>
+        </div>
+      </div>
+
+      <!-- Category breakdown -->
+      <h2 class="section-label" style="margin:var(--sp-5) 0 var(--sp-3)">by category</h2>
+      <div id="categoryBreakdown" aria-label="Spending by category"></div>
+
+      <!-- Today's spending -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:var(--sp-5) 0 var(--sp-3);flex-wrap:wrap;gap:8px">
+        <h2 class="section-label">today</h2>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="bucketFilter" onchange="renderBudgetTab()"
+                  style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text2);font-family:var(--font-mono);font-size:var(--text-xs);padding:4px 8px;outline:none"
+                  aria-label="Filter by bucket">
+            <option value="">all buckets</option>
+            <option value="essentials">🏠 essentials</option>
+            <option value="daily">💳 daily</option>
+            <option value="shortterm">🎯 short term</option>
+            <option value="longterm">🚀 long term</option>
+          </select>
+        </div>
+      </div>
+      <div id="todaySpendList"></div>
+
+      <!-- Monthly log -->
+      <h2 class="section-label" style="margin:var(--sp-5) 0 var(--sp-3)">this month</h2>
+      <div id="monthSpendList"></div>
+
+    </div><!-- /budgetStatsDashboard -->
+
+    <!-- Want list — always visible -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:var(--sp-5) 0 var(--sp-3);flex-wrap:wrap;gap:8px">
+      <h2 class="section-label">want list</h2>
+      <button class="add-btn" onclick="openDopamineModal()" aria-label="Add to want list">+ add want</button>
+    </div>
+    <p style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text3);margin-bottom:var(--sp-3);line-height:1.6">
+      things you want but aren't buying yet. writing it down helps with the impulse.
+    </p>
+    <div id="dopamineList"></div>
+
+  </div>
+</div>
+
+
+<!-- ── JOURNAL ── -->
+<div class="page" id="page-journal" role="tabpanel" aria-labelledby="tab-journal" aria-hidden="true">
+  <div class="container">
+    <div class="header">
+      <div class="header-top">
+        <h1 style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent)" id="journal-heading">journal</h1>
+        <button class="add-btn" onclick="newJournalEntry()"
+                aria-label="Write a new journal entry">+ new entry</button>
+      </div>
+      <!-- Search -->
+      <div style="margin-top:var(--sp-3);position:relative">
+        <input type="search" id="journalSearch" placeholder="search entries..."
+               style="width:100%;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:8px 12px;outline:none"
+               aria-label="Search journal entries"
+               oninput="filterJournalEntries(this.value)">
+      </div>
+    </div>
+
+    <!-- Writing area (shown when composing) -->
+    <div id="journalComposer" style="display:none;margin-bottom:var(--sp-5)">
+      <div class="journal-composer-card">
+        <div class="journal-composer-header">
+          <div>
+            <div class="journal-composer-date" id="composerDate"></div>
+            <div class="journal-composer-meta" id="composerMeta"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="journal-action-btn" id="voiceBtn"
+                    onclick="toggleVoiceInput()"
+                    aria-label="Start voice input"
+                    title="Voice to text">🎤</button>
+            <button class="journal-action-btn" onclick="saveJournalEntry()"
+                    aria-label="Save entry">save</button>
+            <button class="journal-action-btn" onclick="closeJournalComposer()"
+                    aria-label="Discard entry">✕</button>
+          </div>
+        </div>
+
+        <!-- Writing prompt (shown if no text yet) -->
+        <div class="journal-prompt" id="journalPrompt">
+          <p id="journalPromptText"></p>
+          <button class="journal-prompt-dismiss" onclick="dismissPrompt()"
+                  aria-label="Dismiss writing prompt">use this prompt ↓</button>
+        </div>
+
+        <textarea id="journalTextarea"
+                  placeholder="write anything..."
+                  rows="8"
+                  style="width:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-body);font-size:var(--text-lg);line-height:1.8;resize:none;outline:none;padding:var(--sp-3) 0"
+                  aria-label="Journal entry text"
+                  oninput="autoSaveDraft(this.value)"></textarea>
+
+        <div style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text3);text-align:right;margin-top:4px"
+             id="journalWordCount">0 words</div>
+      </div>
+    </div>
+
+    <!-- Entry list -->
+    <div id="journalList" aria-label="Journal entries" role="list"></div>
+  </div>
+</div>
+
+<!-- ── MENU SUB-PAGES ── -->
+
+<!-- Tasks & Symptoms sub-page -->
+<div class="menu-subpage" id="subpage-tasks" aria-label="Tasks and symptoms settings">
+  <div class="menu-subpage-inner">
+    <div class="menu-subpage-header">
+      <button class="menu-back-btn" onclick="closeMenuSubPage('tasks')" aria-label="Back to menu">‹</button>
+      <h2 class="menu-subpage-title">// tasks &amp; symptoms</h2>
+    </div>
+    <div class="settings-segment" style="margin-bottom:var(--sp-4)">
+      <h3 class="settings-section-title" style="margin-top:0">your name</h3>
+      <div class="settings-task-row">
+        <input type="text" id="settingsName2" placeholder="your name" maxlength="40" aria-label="Display name">
+        <button class="add-btn" onclick="saveName2()">save</button>
+      </div>
+    </div>
+    <div class="settings-segment" style="margin-bottom:var(--sp-4)">
+      <h3 class="settings-section-title" style="margin-top:0">non-negotiables</h3>
+      <div id="subTasksCritical"></div>
+      <button class="add-btn" onclick="addTask('critical');renderSubpageTasks()">+ add task</button>
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">daily structure</h3>
+      <div id="subTasksDaily"></div>
+      <button class="add-btn" onclick="addTask('daily');renderSubpageTasks()">+ add task</button>
+      <div class="settings-divider"></div>
+      <h3 class="settings-section-title">symptom flags</h3>
+      <div class="sym-edit-grid" id="subTasksSymptoms"></div>
+      <div class="sym-add-row">
+        <input type="text" id="subNewSymInput" placeholder="new symptom" maxlength="30" aria-label="New symptom">
+        <button class="add-btn" onclick="addSymptomFromSub()">+ add</button>
+      </div>
+    </div>
+    <button class="btn primary" style="width:100%" onclick="saveSettings();showToast('saved ✓')">save all</button>
+  </div>
+</div>
+
+<!-- Notifications sub-page -->
+<div class="menu-subpage" id="subpage-notifications" aria-label="Notification settings">
+  <div class="menu-subpage-inner">
+    <div class="menu-subpage-header">
+      <button class="menu-back-btn" onclick="closeMenuSubPage('notifications')" aria-label="Back">‹</button>
+      <h2 class="menu-subpage-title">// notifications</h2>
+    </div>
+    <div id="subNotifContent"></div>
+  </div>
+</div>
+
+<!-- Timers sub-page -->
+<div class="menu-subpage" id="subpage-timers" aria-label="Timers and schedule settings">
+  <div class="menu-subpage-inner">
+    <div class="menu-subpage-header">
+      <button class="menu-back-btn" onclick="closeMenuSubPage('timers')" aria-label="Back">‹</button>
+      <h2 class="menu-subpage-title">// timers &amp; schedule</h2>
+    </div>
+    <div id="subTimersContent"></div>
+  </div>
+</div>
+
+<!-- Integrations sub-page -->
+<div class="menu-subpage" id="subpage-integrations" aria-label="Integration settings">
+  <div class="menu-subpage-inner">
+    <div class="menu-subpage-header">
+      <button class="menu-back-btn" onclick="closeMenuSubPage('integrations')" aria-label="Back">‹</button>
+      <h2 class="menu-subpage-title">// integrations</h2>
+    </div>
+    <div id="subIntegrationsContent"></div>
+  </div>
+</div>
+
+<!-- Data sub-page -->
+<div class="menu-subpage" id="subpage-data" aria-label="Data and backup">
+  <div class="menu-subpage-inner">
+    <div class="menu-subpage-header">
+      <button class="menu-back-btn" onclick="closeMenuSubPage('data')" aria-label="Back">‹</button>
+      <h2 class="menu-subpage-title">// data &amp; backup</h2>
+    </div>
+    <div id="subDataContent"></div>
+  </div>
+</div>
+
+<!-- Passphrase modal for encrypted backup import -->
+<div class="appt-modal-overlay hidden" id="passphraseModalOverlay"
+     role="dialog" aria-modal="true" aria-labelledby="passphraseModalTitle">
+  <div class="appt-modal">
+    <h3 id="passphraseModalTitle">// encrypted backup</h3>
+    <p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:var(--sp-3);line-height:1.6">
+      This backup is encrypted. Enter your passphrase to restore it.
+    </p>
+    <div class="appt-field">
+      <label>passphrase</label>
+      <input type="password" id="passphraseInput"
+             autocomplete="current-password"
+             placeholder="enter passphrase"
+             style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.875rem;padding:10px 12px;width:100%;outline:none"
+             aria-label="Backup passphrase"
+             onkeydown="if(event.key==='Enter')confirmPassphrase()">
+    </div>
+    <div id="passphraseError"
+         style="font-family:var(--font-mono);font-size:0.625rem;color:var(--danger);margin-bottom:var(--sp-2);display:none">
+      wrong passphrase — try again
+    </div>
+    <div style="display:flex;gap:8px;margin-top:var(--sp-3)">
+      <button class="btn primary" style="flex:1" onclick="confirmPassphrase()">decrypt</button>
+      <button class="btn" style="flex:1" onclick="cancelPassphrase()">cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer" style="text-align:center;padding:1rem;font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">
+  daily structure tracker &mdash; v4.0 &mdash; add to home screen to install
+</div>
+
+<!-- Screenshot preview modal -->
+<div class="preview-overlay hidden" id="previewOverlay" role="dialog" aria-modal="true" aria-label="Screenshot preview">
+  <div class="preview-label">preview — looks right? save it.</div>
+  <img class="preview-img" id="previewImg" src="" alt="Symptom record preview">
+  <div class="preview-label" id="previewFilename"></div>
+  <div class="preview-btns">
+    <button class="btn primary" onclick="savePreviewImage()">save to gallery</button>
+    <button class="btn" onclick="closePreview()">cancel</button>
+  </div>
+</div>
+
+<!-- Toast container — injected by toast.js if not present -->
+<div id="toastContainer" role="status" aria-live="polite" aria-atomic="false"></div>
+
+<!-- Third party scripts — crossorigin for SRI -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+        crossorigin="anonymous" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+        crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"
+        crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder@1.3.3"
+        crossorigin="anonymous" defer></script>
+
+<!-- App modules — load order: crypto → config → state → everything else -->
+<script src="./js/crypto.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/state.js"></script>
+<script src="./js/theme.js"></script>
+<script src="./js/accessibility.js"></script>
+<script src="./js/toast.js"></script>
+<script src="./js/icons.js"></script>
+<script src="./js/audio.js"></script>
+<script src="./js/notifications.js"></script>
+<script src="./js/dnd.js"></script>
+<script src="./js/rewards.js"></script>
+<script src="./js/quotes.js"></script>
+<script src="./js/backup.js"></script>
+<script src="./js/budget.js"></script>
+<script src="./js/journal.js"></script>
+<script src="./js/timers.js"></script>
+<script src="./js/menu.js"></script>
+<script src="./js/screenshot.js"></script>
+<script src="./js/render.js"></script>
+<script src="./js/lockscreen.js"></script>
+<script src="./js/security.js"></script>
+<script src="./js/pwa.js"></script>
+<script src="./rag-engine.js" defer></script>
+
+<!-- Service worker registration -->
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('./sw.js', { scope: './' })
+    .then(reg => {
+      console.log('[SW] Registered:', reg.scope);
+      // Check for updates
+      reg.addEventListener('updatefound', () => {
+        const worker = reg.installing;
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version available — notify user
+            if (typeof showToast === 'function') {
+              showToast('Update available — refresh to get the latest version', 'info');
+            }
+          }
+        });
+      });
+    })
+    .catch(err => console.warn('[SW] Registration failed:', err));
+
+  // Handle controller change (new SW activated)
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
+</script>
+
+</body>
+</html>

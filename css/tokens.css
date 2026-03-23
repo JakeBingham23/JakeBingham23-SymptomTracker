@@ -1,0 +1,215 @@
+/* ═══════════════════════════════════════════════
+   DESIGN TOKENS
+   Daily Structure Tracker
+═══════════════════════════════════════════════ */
+
+/* ── Text scale — applied to html element so rem cascades correctly ── */
+  /* Default: inherit from OS (Android/iOS accessibility settings respected) */
+  html {
+    font-size: 100%;
+    transition: font-size 0.3s ease;
+  }
+  html[data-text-size="small"]  { font-size: 87.5%; }
+  html[data-text-size="large"]  { font-size: 112.5%; }
+  html[data-text-size="xl"]     { font-size: 130%; }
+
+/* ── Reduce motion — OS preference ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    /* Preserve font-size transition — it's a layout change not a decorative animation */
+    html { transition: font-size 0.3s ease !important; }
+  }
+
+/* ── Reduce motion — in-app toggle ── */
+  :root[data-reduce-motion="true"] *,
+  :root[data-reduce-motion="true"] *::before,
+  :root[data-reduce-motion="true"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  /* Preserve font-size transition even with in-app reduce motion */
+  :root[data-reduce-motion="true"] html {
+    transition: font-size 0.3s ease !important;
+  }
+
+/* ── Design system tokens ── */
+  :root {
+    /* Spacing scale — 4px base grid */
+    --sp-1:  4px;
+    --sp-2:  8px;
+    --sp-3:  12px;
+    --sp-4:  16px;
+    --sp-5:  24px;
+    --sp-6:  32px;
+    --sp-7:  48px;
+
+    /* Border radius scale */
+    --radius-sm:  4px;
+    --radius:     8px;
+    --radius-lg:  12px;
+    --radius-xl:  20px;
+    --radius-pill:9999px;
+
+    /* Typography scale */
+    --text-xs:   0.5625rem;   /* 9px  — meta labels */
+    --text-sm:   0.625rem;    /* 10px — captions */
+    --text-base: 0.6875rem;   /* 11px — body */
+    --text-md:   0.75rem;     /* 12px — secondary */
+    --text-lg:   0.875rem;    /* 14px — primary */
+    --text-xl:   1rem;        /* 16px — headings */
+    --text-2xl:  1.375rem;    /* 22px — display */
+    --text-3xl:  2.25rem;     /* 36px — stat numbers */
+  }
+
+/* ── Dark theme (default) ── */
+  :root {
+    --bg:  #0c0c0c;
+    --bg2: #141414;
+    --bg3: #1c1c1c;
+    --bg4: #242424;
+    --border:  rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.14);
+    --border3: rgba(255,255,255,0.22);
+    --text:  #efefef;
+    --text2: #9a9a9a;
+    --text3: #4a4a4a;
+    --accent:  #c8a96e;
+    --accent2: #8fb8d4;
+    --accent-dim: rgba(200,169,110,0.08);
+    --danger:    #c0392b;
+    --danger-bg: rgba(192,57,43,0.1);
+    --success:   #4a9e6b;
+    --success-bg:rgba(74,158,107,0.1);
+    --warning:   #c8a96e;
+    --warning-bg:rgba(200,169,110,0.08);
+    /* System fonts — respect Android/iOS accessibility settings */
+    --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
+    /* IBM Plex Mono loaded on demand */
+    --font-ibm-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow:    0 2px 8px rgba(0,0,0,0.5);
+    --shadow-lg: 0 4px 20px rgba(0,0,0,0.6);
+  }
+
+/* ── Light theme ── */
+  :root[data-theme="light"] {
+    --bg:  #f7f6f2;
+    --bg2: #f0ede8;
+    --bg3: #e8e5df;
+    --bg4: #e0ddd6;
+    --border:  rgba(0,0,0,0.07);
+    --border2: rgba(0,0,0,0.14);
+    --border3: rgba(0,0,0,0.22);
+    --text:  #181818;
+    --text2: #555;
+    --text3: #999;
+    --accent:  #9a6f2e;
+    --accent2: #3a7a9e;
+    --accent-dim: rgba(154,111,46,0.08);
+    --danger:    #b03020;
+    --danger-bg: rgba(176,48,32,0.08);
+    --success:   #2e7a4e;
+    --success-bg:rgba(46,122,78,0.1);
+    --warning:   #9a6f2e;
+    --warning-bg:rgba(154,111,46,0.08);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+    --shadow:    0 2px 8px rgba(0,0,0,0.12);
+    --shadow-lg: 0 4px 20px rgba(0,0,0,0.15);
+  }
+
+/* ── System dark preference (when no override stored) ── */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]):not([data-theme="light"]) {
+      --bg: #f5f4f0;
+      --bg2: #eeede8;
+      --bg3: #e5e4de;
+      --border: rgba(0,0,0,0.08);
+      --border2: rgba(0,0,0,0.18);
+      --text: #1a1a1a;
+      --text2: #555;
+      --text3: #999;
+      --accent: #9a6f2e;
+      --accent2: #3a7a9e;
+      --danger: #b03020;
+      --danger-bg: rgba(176,48,32,0.08);
+      --success: #2e7a4e;
+      --success-bg: rgba(46,122,78,0.1);
+      --warning: #9a6f2e;
+      --warning-bg: rgba(154,111,46,0.1);
+    }
+  }
+
+/* ── High contrast mode ── */
+  @media (prefers-contrast: more) {
+    :root {
+      --bg: #000000;
+      --bg2: #0a0a0a;
+      --bg3: #111111;
+      --border: rgba(255,255,255,0.4);
+      --border2: rgba(255,255,255,0.7);
+      --text: #ffffff;
+      --text2: #dddddd;
+      --text3: #aaaaaa;
+      --accent: #ffd080;
+      --accent2: #80ccff;
+      --danger: #ff6060;
+      --danger-bg: rgba(255,96,96,0.2);
+      --success: #60dd90;
+      --warning: #ffd080;
+    }
+    :root[data-theme="light"] {
+      --bg: #ffffff;
+      --bg2: #f0f0f0;
+      --bg3: #e0e0e0;
+      --border: rgba(0,0,0,0.5);
+      --border2: rgba(0,0,0,0.8);
+      --text: #000000;
+      --text2: #222222;
+      --text3: #444444;
+      --accent: #7a4800;
+      --danger: #cc0000;
+      --success: #006600;
+    }
+  }
+
+/* ── Font themes — all respect Android OS text size ── */
+
+  /* IBM Plex Mono (loaded on demand) */
+  :root[data-font="ibmplexmono"] {
+    --font-body: var(--font-ibm-mono);
+    --font-mono: var(--font-ibm-mono);
+  }
+
+  /* Atkinson Hyperlegible (loaded on demand) */
+  :root[data-font="atkinson"] {
+    --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+    --font-mono: ui-monospace, monospace;
+  }
+
+  /* OpenDyslexic (loaded on demand) */
+  :root[data-font="opendyslexic"] {
+    --font-body: 'OpenDyslexic', system-ui, sans-serif;
+    --font-mono: 'OpenDyslexic Mono', ui-monospace, monospace;
+    letter-spacing: 0.02em;
+    line-height: 1.85;
+    word-spacing: 0.1em;
+  }
+
+  /* Comic Sans — genuinely useful for some dyslexic users */
+  :root[data-font="comic"] {
+    --font-body: 'Comic Sans MS', 'Comic Sans', cursive;
+    --font-mono: ui-monospace, monospace;
+    line-height: 1.75;
+  }
+
+  /* Monospace body — for users who prefer it */
+  :root[data-font="mono"] {
+    --font-body: var(--font-mono);
+  }
