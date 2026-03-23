@@ -4203,8 +4203,10 @@ const SecureStore = (() => {
       .isUserVerifyingPlatformAuthenticatorAvailable();
     if (!available) throw new Error('No biometric authenticator found');
 
-    const credId = crypto.getRandomValues(new Uint8Array(32));
-    const rpId   = location.hostname || 'localhost';
+    // Use stable user ID derived from app salt — same user across setups
+    const appSalt = await getOrCreateSalt();
+    const credId  = appSalt.slice(0, 32); // Deterministic, device-bound
+    const rpId    = location.hostname || 'localhost';
 
     const pubKeyOpts = {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
@@ -4228,8 +4230,9 @@ const SecureStore = (() => {
     const prfResult = cred.getClientExtensionResults()?.prf?.results?.first;
     const hasPRF    = !!(prfResult && prfResult.byteLength === 32);
 
+    // Store rawId as Uint8Array directly — avoids base64 encoding issues
     await idbSet(STORE_META, WEBAUTHN_KEY, {
-      rawId:  btoa(String.fromCharCode(...new Uint8Array(cred.rawId))),
+      rawId:   new Uint8Array(cred.rawId),
       hasPRF,
       pinHash: hasPRF ? null : await hashPIN(pin, await getOrCreateSalt()),
     });
@@ -4260,7 +4263,10 @@ const SecureStore = (() => {
     const stored = await idbGet(STORE_META, WEBAUTHN_KEY);
     if (!stored)  throw new Error('Biometric not set up — use PIN');
 
-    const rawId   = Uint8Array.from(atob(stored.rawId), c => c.charCodeAt(0));
+    // rawId stored as Uint8Array directly — no base64 decode needed
+    const rawId   = stored.rawId instanceof Uint8Array
+      ? stored.rawId
+      : Uint8Array.from(atob(stored.rawId), c => c.charCodeAt(0)); // legacy fallback
     const rpId    = location.hostname || 'localhost';
     const getOpts = {
       publicKey: {
