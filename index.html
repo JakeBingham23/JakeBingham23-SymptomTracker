@@ -104,6 +104,15 @@
     <div id="unlockPINDots" class="pin-dots" aria-label="PIN entry" aria-live="polite"></div>
     <div id="unlockPINError" class="pin-error" role="alert" aria-live="assertive"></div>
     <div class="pin-pad" role="group" aria-label="Number pad" id="unlockPINPad"></div>
+
+    <button id="forgotPINBtn"
+            onclick="lockScreen.showForgotPIN()"
+            style="display:none;margin-top:1.5rem;background:none;border:none;
+                   color:var(--text3);font-family:var(--font-mono);font-size:0.5625rem;
+                   cursor:pointer;text-decoration:underline;padding:4px"
+            aria-label="Forgot PIN — use recovery code">
+      forgot PIN?
+    </button>
   </div>
 
 </div>
@@ -1505,6 +1514,65 @@
   <div class="preview-btns">
     <button class="btn primary" onclick="savePreviewImage()">save to gallery</button>
     <button class="btn" onclick="closePreview()">cancel</button>
+  </div>
+</div>
+
+<!-- Recovery code modal — shown once on first PIN setup -->
+<div class="appt-modal-overlay hidden" id="recoveryCodeOverlay"
+     role="dialog" aria-modal="true" aria-labelledby="recoveryCodeTitle">
+  <div class="appt-modal">
+    <h3 id="recoveryCodeTitle">// your recovery code</h3>
+    <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:var(--sp-3);line-height:1.8">
+      Write this down somewhere safe. If you forget your PIN, this is the only way to reset the app.<br>
+      <strong style="color:var(--danger)">It will never be shown again.</strong>
+    </p>
+    <div id="recoveryCodeDisplay"
+         style="font-family:var(--font-mono);font-size:0.875rem;color:var(--accent);
+                background:var(--bg3);border:0.5px solid var(--border);
+                border-radius:var(--radius);padding:var(--sp-4);
+                text-align:center;letter-spacing:0.1em;word-break:break-all;
+                margin-bottom:var(--sp-4)"
+         aria-label="Recovery code" role="code"></div>
+    <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-bottom:var(--sp-4);line-height:1.7">
+      Resetting with this code will erase your data. Restore from your Duplicati backup afterward.
+    </p>
+    <button class="btn primary" style="width:100%"
+            onclick="lockScreen.confirmRecoveryCodeSaved()"
+            aria-label="Confirm I have saved my recovery code">
+      i've written it down ✓
+    </button>
+  </div>
+</div>
+
+<!-- Forgot PIN modal -->
+<div class="appt-modal-overlay hidden" id="forgotPINOverlay"
+     role="dialog" aria-modal="true" aria-labelledby="forgotPINTitle">
+  <div class="appt-modal">
+    <h3 id="forgotPINTitle">// reset PIN</h3>
+    <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:var(--sp-3);line-height:1.8">
+      Enter your recovery code to wipe the app and set a new PIN.<br>
+      <strong style="color:var(--danger)">Your data will be erased.</strong> Restore from backup after.
+    </p>
+    <div class="appt-field">
+      <label>recovery code</label>
+      <input type="text" id="recoveryCodeInput"
+             placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+             autocomplete="off" spellcheck="false"
+             style="font-family:var(--font-mono);font-size:0.6875rem;letter-spacing:0.05em;text-transform:uppercase"
+             aria-label="Recovery code"
+             oninput="this.value=this.value.toUpperCase()"
+             onkeydown="if(event.key==='Enter')lockScreen.submitRecoveryCode()">
+    </div>
+    <div id="recoveryCodeError"
+         style="font-family:var(--font-mono);font-size:0.625rem;color:var(--danger);
+                margin-bottom:var(--sp-2);min-height:1em"
+         role="alert" aria-live="assertive"></div>
+    <div style="display:flex;gap:8px;margin-top:var(--sp-3)">
+      <button class="btn primary" style="flex:1"
+              onclick="lockScreen.submitRecoveryCode()">reset</button>
+      <button class="btn" style="flex:1"
+              onclick="lockScreen.hideForgotPIN()">cancel</button>
+    </div>
   </div>
 </div>
 
