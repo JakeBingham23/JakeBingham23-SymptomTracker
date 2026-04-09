@@ -366,3 +366,27 @@ document.addEventListener('keydown', e => {
     if (spendEl && !spendEl.classList.contains('hidden')) { closeSpendModal(); return; }
   }
 });
+
+
+// ── App init gate ────────────────────────────────────────────────────────────
+function initApp() {
+  if (!SecureStore.isUnlocked()) {
+    console.warn('[Security] initApp called while locked — aborting');
+    return;
+  }
+  // Normal init
+  try {
+    initOnboarding();
+  } catch(e) {
+    console.error('[INIT ERROR]', e);
+    document.getElementById('page-today')?.classList.add('active');
+  }
+}
+
+// ── Bootstrap — runs on DOMContentLoaded ─────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Hide all page content until unlocked
+  document.getElementById('page-today')?.classList.remove('active');
+  // Show lock screen
+  lockScreen.show();
+});

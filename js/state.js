@@ -2,6 +2,13 @@
 // STATE MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
 
+// ── App constants ────────────────────────────────────────────────────────────
+const TODAY = new Date().toISOString().split('T')[0];
+let CRITICAL  = cfg.critical  || DEFAULT_CRITICAL;
+let DAILY     = cfg.daily     || DEFAULT_DAILY;
+let SYMPTOMS  = cfg.symptoms  || DEFAULT_SYMPTOMS;
+
+
 // ── App state ─────────────────────────────────────────────────────────────
 let state = {
   tasks: {},

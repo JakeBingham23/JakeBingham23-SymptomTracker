@@ -213,7 +213,53 @@ const SecureStore = (() => {
     if (pinHash !== stored) throw new Error('Wrong PIN');
     _key      = await deriveKey(pin, salt);
     _unlocked = true;
+    // One-time recovery: restore non-journal keys that old migration may have wiped
+    await _restoreLocalStorage();
     return true;
+  }
+
+  async function _restoreLocalStorage() {
+    // If old migration wiped tracker-config etc from localStorage, restore them.
+    // Check marker — if already recovered, skip.
+    const recovered = await idbGet(STORE_META, '__ls_restored_v1');
+    if (recovered) return;
+
+    const restoreKeys = [
+      'tracker-config', 'tracker-med-streak',
+      'tracker-appts', 'tracker-quote-today',
+      'tracker-quote-favs', 'tracker-quote-blocked',
+    ];
+
+    // Also restore tracker-history and today's state key
+    const { keys: allKeys } = await idbGetAll(STORE_DATA).catch(() => ({ keys: [] }));
+    const stateKeys = allKeys.filter(k =>
+      typeof k === 'string' && (
+        restoreKeys.includes(k) ||
+        k.startsWith('tracker-2') || // tracker-YYYY-MM-DD
+        k.startsWith('tracker-history') ||
+        k.startsWith('tracker-spend') ||
+        k.startsWith('tracker-budget')
+      )
+    );
+
+    let restored = 0;
+    for (const key of stateKeys) {
+      try {
+        // Only restore if localStorage is missing this key
+        if (localStorage.getItem(key) !== null) continue;
+        const val = await getItem(key);
+        if (val !== null) {
+          const str = typeof val === 'string' ? val : JSON.stringify(val);
+          localStorage.setItem(key, str);
+          restored++;
+        }
+      } catch(e) {}
+    }
+
+    await idbSet(STORE_META, '__ls_restored_v1', true);
+    if (restored > 0) {
+      console.log('[SecureStore] Restored', restored, 'keys from IDB to localStorage');
+    }
   }
 
   // ── Recovery code ─────────────────────────────────────────────────────
@@ -475,34 +521,28 @@ const SecureStore = (() => {
     const already = await idbGet(STORE_META, migrationKey);
     if (already) return { migrated: 0 };
 
-    const trackerKeys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('tracker-')) trackerKeys.push(k);
-    }
+    // Only migrate journal entries — everything else (config, state, history,
+    // streak, quotes, appts, budget) stays in localStorage.
+    // Journal text is the only data worth encrypting at rest.
+    const SENSITIVE_KEYS = ['tracker-journal'];
 
     let migrated = 0;
-    for (const key of trackerKeys) {
+    for (const key of SENSITIVE_KEYS) {
       try {
         const raw = localStorage.getItem(key);
         if (raw) {
-          await setItem(key, raw); // Store as encrypted string
+          await setItem(key, raw);
+          // DO NOT remove from localStorage — journal.js reads IDB first,
+          // localStorage is the plaintext fallback for pre-migration data.
           migrated++;
         }
       } catch(e) {
-        console.warn('Migration failed for key:', key, e);
+        console.warn('[SecureStore] Migration failed for key:', key, e);
       }
     }
 
-    // Mark migration complete
     await idbSet(STORE_META, migrationKey, true);
-
-    // Clear localStorage after successful migration
-    if (migrated > 0) {
-      trackerKeys.forEach(k => localStorage.removeItem(k));
-    }
-
-    return { migrated, keys: trackerKeys };
+    return { migrated, keys: SENSITIVE_KEYS };
   }
 
   // ── Lock ──────────────────────────────────────────────────────────────
