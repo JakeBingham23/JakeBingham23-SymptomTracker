@@ -1,8 +1,10 @@
 Daily Structure Tracker
 A persistent daily task and symptom tracker designed specifically for AuDHD (Autism + ADHD) task management and bipolar symptom monitoring.
-Current version: v2.9
+Current version: v4.4
+
 What it does
 Tracks daily non-negotiables (meds, shower, meals) with a persistent nag banner until completed
+
 Logs mood, energy level, and symptom flags for pattern recognition over time
 Maintains a medication streak counter across days
 Stores 14 days of history locally — no server, no account, no data leaving your device
