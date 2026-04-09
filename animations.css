@@ -1,0 +1,9 @@
+/* ═══════════════════════════════════════════════
+   ANIMATIONS
+   Daily Structure Tracker
+═══════════════════════════════════════════════ */
+
+@keyframes pulse { 0%,100%{opacity:0.4}
+
+@keyframes taskFlash {
+    0%   { background: var(--success-bg); }
