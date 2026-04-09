@@ -55,7 +55,7 @@ function applyName(name) {
 
 // ── Settings panel ────────────────────────────────────────────────────────
 // ── Tab navigation ────────────────────────────────────────────────────────
-function switchTab(tab) {
+async function switchTab(tab) {
   const tabNames = { today: 'Today', history: 'Log and appointments', stats: 'Stats', budget: 'Budget', journal: 'Journal' };
   ['today','history','stats','budget','journal'].forEach(t => {
     const tabEl  = document.getElementById('tab-' + t);
@@ -71,7 +71,7 @@ function switchTab(tab) {
   if (tab === 'history')  renderHistory();
   if (tab === 'stats')    renderStats();
   if (tab === 'budget')   renderBudgetTab();
-  if (tab === 'journal')  renderJournalList();
+  if (tab === 'journal')  await renderJournalList();
 }
 
 // ── Appointments data ────────────────────────────────────────────────────

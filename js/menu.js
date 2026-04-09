@@ -26,43 +26,49 @@ function closeMenu() {
 }
 
 function syncMenuUI() {
-  const a11y  = cfg.a11y || {};
-  const theme = cfg.theme || 'system';
-  const dnd   = getDNDConfig ? getDNDConfig() : { enabled: false };
+  const theme = cfg.theme || 'werkstatt';
+  const font  = cfg.font || cfg.a11y?.font || 'default';
+  const size  = cfg.textSize || cfg.a11y?.textSize || 'normal';
+  const dnd   = typeof getDNDConfig === 'function' ? getDNDConfig() : { enabled: false };
 
-  ['system','light','dark'].forEach(t => {
-    const el = document.getElementById('menuTheme' + t.charAt(0).toUpperCase() + t.slice(1));
-    if (el) { el.classList.toggle('active', t === theme); el.setAttribute('aria-checked', t === theme ? 'true' : 'false'); }
-  });
+  // Theme swatches (Bauhaus)
+  if (typeof updateMenuThemeUI === 'function') updateMenuThemeUI(theme);
 
-  const size = a11y.textSize || 'normal';
+  // Text size
   ['Small','Normal','Large','XL'].forEach(s => {
     const el = document.getElementById('menuSize' + s);
-    const key = s.toLowerCase();
-    if (el) { el.classList.toggle('active', key === size); el.setAttribute('aria-checked', key === size ? 'true' : 'false'); }
+    if (el) {
+      const match = s.toLowerCase() === size;
+      el.classList.toggle('active', match);
+      el.setAttribute('aria-checked', String(match));
+    }
   });
 
-  const hcEl = document.getElementById('menuHighContrast');   if (hcEl) hcEl.checked = !!a11y.highContrast;
-  const rmEl = document.getElementById('menuReduceMotion');   if (rmEl) rmEl.checked = !!a11y.reduceMotion;
-  const ltEl = document.getElementById('menuLargeTargets');   if (ltEl) ltEl.checked = !!a11y.largeTouchTargets;
-  const dndEl = document.getElementById('menuDND');           if (dndEl) dndEl.checked = dnd.enabled;
+  // Accessibility toggles
+  const hcEl  = document.getElementById('menuHighContrast');
+  const rmEl  = document.getElementById('menuReduceMotion');
+  const ltEl  = document.getElementById('menuLargeTargets');
+  const dndEl = document.getElementById('menuDND');
+  if (hcEl)  hcEl.checked  = !!(cfg.highContrast  || cfg.a11y?.highContrast);
+  if (rmEl)  rmEl.checked  = !!(cfg.reduceMotion   || cfg.a11y?.reduceMotion);
+  if (ltEl)  ltEl.checked  = !!(cfg.largeTouchTargets || cfg.a11y?.largeTouchTargets);
+  if (dndEl) dndEl.checked = !!dnd.enabled;
 
-  const font = a11y.font || 'default';
-  ['Default','Ibmplexmono','Atkinson','Opendyslexic','Comic'].forEach(f => {
-    const el = document.getElementById('menuFont' + f);
-    if (el) { el.classList.toggle('active', f.toLowerCase() === font); el.setAttribute('aria-checked', f.toLowerCase() === font ? 'true' : 'false'); }
+  // Font picker — includes jost now
+  ['default','jost','ibmplexmono','atkinson','opendyslexic','comic'].forEach(f => {
+    const key = f.charAt(0).toUpperCase() + f.slice(1);
+    const el  = document.getElementById('menuFont' + key);
+    if (el) {
+      const match = f === font;
+      el.classList.toggle('active', match);
+      el.setAttribute('aria-checked', String(match));
+    }
   });
 }
 
-function updateMenuThemeUI() {
-  const theme = cfg.theme || 'system';
-  ['system','light','dark'].forEach(t => {
-    const el = document.getElementById('menuTheme' + t.charAt(0).toUpperCase() + t.slice(1));
-    if (el) { el.classList.toggle('active', t === theme); el.setAttribute('aria-checked', t === theme ? 'true' : 'false'); }
-    const el2 = document.getElementById('themeOpt' + t.charAt(0).toUpperCase() + t.slice(1));
-    if (el2) { el2.classList.toggle('active', t === theme); el2.setAttribute('aria-checked', t === theme ? 'true' : 'false'); }
-  });
-}
+// updateMenuThemeUI is defined in theme.js (v4.1+).
+// This file intentionally does not redefine it — theme.js loads first
+// and the definition there syncs both menu and settings swatches.
 
 // ── Menu sub-page navigation ─────────────────────────────────────────────
 let _activeSubPage = null;

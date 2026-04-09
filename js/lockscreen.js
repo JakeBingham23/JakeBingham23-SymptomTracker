@@ -106,10 +106,14 @@ const lockScreen = (() => {
     try {
       await SecureStore.setupPIN(pin);
 
-      // Offer WebAuthn after PIN is set
-      const available = await PublicKeyCredential
-        .isUserVerifyingPlatformAuthenticatorAvailable()
-        .catch(() => false);
+      // Offer WebAuthn after PIN is set — only on valid contexts (HTTPS or localhost)
+      const contextOk = SecureStore.isWebAuthnAvailable();
+      const available = contextOk && await (
+        window.PublicKeyCredential
+          ?.isUserVerifyingPlatformAuthenticatorAvailable?.()
+          .catch(() => false)
+        ?? Promise.resolve(false)
+      );
 
       if (available) {
         const wantBio = confirm(
@@ -124,21 +128,25 @@ const lockScreen = (() => {
               announce('Biometric set up. You will still need your PIN to decrypt data on this device.');
             }
           } catch(e) {
-            console.warn('WebAuthn setup failed:', e.message);
-            announce('Biometric setup failed. PIN only will be used.');
+            console.warn('[lockscreen] WebAuthn setup skipped:', e.message);
+            announce('Biometric setup skipped. PIN only will be used.');
           }
         }
       }
 
-      // Migrate existing data
+      // Generate + show recovery code — one time only
+      try {
+        const code = await SecureStore.generateRecoveryCode();
+        showRecoveryCodeModal(code);
+        // dismiss() fires after user confirms they've saved it
+        return;
+      } catch(e) {
+        console.warn('[lockscreen] Recovery code generation failed:', e.message);
+        // Proceed without it — not ideal but don't block setup
+      }
+
+      // Migration + dismiss handled by confirmRecoveryCodeSaved() after user saves code
       setError('setupPINError', '');
-      document.getElementById('setupStep').textContent = 'migrating your data...';
-      announce('PIN set. Migrating your existing data to encrypted storage.');
-
-      const result = await SecureStore.migrateFromLocalStorage();
-      console.log(`[SecureStore] Migrated ${result.migrated} keys`);
-
-      dismiss();
     } catch(e) {
       setError('setupPINError', e.message);
       _pin = '';
@@ -179,12 +187,11 @@ const lockScreen = (() => {
       const result = await SecureStore.unlockWithWebAuthn();
 
       if (result.needsPIN === false) {
-        // PRF success — key derived from fingerprint, fully unlocked
         announce('Biometric unlock successful.');
         dismiss();
       } else {
         // Presence-only — biometric verified but PIN still needed for key
-        setError('unlockPINError', 'biometric verified — enter PIN to decrypt');
+        setError('unlockPINError', 'biometric verified — enter your PIN to decrypt');
         if (btn) btn.style.display = 'none';
         announce('Biometric verified. Enter your PIN to decrypt your data.');
       }
@@ -192,6 +199,11 @@ const lockScreen = (() => {
       if (btn) { btn.textContent = 'fingerprint / face unlock'; btn.disabled = false; }
       if (e.name === 'NotAllowedError' || e.name === 'AbortError') {
         // User cancelled — silent
+      } else if (e.message && e.message.includes('HTTPS')) {
+        // IP address / non-HTTPS context — explain clearly
+        setError('unlockPINError', 'biometric needs HTTPS domain — use PIN');
+        if (btn) btn.style.display = 'none';
+        announce('Biometric unlock requires HTTPS. Use your PIN instead.');
       } else {
         setError('unlockPINError', 'biometric failed — use your PIN');
         announce('Biometric failed. Please use your PIN.');
@@ -241,14 +253,22 @@ const lockScreen = (() => {
       buildPad('unlockPINPad');
       updateDots('unlockPINDots', 0);
 
-      // Check biometric availability
-      const hasBio = await idbGet('__webauthn_cred') !== null;
-      const btn    = document.getElementById('biometricBtn');
-      if (btn && hasBio) {
+      // Check biometric availability — requires credential stored AND valid context
+      const hasBio    = await idbGet('__webauthn_cred') !== null;
+      const canUseBio = hasBio && SecureStore.isWebAuthnAvailable();
+      const btn       = document.getElementById('biometricBtn');
+      if (btn && canUseBio) {
         btn.style.display = 'block';
-        // Auto-trigger biometric after a moment
         setTimeout(() => tryBiometric(), 500);
+      } else if (btn) {
+        btn.style.display = 'none';
       }
+
+      // Show forgot PIN link if a recovery code was set up
+      const hasRecovery = await SecureStore.hasRecoveryCode();
+      const forgotBtn   = document.getElementById('forgotPINBtn');
+      if (forgotBtn) forgotBtn.style.display = hasRecovery ? 'block' : 'none';
+
       announce('App locked. Enter your PIN or use biometrics to unlock.');
     }
   }
@@ -267,7 +287,71 @@ const lockScreen = (() => {
     initApp();
   }
 
-  return { show, tryBiometric, _key, submit };
+  // ── Recovery code modal (shown once on first setup) ───────────────────
+  function showRecoveryCodeModal(code) {
+    const overlay = document.getElementById('recoveryCodeOverlay');
+    const codeEl  = document.getElementById('recoveryCodeDisplay');
+    if (!overlay || !codeEl) { dismiss(); return; }
+    codeEl.textContent = code;
+    overlay.classList.remove('hidden');
+    announce('Write down your recovery code. You will need it if you forget your PIN.');
+  }
+
+  function confirmRecoveryCodeSaved() {
+    const overlay = document.getElementById('recoveryCodeOverlay');
+    if (overlay) overlay.classList.add('hidden');
+
+    // Now migrate + dismiss
+    SecureStore.migrateFromLocalStorage()
+      .then(result => console.log(`[SecureStore] Migrated ${result.migrated} keys`))
+      .catch(e => console.warn('[SecureStore] Migration error:', e.message))
+      .finally(() => dismiss());
+  }
+
+  // ── Forgot PIN flow ───────────────────────────────────────────────────
+  function showForgotPIN() {
+    const overlay = document.getElementById('forgotPINOverlay');
+    if (overlay) overlay.classList.remove('hidden');
+    const input = document.getElementById('recoveryCodeInput');
+    if (input) { input.value = ''; setTimeout(() => input.focus(), 100); }
+    announce('Enter your recovery code to reset your PIN. Warning: this will clear your data.');
+  }
+
+  function hideForgotPIN() {
+    const overlay = document.getElementById('forgotPINOverlay');
+    if (overlay) overlay.classList.add('hidden');
+  }
+
+  async function submitRecoveryCode() {
+    const input  = document.getElementById('recoveryCodeInput');
+    const errEl  = document.getElementById('recoveryCodeError');
+    const code   = input?.value?.trim().toUpperCase();
+    if (!code) return;
+
+    try {
+      const valid = await SecureStore.resetWithRecoveryCode(code);
+      if (!valid) {
+        if (errEl) errEl.textContent = 'invalid recovery code';
+        announce('Invalid recovery code. Check your written copy and try again.');
+        return;
+      }
+      // Valid — wipe complete, start fresh setup
+      hideForgotPIN();
+      _mode     = 'setup-first';
+      _attempts = 0;
+      _pin      = '';
+      document.getElementById('lockSetup').style.display  = 'block';
+      document.getElementById('lockUnlock').style.display = 'none';
+      document.getElementById('setupStep').textContent    = 'set up your new PIN';
+      buildPad('setupPINPad');
+      updateDots('setupPINDots', 0);
+      announce('Recovery successful. Set up a new PIN.');
+    } catch(e) {
+      if (errEl) errEl.textContent = e.message;
+    }
+  }
+
+  return { show, tryBiometric, _key, submit, confirmRecoveryCodeSaved, showForgotPIN, hideForgotPIN, submitRecoveryCode };
 })();
 
 // Close menus on Escape

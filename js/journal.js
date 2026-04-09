@@ -22,12 +22,26 @@ const JOURNAL_PROMPTS = [
   "What's been looping in your head that you haven't written down yet?",
 ];
 
-function getJournalEntries() {
+// ── Storage: SecureStore when unlocked, localStorage fallback ────────────
+async function getJournalEntries() {
+  try {
+    if (typeof SecureStore !== 'undefined' && SecureStore.isUnlocked()) {
+      const val = await SecureStore.getItem(JOURNAL_KEY);
+      if (val !== null) return Array.isArray(val) ? val : JSON.parse(val);
+    }
+  } catch(e) {}
+  // Fallback: unencrypted installs or pre-migration
   try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || '[]'); }
   catch(e) { return []; }
 }
 
-function saveJournalEntries(entries) {
+async function saveJournalEntries(entries) {
+  try {
+    if (typeof SecureStore !== 'undefined' && SecureStore.isUnlocked()) {
+      await SecureStore.setItem(JOURNAL_KEY, entries);
+      return;
+    }
+  } catch(e) {}
   localStorage.setItem(JOURNAL_KEY, JSON.stringify(entries));
 }
 
@@ -100,12 +114,12 @@ function countWords(text) {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
 
-function saveJournalEntry() {
+async function saveJournalEntry() {
   const textarea = document.getElementById('journalTextarea');
   const text = sanitiseInput(textarea?.value || '', 10000);
   if (!text) { showToast('write something first'); return; }
 
-  const entries = getJournalEntries();
+  const entries = await getJournalEntries();
   const entry = {
     id:     _editingEntryId || 'j_' + Date.now(),
     date:   TODAY,
@@ -127,23 +141,23 @@ function saveJournalEntry() {
     entries.unshift(entry);
   }
 
-  saveJournalEntries(entries);
+  await saveJournalEntries(entries);
   closeJournalComposer();
-  renderJournalList();
+  await renderJournalList();
   announce('Journal entry saved. ' + countWords(text) + ' words.');
   hap('task');
   playSuccess();
 }
 
-function deleteJournalEntry(id) {
+async function deleteJournalEntry(id) {
   if (!confirm('Delete this journal entry?')) return;
-  saveJournalEntries(getJournalEntries().filter(e => e.id !== id));
-  renderJournalList();
+  await saveJournalEntries((await getJournalEntries()).filter(e => e.id !== id));
+  await renderJournalList();
   announce('Journal entry deleted.');
 }
 
-function editJournalEntry(id) {
-  const entry = getJournalEntries().find(e => e.id === id);
+async function editJournalEntry(id) {
+  const entry = (await getJournalEntries()).find(e => e.id === id);
   if (!entry) return;
   openJournalComposer(entry.text, id);
   document.getElementById('journalComposer')?.scrollIntoView({ behavior: 'smooth' });
@@ -247,14 +261,14 @@ let _journalFilter = '';
 
 function filterJournalEntries(query) {
   _journalFilter = query.toLowerCase().trim();
-  renderJournalList();
+  renderJournalList(); // async — fire and forget is fine here
 }
 
-function renderJournalList() {
+async function renderJournalList() {
   const el = document.getElementById('journalList');
   if (!el) return;
 
-  let entries = getJournalEntries();
+  let entries = await getJournalEntries();
 
   if (_journalFilter) {
     entries = entries.filter(e =>
@@ -328,8 +342,8 @@ function toggleEntryExpand(id) {
 }
 
 // ── Journal in pre-appointment summary ────────────────────────────────────
-function getRecentJournalForSummary() {
-  const entries = getJournalEntries();
+async function getRecentJournalForSummary() {
+  const entries = await getJournalEntries();
   const last3   = entries.slice(0, 3);
   if (last3.length === 0) return '';
   return '\n\nrecent journal entries:\n' + last3.map(e => {
