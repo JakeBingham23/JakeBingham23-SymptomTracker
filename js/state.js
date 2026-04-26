@@ -1,12 +1,16 @@
 // ═════════════════════════════════════════════════════════════════
-// STATE MODULE — Daily Structure Tracker
+// STATE MODULE — Daily Structure Tracker v5
+//
+// OWNS: state object, loadState(), saveState(), saveHistoryEntry(),
+//       screenshot, gallery folder (IDB).
+//
+// DOES NOT OWN: TODAY, CRITICAL, DAILY, SYMPTOMS → core.js
+//               render, saveAll, toggleTask, setMood, toggleSymptom → core.js
+//
+// Load order: after config.js, symptoms/config.js — before core.js
 // ═════════════════════════════════════════════════════════════════
 
-// ── App constants ────────────────────────────────────────────────────────────
-const TODAY = new Date().toISOString().split('T')[0];
-let CRITICAL  = cfg.critical  || DEFAULT_CRITICAL;
-let DAILY     = cfg.daily     || DEFAULT_DAILY;
-let SYMPTOMS  = cfg.symptoms  || DEFAULT_SYMPTOMS;
+// CRITICAL, DAILY, SYMPTOMS declared in core.js — do not redefine here
 
 
 // ── App state ─────────────────────────────────────────────────────────────
@@ -38,81 +42,6 @@ function saveState() {
     const hasMeds = CRITICAL.some(t => t.id === 'meds');
     if (hasMeds) localStorage.setItem(getStreakKey(), String(state.medStreak));
   } catch(e) {}
-}
-
-function toggleTask(id) {
-  state.tasks[id] = !state.tasks[id];
-  const done = state.tasks[id];
-  // Find task name for announcement
-  const task = [...CRITICAL, ...DAILY].find(t => t.id === id);
-  const name = task ? task.name : id;
-  if (id === 'meds') {
-    state.medStreak = done
-      ? (state.medStreak || 0) + 1
-      : Math.max(0, (state.medStreak || 0) - 1);
-    if (done) {
-      announce(name + ' marked done. Medication streak: ' + state.medStreak + ' days.');
-      checkStreakMilestone(state.medStreak);
-    } else {
-      announce(name + ' unmarked. Medication streak reset to ' + state.medStreak + '.');
-    }
-  } else {
-    announce(name + (done ? ' marked done.' : ' unmarked.'));
-  }
-  if (done) {
-    const isNonNeg = CRITICAL.some(t => t.id === id);
-    celebrateTask(id, name, isNonNeg);
-  }
-  saveState();
-  render();
-  // Update aria-pressed on the toggled element
-  const taskEls = document.querySelectorAll('.task');
-  taskEls.forEach(el => {
-    const onclick = el.getAttribute('onclick') || '';
-    if (onclick.includes(id)) {
-      el.setAttribute('aria-pressed', done ? 'true' : 'false');
-    }
-  });
-}
-
-function setMood(type, btn) {
-  const val = btn.textContent;
-  state.mood[type] = val;
-  announce(type + ' set to ' + val + '.');
-  // Update aria-pressed on all buttons in this group
-  const opts = document.querySelectorAll('#' + type + 'Opts .mood-btn');
-  opts.forEach(b => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
-  saveState();
-  render();
-}
-
-function toggleSymptom(s) {
-  const i = state.symptoms.indexOf(s);
-  if (i > -1) {
-    state.symptoms.splice(i, 1);
-    announce(s + ' symptom flag removed.');
-  } else {
-    state.symptoms.push(s);
-    announce(s + ' symptom flagged.');
-  }
-  saveState();
-  render();
-}
-
-function saveAll() {
-  state.notes = document.getElementById('symptomNotes').value;
-  saveState();
-  saveHistoryEntry();
-  const c = document.getElementById('saveConfirm');
-  c.style.display = 'block';
-  setTimeout(() => { c.style.display = 'none'; }, 2500);
-  const all  = [...CRITICAL, ...DAILY];
-  const done = all.filter(t => state.tasks[t.id]).length;
-  announce('Check-in saved. ' + done + ' of ' + all.length + ' tasks completed today. Mood: ' + (state.mood.mood || 'not set') + '. Energy: ' + (state.mood.energy || 'not set') + '.');
-  checkBadges();
-  renderPointsDisplay();
-  // Show personalised post check-in message
-  showCheckinMessage();
 }
 
 function saveHistoryEntry() {

@@ -136,4 +136,3 @@ self.addEventListener('notificationclick', e => {
 })();
 
 // ─────────────────────────────────────────────────────────────────────────────
-const TODAY = new Date().toISOString().split('T')[0];
