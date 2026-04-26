@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-title" content="Tracker">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="format-detection" content="telephone=no">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.cdnfonts.com; font-src 'self' https://fonts.gstatic.com https://fonts.cdnfonts.com; img-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com https://api.telegram.org; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.cdnfonts.com; font-src 'self' https://fonts.gstatic.com https://fonts.cdnfonts.com; img-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com https://api.telegram.org https://www.googleapis.com https://accounts.google.com; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self';">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="Referrer-Policy" content="no-referrer">
 
@@ -460,8 +460,8 @@
       <h2 class="symptom-header">symptom check <span class="sr-only">— screenshot this section if something is flagged</span><span aria-hidden="true"> — screenshot this if something's flagged</span></h2>
 
       <div class="mood-row">
-        <span class="mood-type">energy</span>
-        <div class="mood-opts" id="energyOpts">
+        <span class="mood-type" id="energy-label">energy</span>
+        <div class="mood-opts" id="energyOpts" role="radiogroup" aria-labelledby="energy-label">
           <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: crashed">crashed</button>
           <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: low">low</button>
           <button class="mood-btn" onclick="setMood('energy',this)" aria-pressed="false" aria-label="energy level: ok">ok</button>
@@ -471,8 +471,8 @@
       </div>
 
       <div class="mood-row">
-        <span class="mood-type">mood</span>
-        <div class="mood-opts" id="moodOpts">
+        <span class="mood-type" id="mood-label">mood</span>
+        <div class="mood-opts" id="moodOpts" role="radiogroup" aria-labelledby="mood-label">
           <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: dark">dark</button>
           <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: low">low</button>
           <button class="mood-btn" onclick="setMood('mood',this)" aria-pressed="false" aria-label="mood: flat">flat</button>
@@ -483,8 +483,13 @@
       </div>
 
       <hr class="divider">
-      <div class="flag-label">flag if present</div>
-      <div class="symptom-grid" id="symptomGrid"></div>
+      <p class="symptom-summary" aria-live="polite">
+        <span class="symptom-flag-count" id="symptomFlagCount">nothing flagged today</span>
+      </p>
+      <div class="symptom-categories" id="symptomCategories"
+           role="group" aria-labelledby="sym-cat-heading">
+        <span class="sr-only" id="sym-cat-heading">symptom flags by category — check all that apply today</span>
+      </div>
 
       <textarea id="symptomNotes" rows="2" placeholder="anything worth noting today" aria-label="notes for today's check-in"></textarea>
 
@@ -807,11 +812,13 @@
       <button class="add-btn" onclick="addTask('daily')" aria-label="Add daily structure task">+ add task</button>
       <div class="settings-divider"></div>
       <h3 class="settings-section-title">symptom flags</h3>
-      <div class="sym-edit-grid" id="settingsSymptoms"></div>
-      <div class="sym-add-row">
-        <input type="text" id="newSymInput" placeholder="new symptom" maxlength="30"
-               aria-label="New symptom name">
-        <button class="add-btn" onclick="addSymptom()" aria-label="Add symptom">+ add</button>
+      <p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:var(--sp-3);line-height:1.6">drag to reorder categories · add or remove symptoms per group</p>
+      <div id="symptomSettingsCategories"></div>
+      <div class="scat-new-category-row">
+        <input type="text" id="newCategoryInput" placeholder="new category name…" maxlength="30"
+               aria-label="new symptom category"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();scatAddCategory()}">
+        <button class="add-btn" onclick="scatAddCategory()">+ category</button>
       </div>
     </section>
 
@@ -1181,6 +1188,51 @@
     </section>
 
     <!-- ── Data ── -->
+    
+      <!-- ── Google Calendar sync ───────────────────────── -->
+      <div class="settings-segment" style="margin-top:var(--sp-5)">
+        <h3 class="settings-section-title" style="margin-top:0">google calendar sync</h3>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;font-family:var(--font-mono);font-size:0.75rem">
+          <span id="gcalStatus" aria-live="polite" style="color:var(--text3)">○ not connected</span>
+          <span id="gcalSyncStatus" style="color:var(--text3);font-size:0.6875rem"></span>
+          <span id="gcalLastSync" style="color:var(--text3);font-size:0.6875rem;margin-left:auto"></span>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="gcalClientId"
+                 placeholder="paste OAuth Client ID here…"
+                 aria-label="Google OAuth Client ID"
+                 style="flex:1;font-family:var(--font-mono);font-size:0.6875rem"
+                 onchange="cfg.gcal.clientId=this.value.trim();saveConfig(cfg);if(this.value.trim())gcalInit()">
+          <button class="btn" onclick="saveGcalClientId()">save</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="gcalConnectBtn" onclick="gcalConnect()">connect Google Calendar</button>
+          <button class="btn" id="gcalDisconnectBtn" style="display:none" onclick="gcalDisconnect()">disconnect</button>
+          <button class="btn" onclick="gcalSyncFull()" style="margin-left:auto">↻ sync now</button>
+        </div>
+        <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-top:12px;line-height:1.7">
+          requires a Google Cloud project with the Calendar API enabled.<br>
+          add your GitHub Pages URL as an authorised JavaScript origin.<br>
+          two-way sync — pushes your appointments out, pulls Google events in.
+        </p>
+      </div>
+
+      <!-- ── Accent colour (Material You) ─────────────────── -->
+      <div class="settings-segment" style="margin-top:var(--sp-4)">
+        <h3 class="settings-section-title" style="margin-top:0">accent colour</h3>
+        <p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:12px;line-height:1.6">
+          seeds the Material You tonal palette for both werkstatt and breuer themes
+        </p>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="color" id="accentColorPicker" value="#5b6ab0"
+                 aria-label="choose accent colour"
+                 oninput="setAccentSeed(this.value)"
+                 style="width:40px;height:32px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px;cursor:pointer;background:transparent">
+          <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text2)">personalise accent</span>
+          <button class="btn" onclick="resetAccentToSystem()" style="margin-left:auto;font-size:0.6875rem">reset to system</button>
+        </div>
+      </div>
+
     <section class="settings-segment" aria-labelledby="seg-data">
       <div class="settings-segment-header">
         <h2 id="seg-data">data &amp; storage</h2>
@@ -1491,10 +1543,13 @@
       <button class="add-btn" onclick="addTask('daily');renderSubpageTasks()">+ add task</button>
       <div class="settings-divider"></div>
       <h3 class="settings-section-title">symptom flags</h3>
-      <div class="sym-edit-grid" id="subTasksSymptoms"></div>
-      <div class="sym-add-row">
-        <input type="text" id="subNewSymInput" placeholder="new symptom" maxlength="30" aria-label="New symptom">
-        <button class="add-btn" onclick="addSymptomFromSub()">+ add</button>
+      <p style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);margin-bottom:var(--sp-3);line-height:1.6">drag to reorder · add per category</p>
+      <div id="symptomSettingsCategories"></div>
+      <div class="scat-new-category-row">
+        <input type="text" id="newCategoryInput" placeholder="new category name…" maxlength="30"
+               aria-label="new symptom category"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();scatAddCategory()}">
+        <button class="add-btn" onclick="scatAddCategory()">+ category</button>
       </div>
     </div>
     <button class="btn primary" style="width:100%" onclick="saveSettings();showToast('saved ✓')">save all</button>
@@ -1661,10 +1716,28 @@
         crossorigin="anonymous" defer></script>
 
 <!-- App modules — load order: crypto → config → state → everything else -->
+<!-- ═══════════════════════════════════════════════════════════════
+     LOAD ORDER — do not reorder without updating this comment
+     1.  crypto.js           → encryption helpers (no deps)
+     2.  config.js           → cfg, defaults, font loading
+     3.  symptoms/config.js  → SYMPTOM_CATEGORIES (needs: config)
+     4.  state.js            → state object, load/save (needs: config, symptoms/config)
+     5.  core.js             → TODAY · CRITICAL · render · saveAll · toggleTask  ← SACRED
+     6.  symptoms/render.js  → renderSymptomGrid (needs: core, symptoms/config)
+     7.  theme.js            → applyTheme, M3 palette (needs: config)
+     8.  gcal/auth.js        → OAuth, gcalConnect (needs: config)
+     9.  gcal/sync.js        → two-way sync (needs: gcal/auth)
+     ─── feature modules below — no ordering constraints among themselves ───
+     ═══════════════════════════════════════════════════════════════ -->
 <script src="./js/crypto.js"></script>
 <script src="./js/config.js"></script>
+<script src="./js/symptoms/config.js"></script>
 <script src="./js/state.js"></script>
+<script src="./js/core.js"></script>
+<script src="./js/symptoms/render.js"></script>
 <script src="./js/theme.js"></script>
+<script src="./js/gcal/auth.js"></script>
+<script src="./js/gcal/sync.js"></script>
 <script src="./js/accessibility.js"></script>
 <script src="./js/toast.js"></script>
 <script src="./js/icons.js"></script>
