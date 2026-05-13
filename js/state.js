@@ -65,30 +65,20 @@ let _pendingScreenshot = null;
 
 async function takePhoto() {
   const btn = document.querySelector('button[onclick="takePhoto()"]');
-  const target = document.getElementById('symptomBlock');
 
   if (btn) { btn.textContent = 'capturing…'; btn.classList.add('loading'); }
 
   try {
-    // Resolve the actual background colour so canvas isn't transparent
-    const bgColor = getComputedStyle(document.body).backgroundColor || '#0f0f0f';
-
-    const canvas = await html2canvas(target, {
-      backgroundColor: bgColor,
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      imageTimeout: 0,
-      removeContainer: true
-    });
+    if (typeof renderCheckinImage !== 'function') {
+      throw new Error('renderCheckinImage not loaded');
+    }
+    const canvas = renderCheckinImage();
 
     resetBtn(btn);
 
     const filename = 'tracker-checkin-' + TODAY + '.png';
     const dataUrl  = canvas.toDataURL('image/png');
 
-    // Show preview so user can confirm it looks right before saving
     canvas.toBlob(blob => {
       _pendingScreenshot = { blob, filename, dataUrl };
       document.getElementById('previewImg').src = dataUrl;
