@@ -1,45 +1,99 @@
 // ═════════════════════════════════════════════════════════════════
-// CORE MODULE — Daily Structure Tracker v5
+// CORE — Daily Structure Tracker
+// Loaded first (after crypto.js). Every other module depends on this.
 //
-// ██████████████████████████████████████████████████████████████
-// ██  THIS FILE IS SACRED.                                    ██
-// ██  render · saveAll · toggleTask · setMood · toggleSymptom ██
-// ██  TODAY · CRITICAL · DAILY · SYMPTOMS                     ██
-// ██  live here and ONLY here.                                ██
-// ██  Never define these in any other file.                   ██
-// ██████████████████████████████████████████████████████████████
+// Owns:
+//   TODAY           — YYYY-MM-DD string, immutable for the session
+//   SCHEMA_VERSION  — bump when storage shape changes
+//   render()        — full UI repaint from current state
+//   announce()      — ARIA live region helper
+//   escHtml()       — XSS-safe HTML escaping
+//   sanitiseInput() — max-length + strip null bytes
 //
-// Load order: 5th — after config.js, symptoms/config.js, state.js
-//             before symptoms/render.js, render.js
+// Rule: nothing in this file may reference a module-level function
+// defined in any other file at parse time. Cross-module calls are
+// only made inside function bodies (called at runtime, not parse time).
 // ═════════════════════════════════════════════════════════════════
 
-const TODAY   = new Date().toISOString().split('T')[0];
-let CRITICAL  = cfg.critical || DEFAULT_CRITICAL;
-let DAILY     = cfg.daily    || DEFAULT_DAILY;
-let SYMPTOMS  = cfg.symptoms || DEFAULT_SYMPTOMS;
+// ── Date ─────────────────────────────────────────────────────────
+const TODAY = new Date().toISOString().split('T')[0];
 
-// ── render() ─────────────────────────────────────────────────────────────
-function render() {
-  const dateEl = document.getElementById('dateDisplay');
-  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', {
-    weekday:'short', year:'numeric', month:'short', day:'numeric'
+// ── Schema version — bump when storage shape changes ─────────────
+const SCHEMA_VERSION = 1;
+
+// ── Utility: HTML escape ─────────────────────────────────────────
+function escHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ── Utility: sanitise user input ─────────────────────────────────
+function sanitiseInput(str, maxLen = 200) {
+  if (str == null) return '';
+  // Strip null bytes and control chars except newline/tab
+  return String(str)
+    .replace(/\0/g, '')
+    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .slice(0, maxLen);
+}
+
+// ── ARIA live region announcer ────────────────────────────────────
+function announce(msg, assertive) {
+  const id = assertive ? 'ariaAlert' : 'ariaStatus';
+  const el = document.getElementById(id);
+  if (!el) return;
+  // Clear first so repeated identical messages still fire
+  el.setAttribute('aria-hidden', 'true');
+  el.textContent = '';
+  requestAnimationFrame(() => {
+    el.setAttribute('aria-hidden', 'false');
+    el.textContent = msg || '\u200B';
   });
+}
 
-  const all    = [...CRITICAL, ...DAILY];
+// ── render() ─────────────────────────────────────────────────────
+// Full UI repaint. Called after any state mutation.
+// Depends on: state, cfg, CRITICAL, DAILY, SYMPTOMS (all globals
+// from config.js / state.js which load before this runs).
+// Safe to call repeatedly — pure DOM writes, no side effects.
+
+function render() {
+  // Guard — if called before DOM is ready, bail silently
+  if (!document.getElementById('dateDisplay')) return;
+
+  // ── Date display ──────────────────────────────────────────────
+  document.getElementById('dateDisplay').textContent =
+    new Date().toLocaleDateString('en-US', {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+    });
+
+  // ── Stat counts ───────────────────────────────────────────────
+  const all    = [...(CRITICAL || []), ...(DAILY || [])];
   const done   = all.filter(t =>  state.tasks[t.id]).length;
   const missed = all.filter(t => !state.tasks[t.id]).length;
-  _setStatEl('statDone',   done,              'tasks done today: '   + done);
-  _setStatEl('statMissed', missed,            'tasks missed: '       + missed);
-  _setStatEl('statStreak', state.medStreak||0,'medication streak: '  + (state.medStreak||0) + ' days');
 
-  // Nag banner
-  const nagItems = (CRITICAL||[]).filter(t => !state.tasks[t.id]);
+  const statDone   = document.getElementById('statDone');
+  const statMissed = document.getElementById('statMissed');
+  const statStreak = document.getElementById('statStreak');
+
+  if (statDone)   { statDone.textContent = done;   statDone.setAttribute('aria-label', 'tasks done today: ' + done); }
+  if (statMissed) { statMissed.textContent = missed; statMissed.setAttribute('aria-label', 'tasks missed: ' + missed); }
+  if (statStreak) { statStreak.textContent = state.medStreak || 0; statStreak.setAttribute('aria-label', 'medication streak: ' + (state.medStreak || 0) + ' days'); }
+
+  // ── Nag banner ────────────────────────────────────────────────
+  const nagItems = (CRITICAL || []).filter(t => !state.tasks[t.id]);
   const banner   = document.getElementById('nagBanner');
   if (banner) {
     if (nagItems.length > 0) {
       banner.classList.add('visible');
+      const name = (typeof cfg !== 'undefined' && cfg.name) ? cfg.name : 'hey';
       const nagText = document.getElementById('nagText');
-      if (nagText) nagText.textContent = (cfg.name||'hey') + '. ' + nagItems.map(t=>t.name).join(', ') + '. Right now.';
+      if (nagText) nagText.textContent = name + '. ' + nagItems.map(t => t.name).join(', ') + '. Right now.';
       const encEl = document.getElementById('nagEncouragement');
       if (encEl && typeof getEncouragement === 'function') encEl.textContent = getEncouragement();
     } else {
@@ -47,14 +101,64 @@ function render() {
     }
   }
 
-  _renderList(CRITICAL||[], 'criticalTasks', true);
-  _renderList(DAILY||[],    'dailyTasks',    false);
+  // ── Task lists ────────────────────────────────────────────────
+  function renderTaskList(list, containerId, critical) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = (list || []).map(t => {
+      const deadline      = critical && typeof cfg !== 'undefined' && cfg.taskDeadlines && cfg.taskDeadlines[t.id];
+      const ringData      = deadline && typeof getRingData === 'function' ? getRingData(deadline, !!state.tasks[t.id]) : null;
+      const circumference = 2 * Math.PI * 12;
+      const dashOffset    = ringData ? circumference * (1 - ringData.pct) : 0;
+      const isDone        = !!state.tasks[t.id];
+      const descId        = t.sub ? 'desc-' + t.id : '';
+      const timerDescId   = ringData ? 'timer-' + t.id : '';
+      const describedBy   = [descId, timerDescId].filter(Boolean).join(' ');
 
-  // Symptom grid — delegated to symptoms/render.js
-  if (typeof renderSymptomGrid === 'function') renderSymptomGrid();
+      return `<div class="task ${isDone ? 'done' : ''} ${critical ? 'critical' : ''}"
+           role="button" tabindex="0"
+           aria-pressed="${isDone}"
+           aria-label="${escHtml(t.name)}${isDone ? ' — completed' : ' — not done'}"
+           ${describedBy ? 'aria-describedby="' + describedBy + '"' : ''}
+           onclick="toggleTask('${escHtml(t.id)}')"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTask('${escHtml(t.id)}')}">
+        <div class="ring-wrap">
+          ${deadline ? `<svg class="ring-svg" viewBox="0 0 28 28" aria-hidden="true">
+            <circle class="ring-track" cx="14" cy="14" r="12"/>
+            <circle class="ring-fill ${ringData ? ringData.cls : ''}" cx="14" cy="14" r="12"
+              data-ring-id="${t.id}"
+              stroke-dasharray="${circumference}"
+              stroke-dashoffset="${dashOffset}"/>
+          </svg>` : ''}
+          <div class="check ${isDone ? 'checked' : ''}" aria-hidden="true"></div>
+        </div>
+        <div>
+          <div class="task-name" aria-hidden="true">${escHtml(t.name)}</div>
+          ${t.sub ? `<div class="task-sub" id="${descId}">${escHtml(t.sub)}</div>` : ''}
+          ${ringData ? `<div class="task-timer ${ringData.cls}" id="${timerDescId}" data-timer-id="${t.id}" aria-live="polite">${ringData.label}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
 
-  // Mood buttons
-  ['energy','mood'].forEach(type => {
+  renderTaskList(CRITICAL || [], 'criticalTasks', true);
+  renderTaskList(DAILY    || [], 'dailyTasks',    false);
+
+  // ── Symptom grid ──────────────────────────────────────────────
+  const symptomGrid = document.getElementById('symptomGrid');
+  if (symptomGrid && typeof SYMPTOMS !== 'undefined') {
+    symptomGrid.innerHTML = (SYMPTOMS || []).map(s => {
+      const active = state.symptoms.includes(s);
+      return `<button class="sym-btn ${active ? 'active' : ''}"
+              role="checkbox"
+              aria-checked="${active}"
+              aria-label="symptom flag: ${escHtml(s)}"
+              onclick="toggleSymptom(${JSON.stringify(s)})">${escHtml(s)}</button>`;
+    }).join('');
+  }
+
+  // ── Mood buttons ──────────────────────────────────────────────
+  ['energy', 'mood'].forEach(type => {
     document.querySelectorAll(`#${type}Opts .mood-btn`).forEach(btn => {
       const active = btn.textContent === state.mood[type];
       btn.classList.toggle('active', active);
@@ -62,141 +166,26 @@ function render() {
     });
   });
 
+  // ── Notes ─────────────────────────────────────────────────────
   const notesEl = document.getElementById('symptomNotes');
-  if (notesEl) notesEl.value = state.notes || '';
+  if (notesEl && document.activeElement !== notesEl) {
+    notesEl.value = state.notes || '';
+  }
 
-  // Mini history panel
+  // ── History list (Today tab sidebar / history tab) ────────────
   try {
-    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+    const history = Store.get('tracker-history') || [];
     const histEl  = document.getElementById('historyList');
     if (histEl) {
       histEl.innerHTML = history.length === 0
         ? `<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3)">no entries yet</div>`
-        : history.slice(0,7).map(e => `
+        : history.slice(0, 7).map(e => `
           <div class="history-entry">
             <span class="history-date">${e.date}</span>
             <span>${e.done}/${e.total} tasks</span>
-            <span>mood: ${e.mood||'—'} / energy: ${e.energy||'—'}</span>
-            ${e.flags > 0 ? `<span class="history-flags">${e.flags} flag${e.flags>1?'s':''}</span>` : ''}
+            <span>mood: ${e.mood || '—'} / energy: ${e.energy || '—'}</span>
+            ${e.flags > 0 ? `<span class="history-flags">${e.flags} flag${e.flags > 1 ? 's' : ''}</span>` : ''}
           </div>`).join('');
     }
   } catch(e) {}
-}
-
-function _setStatEl(id, value, ariaLabel) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = value;
-  if (ariaLabel) el.setAttribute('aria-label', ariaLabel);
-}
-
-function _renderList(list, containerId, critical) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  container.innerHTML = list.map(t => {
-    const deadline      = critical && cfg.taskDeadlines && cfg.taskDeadlines[t.id];
-    const ringData      = deadline && typeof getRingData === 'function' ? getRingData(deadline, !!state.tasks[t.id]) : null;
-    const circumference = 2 * Math.PI * 12;
-    const dashOffset    = ringData ? circumference * (1 - ringData.pct) : 0;
-    const isDone        = !!state.tasks[t.id];
-    const descId        = t.sub    ? 'desc-'  + t.id : '';
-    const timerDescId   = ringData ? 'timer-' + t.id : '';
-    const describedBy   = [descId, timerDescId].filter(Boolean).join(' ');
-    return `
-      <div class="task ${isDone?'done':''} ${critical?'critical':''}"
-           role="button" tabindex="0"
-           aria-pressed="${isDone}"
-           aria-label="${escHtml(t.name)}${isDone?' — completed':' — not done'}"
-           ${describedBy ? 'aria-describedby="'+describedBy+'"' : ''}
-           onclick="toggleTask('${t.id}')"
-           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTask('${t.id}')}">
-        <div class="ring-wrap">
-          ${deadline ? `<svg class="ring-svg" viewBox="0 0 28 28" aria-hidden="true">
-            <circle class="ring-track" cx="14" cy="14" r="12"/>
-            <circle class="ring-fill ${ringData.cls}" cx="14" cy="14" r="12"
-              data-ring-id="${t.id}" stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}"/>
-          </svg>` : ''}
-          <div class="check ${isDone?'checked':''}" aria-hidden="true"></div>
-        </div>
-        <div>
-          <div class="task-name" aria-hidden="true">${escHtml(t.name)}</div>
-          ${t.sub ? `<div class="task-sub" id="${descId}">${escHtml(t.sub)}</div>` : ''}
-          ${ringData ? `<div class="task-timer ${ringData.cls}" id="${timerDescId}"
-                             data-timer-id="${t.id}" aria-live="polite">${ringData.label}</div>` : ''}
-        </div>
-      </div>`;
-  }).join('');
-}
-
-// ── saveAll() ─────────────────────────────────────────────────────────────
-function saveAll() {
-  const notesEl = document.getElementById('symptomNotes');
-  if (notesEl) state.notes = notesEl.value;
-  saveState();
-  saveHistoryEntry();
-  if (typeof gcalSyncOnSave === 'function') gcalSyncOnSave();
-  const c = document.getElementById('saveConfirm');
-  if (c) { c.style.display = 'block'; setTimeout(() => { c.style.display = 'none'; }, 2500); }
-  const all  = [...CRITICAL, ...DAILY];
-  const done = all.filter(t => state.tasks[t.id]).length;
-  if (typeof announce === 'function')
-    announce('Check-in saved. ' + done + ' of ' + all.length + ' tasks completed today. Mood: ' +
-             (state.mood.mood||'not set') + '. Energy: ' + (state.mood.energy||'not set') + '.');
-  if (typeof checkBadges          === 'function') checkBadges();
-  if (typeof renderPointsDisplay  === 'function') renderPointsDisplay();
-  if (typeof showCheckinMessage   === 'function') showCheckinMessage();
-}
-
-// ── toggleTask() ──────────────────────────────────────────────────────────
-function toggleTask(id) {
-  state.tasks[id] = !state.tasks[id];
-  const done = state.tasks[id];
-  const task = [...CRITICAL, ...DAILY].find(t => t.id === id);
-  const name = task ? task.name : id;
-  if (id === 'meds') {
-    state.medStreak = done
-      ? (state.medStreak||0) + 1
-      : Math.max(0, (state.medStreak||0) - 1);
-    if (typeof announce === 'function') {
-      if (done) {
-        announce(name + ' marked done. Medication streak: ' + state.medStreak + ' days.');
-        if (typeof checkStreakMilestone === 'function') checkStreakMilestone(state.medStreak);
-      } else {
-        announce(name + ' unmarked. Medication streak reset to ' + state.medStreak + '.');
-      }
-    }
-  } else {
-    if (typeof announce === 'function') announce(name + (done ? ' marked done.' : ' unmarked.'));
-  }
-  if (done && typeof celebrateTask === 'function') {
-    celebrateTask(id, name, CRITICAL.some(t => t.id === id));
-  }
-  saveState();
-  render();
-}
-
-// ── setMood() ─────────────────────────────────────────────────────────────
-function setMood(type, btn) {
-  const val = btn.textContent;
-  state.mood[type] = val;
-  if (typeof announce === 'function') announce(type + ' set to ' + val + '.');
-  document.querySelectorAll('#' + type + 'Opts .mood-btn')
-    .forEach(b => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
-  saveState();
-  render();
-}
-
-// ── toggleSymptom() ───────────────────────────────────────────────────────
-function toggleSymptom(s) {
-  const i = state.symptoms.indexOf(s);
-  if (i > -1) {
-    state.symptoms.splice(i, 1);
-    if (typeof announce === 'function') announce(s + ' symptom flag removed.');
-  } else {
-    state.symptoms.push(s);
-    if (typeof announce === 'function') announce(s + ' symptom flagged.');
-  }
-  saveState();
-  if (typeof renderSymptomGrid === 'function') renderSymptomGrid();
-  else render();
 }

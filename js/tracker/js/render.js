@@ -55,7 +55,7 @@ function applyName(name) {
 
 // ── Settings panel ────────────────────────────────────────────────────────
 // ── Tab navigation ────────────────────────────────────────────────────────
-async function switchTab(tab) {
+function switchTab(tab) {
   const tabNames = { today: 'Today', history: 'Log and appointments', stats: 'Stats', budget: 'Budget', journal: 'Journal' };
   ['today','history','stats','budget','journal'].forEach(t => {
     const tabEl  = document.getElementById('tab-' + t);
@@ -71,15 +71,15 @@ async function switchTab(tab) {
   if (tab === 'history')  renderHistory();
   if (tab === 'stats')    renderStats();
   if (tab === 'budget')   renderBudgetTab();
-  if (tab === 'journal')  await renderJournalList();
+  if (tab === 'journal')  renderJournalList();
 }
 
 // ── Appointments data ────────────────────────────────────────────────────
 function loadAppts() {
-  try { return Store.get('tracker-appts') || []; } catch(e) { return []; }
+  try { return JSON.parse(localStorage.getItem('tracker-appts') || '[]'); } catch(e) { return []; }
 }
 function saveAppts(appts) {
-  try { Store.set('tracker-appts', appts); } catch(e) {}
+  try { localStorage.setItem('tracker-appts', JSON.stringify(appts)); } catch(e) {}
 }
 
 function openApptModal(id) {
@@ -225,7 +225,7 @@ function scheduleApptReminders(appt) {
 
 // ── Pre-appointment summary ───────────────────────────────────────────────
 function generateSummary(apptTitle) {
-  const history = Store.get('tracker-history') || [];
+  const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
   const last7   = history.slice(0, 7);
   const name    = cfg.name || 'Patient';
   const today   = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
@@ -242,7 +242,7 @@ function generateSummary(apptTitle) {
   const flagCounts = {};
   last7.forEach(e => {
     try {
-      const day = Store.get('tracker-today', e.date) || {};
+      const day = JSON.parse(localStorage.getItem('tracker-' + e.date) || '{}');
       (day.symptoms || []).forEach(s => { flagCounts[s] = (flagCounts[s] || 0) + 1; });
     } catch(_) {}
   });
@@ -351,7 +351,7 @@ function renderHistory() {
   // Render check-in history
   try {
     if (!el) return;
-    const history = Store.get('tracker-history') || [];
+    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     el.innerHTML = history.length === 0
       ? `<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);padding:8px 0">no entries yet — save a check-in on the today tab</div>`
       : history.map(e => `
@@ -379,7 +379,7 @@ function renderStats() {
   renderMonthlySummaryCard();
   renderSpendMoodCorrelation();
   try {
-    const history = Store.get('tracker-history') || [];
+    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     document.getElementById('bigDaysLogged').textContent = history.length;
     if (history.length > 0) {
       const avgDone  = (history.reduce((s,e) => s + (e.done / (e.total || 1)), 0) / history.length * 100).toFixed(0);
@@ -441,10 +441,29 @@ function renderSettingsPanel() {
   `).join('');
 }
 
-// escHtml() is defined in core.js
+function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;')
+    .replace(/\//g,'&#x2F;');
+}
 
 // Sanitise user input — strips dangerous patterns before storage
-// sanitiseInput() is defined in core.js
+function sanitiseInput(str, maxLen = 200) {
+  if (!str) return '';
+  return String(str)
+    .trim()
+    .slice(0, maxLen)
+    // Strip script tags and event handlers
+    .replace(/<script[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/data\s*:/gi, '');
+}
 
 // Safe number parser — returns 0 for invalid input
 function safeFloat(val, min = 0, max = 999999) {

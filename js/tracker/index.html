@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="app-version" content="4.5">
+  <meta name="app-version" content="4.0">
   <meta name="theme-color" content="#0c0c0c">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,14 +21,11 @@
 
   <!-- Icons -->
   <link rel="icon" type="image/png" sizes="48x48"   href="./icons/icon-48.png">
-  <link rel="icon" type="image/png" sizes="96x96"   href="./icons/icon-96.png">
-  <link rel="icon" type="image/png" sizes="128x128" href="./icons/icon-128.png">
-  <link rel="apple-touch-icon" sizes="192x192"      href="./icons/icon-192.png">
-  <link rel="apple-touch-icon" sizes="512x512"      href="./icons/icon-512.png">
+  <link rel="apple-touch-icon" sizes="192x192"       href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512"       href="./icons/icon-512.png">
 
   <!-- Styles — load order matters -->
   <link rel="stylesheet" href="./css/tokens.css">
-  <link rel="stylesheet" href="./css/themes.css">
   <link rel="stylesheet" href="./css/layout.css">
   <link rel="stylesheet" href="./css/components.css">
   <link rel="stylesheet" href="./css/animations.css">
@@ -184,11 +181,6 @@
             aria-controls="menuOverlay">
       <span aria-hidden="true">☰</span>
     </button>
-    <button class="nav-lightdark-btn" id="navLightDarkBtn"
-            onclick="toggleLightDark()"
-            aria-label="Toggle light/dark mode">
-      <span id="navLightDarkIcon">◑</span>
-    </button>
   </div>
 </nav>
 
@@ -207,45 +199,16 @@
       <div class="menu-section-title">appearance</div>
       <div class="menu-row">
         <span class="menu-row-label">theme</span>
+        <div class="theme-pill" role="radiogroup" aria-label="Colour theme" style="gap:2px">
+          <button class="theme-opt" id="menuThemeSystem" onclick="setTheme('system');updateMenuThemeUI()"
+                  role="radio" aria-checked="true">system</button>
+          <button class="theme-opt" id="menuThemeLight"  onclick="setTheme('light');updateMenuThemeUI()"
+                  role="radio" aria-checked="false">light</button>
+          <button class="theme-opt" id="menuThemeDark"   onclick="setTheme('dark');updateMenuThemeUI()"
+                  role="radio" aria-checked="false">dark</button>
+        </div>
       </div>
-      <div class="bauhaus-theme-grid" role="radiogroup" aria-label="Colour theme" id="menuThemeGrid">
-        <button class="bauhaus-theme-swatch" id="menuThemeWerkstatt"
-                onclick="setTheme('werkstatt')" role="radio" aria-checked="true"
-                aria-label="Werkstatt — warm dark amber">
-          <span class="swatch-dot" style="background:#d4a853"></span>
-          <span class="swatch-name">werkstatt</span>
-          <span class="swatch-sub">warm dark</span>
-        </button>
-        <button class="bauhaus-theme-swatch" id="menuThemeBreuer"
-                onclick="setTheme('breuer')" role="radio" aria-checked="false"
-                aria-label="Breuer — warm cream and terracotta">
-          <span class="swatch-dot" style="background:#b83a12"></span>
-          <span class="swatch-name">breuer</span>
-          <span class="swatch-sub">warm light</span>
-        </button>
-        <button class="bauhaus-theme-swatch" id="menuThemeKandinsky"
-                onclick="setTheme('kandinsky')" role="radio" aria-checked="false"
-                aria-label="Kandinsky — midnight blue and yellow">
-          <span class="swatch-dot" style="background:#f0c832"></span>
-          <span class="swatch-name">kandinsky</span>
-          <span class="swatch-sub">blue + yellow</span>
-        </button>
-        <button class="bauhaus-theme-swatch" id="menuThemeKlee"
-                onclick="setTheme('klee')" role="radio" aria-checked="false"
-                aria-label="Klee — earthy warm terracotta">
-          <span class="swatch-dot" style="background:#c86e38"></span>
-          <span class="swatch-name">klee</span>
-          <span class="swatch-sub">earthy warm</span>
-        </button>
-        <button class="bauhaus-theme-swatch" id="menuThemeItten"
-                onclick="setTheme('itten')" role="radio" aria-checked="false"
-                aria-label="Itten — high contrast monochrome">
-          <span class="swatch-dot" style="background:#fff;border:1px solid #444"></span>
-          <span class="swatch-name">itten</span>
-          <span class="swatch-sub">high contrast</span>
-        </button>
-      </div>
-      <div class="menu-row" style="margin-top:var(--sp-4)">
+      <div class="menu-row">
         <span class="menu-row-label">text size</span>
         <div class="theme-pill" role="radiogroup" aria-label="Text size" style="gap:2px">
           <button class="theme-opt" id="menuSizeSmall"  onclick="setTextSize('small')"
@@ -360,9 +323,6 @@
            style="flex-wrap:wrap;height:auto;padding:4px;gap:3px">
         <button class="theme-opt active" id="menuFontDefault"
                 onclick="setFont('default')" role="radio" aria-checked="true">system</button>
-        <button class="theme-opt" id="menuFontJost"
-                onclick="setFont('jost')" role="radio" aria-checked="false"
-                style="font-family:'Jost',sans-serif">jost</button>
         <button class="theme-opt" id="menuFontIbmplexmono"
                 onclick="setFont('ibmplexmono')" role="radio" aria-checked="false"
                 style="font-family:'IBM Plex Mono',monospace">ibm mono</button>
@@ -674,64 +634,33 @@
       <div class="settings-segment-header" style="margin-top:12px;margin-bottom:10px;border:none;padding:0">
         <h2 id="seg-appearance" style="color:var(--text2)">appearance</h2>
       </div>
-
-      <div style="margin-bottom:4px">
-        <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">theme</div>
-        <div class="bauhaus-theme-grid" role="radiogroup" aria-label="Colour theme" id="settingsThemeGrid">
-          <button class="bauhaus-theme-swatch" id="settingsThemeWerkstatt"
-                  onclick="setTheme('werkstatt')" role="radio" aria-checked="true"
-                  aria-label="Werkstatt — warm dark">
-            <span class="swatch-dot" style="background:#d4a853"></span>
-            <span class="swatch-name">werkstatt</span>
-            <span class="swatch-sub">warm dark</span>
-          </button>
-          <button class="bauhaus-theme-swatch" id="settingsThemeBreuer"
-                  onclick="setTheme('breuer')" role="radio" aria-checked="false"
-                  aria-label="Breuer — warm light">
-            <span class="swatch-dot" style="background:#b83a12"></span>
-            <span class="swatch-name">breuer</span>
-            <span class="swatch-sub">warm light</span>
-          </button>
-          <button class="bauhaus-theme-swatch" id="settingsThemeKandinsky"
-                  onclick="setTheme('kandinsky')" role="radio" aria-checked="false"
-                  aria-label="Kandinsky — blue and yellow">
-            <span class="swatch-dot" style="background:#f0c832"></span>
-            <span class="swatch-name">kandinsky</span>
-            <span class="swatch-sub">blue + yellow</span>
-          </button>
-          <button class="bauhaus-theme-swatch" id="settingsThemeKlee"
-                  onclick="setTheme('klee')" role="radio" aria-checked="false"
-                  aria-label="Klee — earthy warm">
-            <span class="swatch-dot" style="background:#c86e38"></span>
-            <span class="swatch-name">klee</span>
-            <span class="swatch-sub">earthy warm</span>
-          </button>
-          <button class="bauhaus-theme-swatch" id="settingsThemeItten"
-                  onclick="setTheme('itten')" role="radio" aria-checked="false"
-                  aria-label="Itten — high contrast">
-            <span class="swatch-dot" style="background:#fff;border:1px solid #444"></span>
-            <span class="swatch-name">itten</span>
-            <span class="swatch-sub">high contrast</span>
-          </button>
+      <div class="theme-row">
+        <div class="theme-pill" role="radiogroup" aria-label="Colour theme">
+          <button class="theme-opt" id="themeOptSystem" onclick="setTheme('system')"
+                  role="radio" aria-checked="true">system</button>
+          <button class="theme-opt" id="themeOptLight"  onclick="setTheme('light')"
+                  role="radio" aria-checked="false">light</button>
+          <button class="theme-opt" id="themeOptDark"   onclick="setTheme('dark')"
+                  role="radio" aria-checked="false">dark</button>
         </div>
       </div>
 
-      <div style="margin-top:16px;margin-bottom:4px">
+      <div style="margin-top:12px;margin-bottom:4px">
         <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">font</div>
         <div class="theme-pill" role="radiogroup" aria-label="Font choice"
              style="flex-wrap:wrap;height:auto;padding:4px;gap:3px">
           <button class="theme-opt active" id="fontOptDefault"
-                  onclick="setFont('default')" role="radio" aria-checked="true">system</button>
-          <button class="theme-opt" id="fontOptJost"
-                  onclick="setFont('jost')" role="radio" aria-checked="false"
-                  style="font-family:'Jost',sans-serif">jost</button>
-          <button class="theme-opt" id="fontOptIbmplexmono"
-                  onclick="setFont('ibmplexmono')" role="radio" aria-checked="false"
-                  style="font-family:'IBM Plex Mono',monospace">ibm mono</button>
+                  onclick="setFont('default')" role="radio" aria-checked="true"
+                  style="font-family:'IBM Plex Sans',sans-serif">default</button>
+          <button class="theme-opt" id="fontOptSystem"
+                  onclick="setFont('system')" role="radio" aria-checked="false"
+                  style="font-family:system-ui,sans-serif">system</button>
           <button class="theme-opt" id="fontOptAtkinson"
-                  onclick="setFont('atkinson')" role="radio" aria-checked="false">atkinson</button>
+                  onclick="setFont('atkinson')" role="radio" aria-checked="false"
+                  style="font-family:'Atkinson Hyperlegible',sans-serif">atkinson</button>
           <button class="theme-opt" id="fontOptOpendyslexic"
-                  onclick="setFont('opendyslexic')" role="radio" aria-checked="false">opendyslexic</button>
+                  onclick="setFont('opendyslexic')" role="radio" aria-checked="false"
+                  style="font-family:'OpenDyslexic',sans-serif">opendyslexic</button>
           <button class="theme-opt" id="fontOptComic"
                   onclick="setFont('comic')" role="radio" aria-checked="false"
                   style="font-family:'Comic Sans MS',cursive">comic sans</button>
@@ -1574,7 +1503,7 @@
 </div>
 
 <div class="footer" style="text-align:center;padding:1rem;font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">
-  daily structure tracker &mdash; v4.5 &mdash; add to home screen to install
+  daily structure tracker &mdash; v4.0 &mdash; add to home screen to install
 </div>
 
 <!-- Screenshot preview modal -->
@@ -1589,7 +1518,7 @@
 </div>
 
 <!-- Recovery code modal — shown once on first PIN setup -->
-<div class="pin-modal-overlay hidden" id="recoveryCodeOverlay"
+<div class="appt-modal-overlay hidden" id="recoveryCodeOverlay"
      role="dialog" aria-modal="true" aria-labelledby="recoveryCodeTitle">
   <div class="appt-modal">
     <h3 id="recoveryCodeTitle">// your recovery code</h3>
@@ -1616,7 +1545,7 @@
 </div>
 
 <!-- Forgot PIN modal -->
-<div class="pin-modal-overlay hidden" id="forgotPINOverlay"
+<div class="appt-modal-overlay hidden" id="forgotPINOverlay"
      role="dialog" aria-modal="true" aria-labelledby="forgotPINTitle">
   <div class="appt-modal">
     <h3 id="forgotPINTitle">// reset PIN</h3>
@@ -1662,8 +1591,6 @@
 
 <!-- App modules — load order: crypto → config → state → everything else -->
 <script src="./js/crypto.js"></script>
-<script src="./js/storage.js"></script>
-<script src="./js/core.js"></script>
 <script src="./js/config.js"></script>
 <script src="./js/state.js"></script>
 <script src="./js/theme.js"></script>

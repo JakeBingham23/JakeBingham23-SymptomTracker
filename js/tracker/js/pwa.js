@@ -136,4 +136,4 @@ self.addEventListener('notificationclick', e => {
 })();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TODAY is defined in core.js
+const TODAY = new Date().toISOString().split('T')[0];

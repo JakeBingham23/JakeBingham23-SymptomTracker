@@ -22,27 +22,13 @@ const JOURNAL_PROMPTS = [
   "What's been looping in your head that you haven't written down yet?",
 ];
 
-// ── Storage: SecureStore when unlocked, localStorage fallback ────────────
-async function getJournalEntries() {
-  try {
-    if (typeof SecureStore !== 'undefined' && SecureStore.isUnlocked()) {
-      const val = await SecureStore.getItem(JOURNAL_KEY);
-      if (val !== null) return Array.isArray(val) ? val : JSON.parse(val);
-    }
-  } catch(e) {}
-  // Fallback: unencrypted installs or pre-migration
-  try { return Store.get(JOURNAL_KEY) || []; }
+function getJournalEntries() {
+  try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || '[]'); }
   catch(e) { return []; }
 }
 
-async function saveJournalEntries(entries) {
-  try {
-    if (typeof SecureStore !== 'undefined' && SecureStore.isUnlocked()) {
-      await SecureStore.setItem(JOURNAL_KEY, entries);
-      return;
-    }
-  } catch(e) {}
-  Store.set(JOURNAL_KEY, entries);
+function saveJournalEntries(entries) {
+  localStorage.setItem(JOURNAL_KEY, JSON.stringify(entries));
 }
 
 // ── Composer ──────────────────────────────────────────────────────────────
@@ -93,7 +79,7 @@ function closeJournalComposer() {
   const composer = document.getElementById('journalComposer');
   if (composer) composer.style.display = 'none';
   stopVoiceInput();
-  Store.remove(JOURNAL_DRAFT_KEY);
+  localStorage.removeItem(JOURNAL_DRAFT_KEY);
   _editingEntryId = null;
 }
 
@@ -106,7 +92,7 @@ function autoSaveDraft(text) {
   // Autosave draft
   clearTimeout(_draftTimer);
   _draftTimer = setTimeout(() => {
-    Store.set(JOURNAL_DRAFT_KEY, text);
+    localStorage.setItem(JOURNAL_DRAFT_KEY, text);
   }, 1000);
 }
 
@@ -114,12 +100,12 @@ function countWords(text) {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
 
-async function saveJournalEntry() {
+function saveJournalEntry() {
   const textarea = document.getElementById('journalTextarea');
   const text = sanitiseInput(textarea?.value || '', 10000);
   if (!text) { showToast('write something first'); return; }
 
-  const entries = await getJournalEntries();
+  const entries = getJournalEntries();
   const entry = {
     id:     _editingEntryId || 'j_' + Date.now(),
     date:   TODAY,
@@ -141,23 +127,23 @@ async function saveJournalEntry() {
     entries.unshift(entry);
   }
 
-  await saveJournalEntries(entries);
+  saveJournalEntries(entries);
   closeJournalComposer();
-  await renderJournalList();
+  renderJournalList();
   announce('Journal entry saved. ' + countWords(text) + ' words.');
   hap('task');
   playSuccess();
 }
 
-async function deleteJournalEntry(id) {
+function deleteJournalEntry(id) {
   if (!confirm('Delete this journal entry?')) return;
-  await saveJournalEntries((await getJournalEntries()).filter(e => e.id !== id));
-  await renderJournalList();
+  saveJournalEntries(getJournalEntries().filter(e => e.id !== id));
+  renderJournalList();
   announce('Journal entry deleted.');
 }
 
-async function editJournalEntry(id) {
-  const entry = (await getJournalEntries()).find(e => e.id === id);
+function editJournalEntry(id) {
+  const entry = getJournalEntries().find(e => e.id === id);
   if (!entry) return;
   openJournalComposer(entry.text, id);
   document.getElementById('journalComposer')?.scrollIntoView({ behavior: 'smooth' });
@@ -261,14 +247,14 @@ let _journalFilter = '';
 
 function filterJournalEntries(query) {
   _journalFilter = query.toLowerCase().trim();
-  renderJournalList(); // async — fire and forget is fine here
+  renderJournalList();
 }
 
-async function renderJournalList() {
+function renderJournalList() {
   const el = document.getElementById('journalList');
   if (!el) return;
 
-  let entries = await getJournalEntries();
+  let entries = getJournalEntries();
 
   if (_journalFilter) {
     entries = entries.filter(e =>
@@ -342,8 +328,8 @@ function toggleEntryExpand(id) {
 }
 
 // ── Journal in pre-appointment summary ────────────────────────────────────
-async function getRecentJournalForSummary() {
-  const entries = await getJournalEntries();
+function getRecentJournalForSummary() {
+  const entries = getJournalEntries();
   const last3   = entries.slice(0, 3);
   if (last3.length === 0) return '';
   return '\n\nrecent journal entries:\n' + last3.map(e => {

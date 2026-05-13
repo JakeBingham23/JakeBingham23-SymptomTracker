@@ -10,10 +10,10 @@ const QUOTE_BLOCKED_KEY = 'tracker-quote-blocked';
 const ANTHROPIC_KEY_K = 'tracker-anthropic-key';
 // Migrate API key from localStorage to sessionStorage (one-time)
 (function migrateApiKey() {
-  const old = localStorage.getItem(ANTHROPIC_KEY_K); // one-time migration
+  const old = localStorage.getItem(ANTHROPIC_KEY_K);
   if (old) {
-    Store.setSession(ANTHROPIC_KEY_K, old);
-    localStorage.removeItem(ANTHROPIC_KEY_K); // intentional: clearing old plaintext key
+    sessionStorage.setItem(ANTHROPIC_KEY_K, old);
+    localStorage.removeItem(ANTHROPIC_KEY_K);
   }
 })();
 
@@ -77,7 +77,7 @@ const OFFLINE_QUOTES = {
 };
 
 function getOfflineQuote(state) {
-  const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
+  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
   let pool = OFFLINE_QUOTES[state] || OFFLINE_QUOTES.generic;
   const available = pool.filter(q => !blocked.includes(q));
   if (available.length === 0) return pool[Math.floor(Math.random() * pool.length)];
@@ -98,7 +98,7 @@ function getDayState() {
 
 // ── AI quote generation ───────────────────────────────────────────────────
 async function generateAIQuote(context) {
-  const key = Store.getSession(ANTHROPIC_KEY_K);
+  const key = sessionStorage.getItem(ANTHROPIC_KEY_K);
   if (!key) return null;
   const prefs = cfg.notifPrefs || {};
   if (prefs.aiQuotesEnabled === false) return null;
@@ -163,7 +163,7 @@ async function loadQuoteOfDay(forceRefresh) {
   // Check cache (regenerate once per day or on force)
   if (!forceRefresh) {
     try {
-      const cached = Store.get(QUOTE_KEY);
+      const cached = JSON.parse(localStorage.getItem(QUOTE_KEY) || 'null');
       if (cached && cached.date === TODAY) {
         showQuote(cached.text, cached.source, cached.liked);
         return;
@@ -176,7 +176,7 @@ async function loadQuoteOfDay(forceRefresh) {
   if (textEl)  textEl.style.display  = 'none';
   if (metaEl)  metaEl.style.display  = 'none';
 
-  const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
+  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
   let text = null, source = 'daily reminder', method = 'rag';
 
   // Build context for RAG
@@ -201,7 +201,7 @@ async function loadQuoteOfDay(forceRefresh) {
   }
 
   // Cache it
-  Store.set(QUOTE_KEY, { date: TODAY, text, source, liked: false });
+  localStorage.setItem(QUOTE_KEY, JSON.stringify({ date: TODAY, text, source, liked: false }));
   showQuote(text, source, false);
   announce('Daily message: ' + text);
 }
@@ -243,11 +243,11 @@ function refreshQuote() {
 
 function likeQuote() {
   try {
-    const cached = Store.get(QUOTE_KEY);
+    const cached = JSON.parse(localStorage.getItem(QUOTE_KEY) || 'null');
     if (!cached) return;
     const wasLiked = cached.liked;
     cached.liked = !wasLiked;
-    Store.set(QUOTE_KEY, cached);
+    localStorage.setItem(QUOTE_KEY, JSON.stringify(cached));
     if (!wasLiked) saveFavQuote(cached.text);
     showQuote(cached.text, cached.source, cached.liked);
     announce(cached.liked ? 'Quote saved to favourites.' : 'Quote removed from favourites.');
@@ -259,7 +259,7 @@ function saveApiKey() {
   const key = document.getElementById('anthropicKey')?.value?.trim();
   if (!key) { apiKeyStatus('enter a key first', 'var(--danger)'); return; }
   if (!key.startsWith('sk-ant-')) { apiKeyStatus('key should start with sk-ant-', 'var(--warning)'); return; }
-  Store.setSession(ANTHROPIC_KEY_K, key);
+  sessionStorage.setItem(ANTHROPIC_KEY_K, key);
   apiKeyStatus('key saved ✓', 'var(--success)');
   announce('API key saved.');
 }
@@ -278,7 +278,7 @@ function saveQuotePrefs() {
 function syncQuoteSettingsUI() {
   const keyEl = document.getElementById('anthropicKey');
   if (keyEl) {
-    const stored = Store.getSession(ANTHROPIC_KEY_K);
+    const stored = sessionStorage.getItem(ANTHROPIC_KEY_K);
     if (stored) { keyEl.value = stored; apiKeyStatus('key saved ✓', 'var(--success)'); }
   }
   const toggleEl = document.getElementById('aiQuotesEnabled');
@@ -287,29 +287,29 @@ function syncQuoteSettingsUI() {
 
 // ── Favourites ────────────────────────────────────────────────────────────
 function getFavQuotes() {
-  try { return Store.get(QUOTE_FAVS_KEY) || []; } catch(e) { return []; }
+  try { return JSON.parse(localStorage.getItem(QUOTE_FAVS_KEY) || '[]'); } catch(e) { return []; }
 }
 
 function saveFavQuote(text) {
   const favs = getFavQuotes();
   if (!favs.includes(text)) {
     favs.unshift(text);
-    Store.set(QUOTE_FAVS_KEY, favs.slice(0, 50));
+    localStorage.setItem(QUOTE_FAVS_KEY, JSON.stringify(favs.slice(0, 50)));
   }
 }
 
 function removeFavQuote(idx) {
   const favs = getFavQuotes();
   favs.splice(idx, 1);
-  Store.set(QUOTE_FAVS_KEY, favs);
+  localStorage.setItem(QUOTE_FAVS_KEY, JSON.stringify(favs));
   renderFavQuotes();
 }
 
 function blockQuote(text) {
-  const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
+  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
   if (!blocked.includes(text)) {
     blocked.push(text);
-    Store.set(QUOTE_BLOCKED_KEY, blocked);
+    localStorage.setItem(QUOTE_BLOCKED_KEY, JSON.stringify(blocked));
   }
 }
 

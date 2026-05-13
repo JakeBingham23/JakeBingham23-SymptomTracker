@@ -23,14 +23,14 @@ const DEFAULT_SYMPTOMS = [
 // ── User config ───────────────────────────────────────────────────────────
 function loadConfig() {
   try {
-    const raw = localStorage.getItem('tracker-config'); // Store not loaded yet at parse time
+    const raw = localStorage.getItem('tracker-config');
     if (raw) return JSON.parse(raw);
   } catch(e) {}
   return null;
 }
 
 function saveConfig(cfg) {
-  try { localStorage.setItem('tracker-config', JSON.stringify(cfg)); Store.set && Store.set('tracker-config', cfg); } catch(e) {}
+  try { localStorage.setItem('tracker-config', JSON.stringify(cfg)); } catch(e) {}
 }
 
 let cfg = loadConfig() || {
@@ -72,9 +72,9 @@ let CRITICAL  = cfg.critical  || DEFAULT_CRITICAL;
 let DAILY     = cfg.daily     || DEFAULT_DAILY;
 let SYMPTOMS  = cfg.symptoms  || DEFAULT_SYMPTOMS;
 
+// ── Font system ───────────────────────────────────────────────────────────
 // ── Font loading registry ─────────────────────────────────────────────────
 const FONT_SOURCES = {
-  jost:         'https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap',
   ibmplexmono:  'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap',
   atkinson:     'https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap',
   opendyslexic: 'https://fonts.cdnfonts.com/css/opendyslexic',
@@ -84,16 +84,17 @@ const _loadedFonts = new Set();
 async function loadFontIfNeeded(font) {
   if (!FONT_SOURCES[font] || _loadedFonts.has(font)) return;
   return new Promise((resolve) => {
-    const link   = document.createElement('link');
-    link.rel     = 'stylesheet';
-    link.href    = FONT_SOURCES[font];
-    link.onload  = () => { _loadedFonts.add(font); resolve(); };
-    link.onerror = () => resolve();
+    const link  = document.createElement('link');
+    link.rel    = 'stylesheet';
+    link.href   = FONT_SOURCES[font];
+    link.onload = () => { _loadedFonts.add(font); resolve(); };
+    link.onerror = () => resolve(); // fail silently, fallback to system
     document.head.appendChild(link);
   });
 }
 
 async function applyFont(font) {
+  // Load font on demand if needed
   if (font && FONT_SOURCES[font]) await loadFontIfNeeded(font);
   const root = document.documentElement;
   root.removeAttribute('data-font');
@@ -101,35 +102,30 @@ async function applyFont(font) {
   updateFontUI(font || 'default');
 }
 
-// setFont is the canonical entry point — theme.js defers to this
 async function setFont(font) {
-  cfg.font     = font;           // top-level key (v4.1+)
-  cfg.a11y     = cfg.a11y || {};
-  cfg.a11y.font = font;          // keep legacy key in sync
+  cfg.a11y = cfg.a11y || {};
+  cfg.a11y.font = font;
   saveConfig(cfg);
   await applyFont(font);
-  if (typeof announce === 'function')
-    announce('Font changed to ' + (font === 'default' ? 'system default' : font) + '.');
+  announce('Font changed to ' + (font === 'default' ? 'system default' : font) + '.');
 }
 
 function updateFontUI(font) {
-  const f = font || 'default';
-  ['default','jost','ibmplexmono','atkinson','opendyslexic','comic','mono'].forEach(k => {
-    const key = k.charAt(0).toUpperCase() + k.slice(1);
-    [
-      document.getElementById('fontOpt'  + key),
-      document.getElementById('menuFont' + key),
-    ].forEach(el => {
-      if (!el) return;
-      el.classList.toggle('active', k === f);
-      el.setAttribute('aria-checked', String(k === f));
-    });
+  ['default','ibmplexmono','atkinson','opendyslexic','comic','mono'].forEach(f => {
+    const key = f.charAt(0).toUpperCase() + f.slice(1);
+
+    // Settings page
+    const el  = document.getElementById('fontOpt' + key);
+    if (el) {
+      el.classList.toggle('active', f === font);
+      el.setAttribute('aria-checked', f === font ? 'true' : 'false');
+    }
+
+    // Hamburger menu
+    const menuEl = document.getElementById('menuFont' + key);
+    if (menuEl) {
+      menuEl.classList.toggle('active', f === font);
+      menuEl.setAttribute('aria-checked', f === font ? 'true' : 'false');
+    }
   });
 }
-
-// Ensure cfg.theme is a valid Bauhaus theme name
-if (!cfg.theme || ['system','light','dark'].includes(cfg.theme)) {
-  // Migrate old system/dark → werkstatt, old light → breuer
-  cfg.theme = cfg.theme === 'light' ? 'breuer' : 'werkstatt';
-}
-if (!cfg.font) cfg.font = cfg.a11y?.font || 'default';

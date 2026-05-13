@@ -14,10 +14,10 @@ const TASK_POINTS  = 10;   // per task completion
 const STREAK_BONUS = 5;    // extra per day for streak continuation
 const ALL_DONE_BONUS = 25; // bonus for all non-negotiables
 
-function getPoints()  { try { return Store.get(POINTS_KEY) || 0; } catch(e) { return 0; } }
+function getPoints()  { try { return JSON.parse(localStorage.getItem(POINTS_KEY) || '0'); } catch(e) { return 0; } }
 function addPoints(n) {
   const total = getPoints() + n;
-  Store.set(POINTS_KEY, total);
+  localStorage.setItem(POINTS_KEY, JSON.stringify(total));
   return total;
 }
 
@@ -45,8 +45,8 @@ const BADGE_DEFS = [
   { id: 'appointment',   icon: '🏥', name: 'prepared',       desc: 'Use pre-appointment summary' },
 ];
 
-function getBadges()    { try { return Store.get(BADGES_KEY) || {}; } catch(e) { return {}; } }
-function saveBadges(b)  { Store.set(BADGES_KEY, b); }
+function getBadges()    { try { return JSON.parse(localStorage.getItem(BADGES_KEY) || '{}'); } catch(e) { return {}; } }
+function saveBadges(b)  { localStorage.setItem(BADGES_KEY, JSON.stringify(b)); }
 
 function earnBadge(id) {
   const badges = getBadges();
@@ -253,7 +253,7 @@ function getEncouragement() {
 
 // ── Weekly summary ────────────────────────────────────────────────────────
 function generateWeeklySummary() {
-  const history = Store.get('tracker-history') || [];
+  const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
   const last7   = history.slice(0, 7);
   if (last7.length === 0) return null;
   const avgDone  = (last7.reduce((s,e) => s + (e.done/(e.total||1)), 0) / last7.length * 100).toFixed(0);
@@ -284,7 +284,7 @@ function renderWeeklySummaryCard() {
 
 // ── Monthly summary ────────────────────────────────────────────────────────
 function generateMonthlySummary() {
-  const history = Store.get('tracker-history') || [];
+  const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
   if (history.length === 0) return null;
   const now     = new Date();
   const month   = now.getMonth();

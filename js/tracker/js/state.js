@@ -16,9 +16,9 @@ function getStreakKey() { return 'tracker-med-streak'; }
 
 function loadState() {
   try {
-    const raw = Store.get('tracker-today');
-    if (raw) Object.assign(state, typeof raw === 'object' ? raw : JSON.parse(raw));
-    const streak = Store.get('tracker-med-streak');
+    const raw = localStorage.getItem(getKey(TODAY));
+    if (raw) Object.assign(state, JSON.parse(raw));
+    const streak = localStorage.getItem(getStreakKey());
     if (streak) state.medStreak = parseInt(streak) || 0;
   } catch(e) {}
   render();
@@ -26,10 +26,10 @@ function loadState() {
 
 function saveState() {
   try {
-    Store.set('tracker-today', state);
+    localStorage.setItem(getKey(TODAY), JSON.stringify(state));
     // persist streak against any meds task
     const hasMeds = CRITICAL.some(t => t.id === 'meds');
-    if (hasMeds) Store.set('tracker-med-streak', String(state.medStreak));
+    if (hasMeds) localStorage.setItem(getStreakKey(), String(state.medStreak));
   } catch(e) {}
 }
 
@@ -117,10 +117,10 @@ function saveHistoryEntry() {
     flags: state.symptoms.length
   };
   try {
-    const existing = Store.get('tracker-history') || [];
+    const existing = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     const filtered = existing.filter(e => e.date !== TODAY);
     filtered.unshift(entry);
-    Store.set('tracker-history', filtered.slice(0, 14));
+    localStorage.setItem('tracker-history', JSON.stringify(filtered.slice(0, 14)));
   } catch(e) {}
 }
 

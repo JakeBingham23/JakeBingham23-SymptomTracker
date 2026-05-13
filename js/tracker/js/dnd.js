@@ -6,7 +6,7 @@
 const DND_KEY = 'tracker-dnd';
 
 function getDNDConfig() {
-  try { return Store.get(DND_KEY) || {
+  try { return JSON.parse(localStorage.getItem(DND_KEY) || 'null') || {
     enabled: false,
     days: [true,true,true,true,true,true,true],
     windows: []
@@ -14,7 +14,7 @@ function getDNDConfig() {
 }
 
 function saveDNDConfig(dnd) {
-  Store.set(DND_KEY, dnd);
+  localStorage.setItem(DND_KEY, JSON.stringify(dnd));
 }
 
 function isDNDActive() {

@@ -106,9 +106,8 @@ const lockScreen = (() => {
     try {
       await SecureStore.setupPIN(pin);
 
-      // Offer WebAuthn after PIN is set — only on valid contexts (HTTPS or localhost)
-      const contextOk = SecureStore.isWebAuthnAvailable();
-      const available = contextOk && await (
+      // Offer WebAuthn after PIN is set — fully optional, never throws
+      const available = await (
         window.PublicKeyCredential
           ?.isUserVerifyingPlatformAuthenticatorAvailable?.()
           .catch(() => false)
@@ -187,11 +186,12 @@ const lockScreen = (() => {
       const result = await SecureStore.unlockWithWebAuthn();
 
       if (result.needsPIN === false) {
+        // PRF success — key derived from fingerprint, fully unlocked
         announce('Biometric unlock successful.');
         dismiss();
       } else {
         // Presence-only — biometric verified but PIN still needed for key
-        setError('unlockPINError', 'biometric verified — enter your PIN to decrypt');
+        setError('unlockPINError', 'biometric verified — enter PIN to decrypt');
         if (btn) btn.style.display = 'none';
         announce('Biometric verified. Enter your PIN to decrypt your data.');
       }
@@ -199,11 +199,6 @@ const lockScreen = (() => {
       if (btn) { btn.textContent = 'fingerprint / face unlock'; btn.disabled = false; }
       if (e.name === 'NotAllowedError' || e.name === 'AbortError') {
         // User cancelled — silent
-      } else if (e.message && e.message.includes('HTTPS')) {
-        // IP address / non-HTTPS context — explain clearly
-        setError('unlockPINError', 'biometric needs HTTPS domain — use PIN');
-        if (btn) btn.style.display = 'none';
-        announce('Biometric unlock requires HTTPS. Use your PIN instead.');
       } else {
         setError('unlockPINError', 'biometric failed — use your PIN');
         announce('Biometric failed. Please use your PIN.');
@@ -253,15 +248,13 @@ const lockScreen = (() => {
       buildPad('unlockPINPad');
       updateDots('unlockPINDots', 0);
 
-      // Check biometric availability — requires credential stored AND valid context
-      const hasBio    = await idbGet('__webauthn_cred') !== null;
-      const canUseBio = hasBio && SecureStore.isWebAuthnAvailable();
-      const btn       = document.getElementById('biometricBtn');
-      if (btn && canUseBio) {
+      // Check biometric availability
+      const hasBio = await idbGet('__webauthn_cred') !== null;
+      const btn    = document.getElementById('biometricBtn');
+      if (btn && hasBio) {
         btn.style.display = 'block';
+        // Auto-trigger biometric after a moment
         setTimeout(() => tryBiometric(), 500);
-      } else if (btn) {
-        btn.style.display = 'none';
       }
 
       // Show forgot PIN link if a recovery code was set up

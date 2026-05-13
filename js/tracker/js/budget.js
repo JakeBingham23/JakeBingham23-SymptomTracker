@@ -12,24 +12,24 @@ const CATEGORY_ICONS = {
 };
 
 function getBudgetConfig() {
-  try { return Store.get(BUDGET_KEY) || {monthly: 0}; }
+  try { return JSON.parse(localStorage.getItem(BUDGET_KEY) || '{"monthly":0}'); }
   catch(e) { return { monthly: 0 }; }
 }
 
 function getSpends() {
-  try { return Store.get(SPEND_KEY) || []; }
+  try { return JSON.parse(localStorage.getItem(SPEND_KEY) || '[]'); }
   catch(e) { return []; }
 }
 
 function saveSpends(spends) {
-  Store.set(SPEND_KEY, spends);
+  localStorage.setItem(SPEND_KEY, JSON.stringify(spends));
 }
 
 function saveMonthlyBudget() {
   const val = parseFloat(document.getElementById('monthlyBudgetSettings')?.value || document.getElementById('monthlyBudget')?.value || '0');
   const c = getBudgetConfig();
   c.monthly = val;
-  Store.set(BUDGET_KEY, c);
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
   renderBudgetTab();
   announce('Monthly budget set to $' + val.toFixed(2));
   showToast('budget saved ✓');
@@ -265,7 +265,7 @@ function saveBucketLimits() {
   if (monthly) {
     const c = getBudgetConfig();
     c.monthly = monthly;
-    Store.set(BUDGET_KEY, c);
+    localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
   }
   renderBucketCards();
   renderDailyCard();
@@ -278,7 +278,7 @@ function saveBigSpendThreshold() {
   const val = parseFloat(document.getElementById('bigSpendThreshold')?.value || '50');
   const c = getBudgetConfig();
   c.bigSpendThreshold = val;
-  Store.set(BUDGET_KEY, c);
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(c));
   showToast('big purchase flag set to $' + val.toFixed(0));
   announce('Big purchase flag set to $' + val.toFixed(0));
 }
