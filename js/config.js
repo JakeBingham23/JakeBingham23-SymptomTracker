@@ -43,6 +43,7 @@ let cfg = loadConfig() || {
   tgChatId: '',
   windowCloseTime: '',
   taskDeadlines: {},
+  taskReminders: {},
   customTimers: []
 };
 // Ensure older saved configs get new keys
@@ -54,6 +55,7 @@ if (!cfg.tgToken)            cfg.tgToken = '';
 if (!cfg.tgChatId)           cfg.tgChatId = '';
 if (!cfg.windowCloseTime)    cfg.windowCloseTime = '';
 if (!cfg.taskDeadlines)      cfg.taskDeadlines = {};
+if (!cfg.taskReminders)      cfg.taskReminders = {};
 if (!cfg.customTimers)       cfg.customTimers = [];
 if (!cfg.a11y)               cfg.a11y = { textSize: 'normal', highContrast: false, reduceMotion: false, largeTouchTargets: false, font: 'default' };
 if (!cfg.notifPrefs) cfg.notifPrefs = {

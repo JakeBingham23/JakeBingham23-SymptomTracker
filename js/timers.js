@@ -176,14 +176,32 @@ function renderTaskDeadlineSettings() {
   const el = document.getElementById('taskDeadlineSettings');
   if (!el) return;
   el.innerHTML = CRITICAL.map(t => `
-    <div class="settings-task-row" style="margin-bottom:6px">
-      <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text2);flex:1">${escHtml(t.name)}</span>
-      <input type="time" data-task-id="${t.id}"
-        value="${cfg.taskDeadlines[t.id] || ''}"
-        onchange="setTaskDeadline('${t.id}', this.value)"
-        style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:5px 8px;outline:none">
+    <div class="settings-task-row" style="flex-direction:column;align-items:flex-start;gap:6px;padding:10px 0;border-bottom:0.5px solid var(--border)">
+      <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text);font-weight:500">${escHtml(t.name)}</span>
+      <div style="display:flex;gap:10px;width:100%;flex-wrap:wrap">
+        <label style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:120px">
+          <span style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">remind me at</span>
+          <input type="time" data-task-id="${t.id}"
+            value="${(cfg.taskReminders || {})[t.id] || ''}"
+            onchange="setTaskReminder('${t.id}', this.value)"
+            style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:6px 8px;outline:none;width:100%"
+            aria-label="Reminder time for ${escHtml(t.name)}">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:120px">
+          <span style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">must be done by</span>
+          <input type="time" data-task-id="${t.id}"
+            value="${cfg.taskDeadlines[t.id] || ''}"
+            onchange="setTaskDeadline('${t.id}', this.value)"
+            style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--font-mono);font-size:0.75rem;padding:6px 8px;outline:none;width:100%"
+            aria-label="Deadline for ${escHtml(t.name)}">
+        </label>
+      </div>
     </div>
-  `).join('');
+  `).join('') + `
+    <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-top:10px;line-height:1.7">
+      <strong style="color:var(--text2)">remind me at</strong> — fires once at that time whether or not it's done. interrupt-level push + Telegram if connected.<br>
+      <strong style="color:var(--text2)">must be done by</strong> — shows a countdown ring. nags you when overdue.
+    </p>`;
 }
 
 function setTaskDeadline(taskId, timeVal) {
@@ -249,12 +267,20 @@ async function requestNotificationPermission() {
   if (Notification.permission === 'default') {
     const result = await Notification.requestPermission();
     if (result === 'granted') {
-      swNotify('Notifications enabled', 'You will be nagged until tasks are done.', 'tracker-welcome', false);
+      // Wait for SW to be controlling before firing — swNotify needs controller
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(() => {
+          swNotify('Notifications enabled',
+            'You\'ll be reminded about non-negotiables until they\'re done.',
+            'tracker-welcome', false);
+        });
+      }
     }
   }
 }
 
-requestNotificationPermission();
+// Delay permission request slightly — less jarring than immediate prompt
+setTimeout(requestNotificationPermission, 4000);
 startReminderTimer();
 
 // Re-schedule any saved appointment reminders on load
