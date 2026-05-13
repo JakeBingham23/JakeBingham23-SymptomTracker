@@ -2237,3 +2237,37 @@ input[type="checkbox"] + .toggle-track {
   opacity: 0.8;
 }
 
+
+/* ── Summary cards (weekly / monthly on Stats tab) ── */
+.summary-card {
+  background: var(--bg2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-3);
+  box-shadow: var(--card-shadow, 0 2px 8px rgba(0,0,0,0.3));
+}
+.summary-card-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: 0.5px solid var(--border);
+}
+.summary-card-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  padding: 4px 0;
+  border-bottom: 0.5px solid var(--border);
+  gap: 12px;
+}
+.summary-card-stat:last-child { border-bottom: none; }
+.summary-card-stat > span:first-child { color: var(--text3); }
+.summary-card-stat > span:last-child  { color: var(--text); font-weight: 500; }

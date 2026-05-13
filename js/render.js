@@ -403,9 +403,45 @@ function renderStats() {
   } catch(err) {}
 }
 
-function renderSettingsPanel() {
+function renderSpendMoodCorrelation() {
+  const el = document.getElementById('spendMoodCorrelation');
+  if (!el) return;
+
+  const history = Store.get('tracker-history') || [];
+  if (history.length === 0) {
+    el.innerHTML = '<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3)">no data yet</div>';
+    return;
+  }
+
+  const moodScore = { dark: -3, low: -2, flat: -1, ok: 0, good: 1, high: 2 };
+  const entries = history
+    .filter(e => e.date && typeof e.spend === 'number')
+    .slice(0, 14)
+    .reverse();
+
+  if (entries.length === 0) {
+    el.innerHTML = '<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3)">log some spending to see correlation</div>';
+    return;
+  }
+
+  const maxSpend = Math.max(...entries.map(e => e.spend || 0), 1);
+
+  el.innerHTML = entries.map(e => {
+    const score   = moodScore[e.mood] ?? 0;
+    const barW    = Math.round(((e.spend || 0) / maxSpend) * 80);
+    const moodCol = score >= 1 ? 'var(--success)' : score === 0 ? 'var(--accent)' : 'var(--danger)';
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-family:var(--font-mono);font-size:0.625rem">
+      <span style="color:var(--text3);width:52px;flex-shrink:0">${e.date.slice(5)}</span>
+      <div style="flex:1;background:var(--bg3);border-radius:2px;height:10px;overflow:hidden">
+        <div style="height:100%;width:${barW}%;background:var(--accent);opacity:0.7;border-radius:2px"></div>
+      </div>
+      <span style="color:${moodCol};width:36px;flex-shrink:0;text-align:right">${e.mood || '—'}</span>
+      <span style="color:var(--text3);width:44px;flex-shrink:0;text-align:right">$${(e.spend || 0).toFixed(0)}</span>
+    </div>`;
+  }).join('') + `<p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-top:8px">bar = daily spend · colour = mood</p>`;
+}
   document.getElementById('settingsName').value = cfg.name || '';
-  updateThemePill(cfg.theme || 'system');
+  if (typeof updateMenuThemeUI === 'function') updateMenuThemeUI(cfg.theme || 'werkstatt');
   updateIntervalPill(cfg.reminderInterval || '30');
   // Telegram fields
   const tgTokenEl = document.getElementById('tgToken');
