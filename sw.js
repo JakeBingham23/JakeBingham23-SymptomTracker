@@ -3,13 +3,11 @@
 // Real sw.js — replaces the blob URL hack
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME    = 'tracker-v4.5';
+const CACHE_NAME    = 'tracker-v5.0';
 const CACHE_STATIC  = [
   './',
   './index.html',
   './manifest.json',
-  './js/core.js',
-  './js/storage.js',
   './css/tokens.css',
   './css/themes.css',
   './css/layout.css',
@@ -19,8 +17,8 @@ const CACHE_STATIC  = [
   './js/crypto.js',
   './js/config.js',
   './js/state.js',
+  './js/core.js',
   './js/render.js',
-  './js/today.js',
   './js/budget.js',
   './js/journal.js',
   './js/notifications.js',
@@ -38,7 +36,10 @@ const CACHE_STATIC  = [
   './js/screenshot.js',
   './js/pwa.js',
   './js/theme.js',
-  './js/render.js',
+  './js/symptoms/config.js',
+  './js/symptoms/render.js',
+  './js/gcal/auth.js',
+  './js/gcal/sync.js',
   './rag-engine.js',
   './icons/icon-48.png',
   './icons/icon-72.png',

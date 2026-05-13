@@ -10,10 +10,10 @@ const QUOTE_BLOCKED_KEY = 'tracker-quote-blocked';
 const ANTHROPIC_KEY_K = 'tracker-anthropic-key';
 // Migrate API key from localStorage to sessionStorage (one-time)
 (function migrateApiKey() {
-  const old = localStorage.getItem(ANTHROPIC_KEY_K); // one-time migration
+  const old = localStorage.getItem(ANTHROPIC_KEY_K);
   if (old) {
-    Store.setSession(ANTHROPIC_KEY_K, old);
-    localStorage.removeItem(ANTHROPIC_KEY_K); // intentional: clearing old plaintext key
+    sessionStorage.setItem(ANTHROPIC_KEY_K, old);
+    localStorage.removeItem(ANTHROPIC_KEY_K);
   }
 })();
 
@@ -77,11 +77,14 @@ const OFFLINE_QUOTES = {
 };
 
 function getOfflineQuote(state) {
-  const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
+  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
   let pool = OFFLINE_QUOTES[state] || OFFLINE_QUOTES.generic;
   const available = pool.filter(q => !blocked.includes(q));
-  if (available.length === 0) return pool[Math.floor(Math.random() * pool.length)];
-  return available[Math.floor(Math.random() * available.length)];
+  if (available.length === 0) return pool[0];
+  // Date-seeded: consistent for the whole day, changes daily
+  const today = new Date();
+  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+  return available[seed % available.length];
 }
 
 function getDayState() {
@@ -98,7 +101,7 @@ function getDayState() {
 
 // ── AI quote generation ───────────────────────────────────────────────────
 async function generateAIQuote(context) {
-  const key = Store.getSession(ANTHROPIC_KEY_K);
+  const key = sessionStorage.getItem(ANTHROPIC_KEY_K);
   if (!key) return null;
   const prefs = cfg.notifPrefs || {};
   if (prefs.aiQuotesEnabled === false) return null;
@@ -153,7 +156,7 @@ function buildContext() {
 }
 
 // ── Quote of the day ──────────────────────────────────────────────────────
-async function loadQuoteOfDay(forceRefresh) {
+function loadQuoteOfDay(forceRefresh) {
   const card    = document.getElementById('quoteCard');
   const loading = document.getElementById('quoteLoading');
   const textEl  = document.getElementById('quoteText');
@@ -163,7 +166,7 @@ async function loadQuoteOfDay(forceRefresh) {
   // Check cache (regenerate once per day or on force)
   if (!forceRefresh) {
     try {
-      const cached = Store.get(QUOTE_KEY);
+      const cached = JSON.parse(localStorage.getItem(QUOTE_KEY) || 'null');
       if (cached && cached.date === TODAY) {
         showQuote(cached.text, cached.source, cached.liked);
         return;
@@ -171,37 +174,26 @@ async function loadQuoteOfDay(forceRefresh) {
     } catch(e) {}
   }
 
-  // Show loading state
-  if (loading) loading.style.display = 'block';
-  if (textEl)  textEl.style.display  = 'none';
-  if (metaEl)  metaEl.style.display  = 'none';
+  // Hide spinner immediately — no async wait
+  if (loading) loading.style.display = 'none';
 
-  const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
-  let text = null, source = 'daily reminder', method = 'rag';
+  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
+  let text = null, source = 'daily reminder';
 
-  // Build context for RAG
-  const ragContext = buildRAGContext();
-
-  // Try AI (Claude) first if key is set
-  const aiText = await generateAIQuote(buildContext());
-  if (aiText) {
-    text   = aiText;
-    source = 'generated for you today';
-    method = 'ai';
-  } else if (window.RAGEngine) {
-    // Use RAG engine — semantic if USE model loaded, tag-based otherwise
-    const result = await RAGEngine.getQuote(ragContext, blocked, true);
+  // Try RAG tag-based scoring (synchronous, no model load)
+  if (window.RAGEngine && typeof RAGEngine.getQuoteSync === 'function') {
+    const ragContext = buildRAGContext();
+    const result = RAGEngine.getQuoteSync(ragContext, blocked);
     text   = result.text;
     source = result.source;
-    method = result.method;
   } else {
-    // Ultimate fallback
+    // Date-seeded offline quote
     text   = getOfflineQuote(getDayState());
     source = 'daily reminder';
   }
 
   // Cache it
-  Store.set(QUOTE_KEY, { date: TODAY, text, source, liked: false });
+  localStorage.setItem(QUOTE_KEY, JSON.stringify({ date: TODAY, text, source, liked: false }));
   showQuote(text, source, false);
   announce('Daily message: ' + text);
 }
@@ -243,11 +235,11 @@ function refreshQuote() {
 
 function likeQuote() {
   try {
-    const cached = Store.get(QUOTE_KEY);
+    const cached = JSON.parse(localStorage.getItem(QUOTE_KEY) || 'null');
     if (!cached) return;
     const wasLiked = cached.liked;
     cached.liked = !wasLiked;
-    Store.set(QUOTE_KEY, cached);
+    localStorage.setItem(QUOTE_KEY, JSON.stringify(cached));
     if (!wasLiked) saveFavQuote(cached.text);
     showQuote(cached.text, cached.source, cached.liked);
     announce(cached.liked ? 'Quote saved to favourites.' : 'Quote removed from favourites.');
@@ -259,7 +251,7 @@ function saveApiKey() {
   const key = document.getElementById('anthropicKey')?.value?.trim();
   if (!key) { apiKeyStatus('enter a key first', 'var(--danger)'); return; }
   if (!key.startsWith('sk-ant-')) { apiKeyStatus('key should start with sk-ant-', 'var(--warning)'); return; }
-  Store.setSession(ANTHROPIC_KEY_K, key);
+  sessionStorage.setItem(ANTHROPIC_KEY_K, key);
   apiKeyStatus('key saved ✓', 'var(--success)');
   announce('API key saved.');
 }
@@ -278,7 +270,7 @@ function saveQuotePrefs() {
 function syncQuoteSettingsUI() {
   const keyEl = document.getElementById('anthropicKey');
   if (keyEl) {
-    const stored = Store.getSession(ANTHROPIC_KEY_K);
+    const stored = sessionStorage.getItem(ANTHROPIC_KEY_K);
     if (stored) { keyEl.value = stored; apiKeyStatus('key saved ✓', 'var(--success)'); }
   }
   const toggleEl = document.getElementById('aiQuotesEnabled');
@@ -287,29 +279,29 @@ function syncQuoteSettingsUI() {
 
 // ── Favourites ────────────────────────────────────────────────────────────
 function getFavQuotes() {
-  try { return Store.get(QUOTE_FAVS_KEY) || []; } catch(e) { return []; }
+  try { return JSON.parse(localStorage.getItem(QUOTE_FAVS_KEY) || '[]'); } catch(e) { return []; }
 }
 
 function saveFavQuote(text) {
   const favs = getFavQuotes();
   if (!favs.includes(text)) {
     favs.unshift(text);
-    Store.set(QUOTE_FAVS_KEY, favs.slice(0, 50));
+    localStorage.setItem(QUOTE_FAVS_KEY, JSON.stringify(favs.slice(0, 50)));
   }
 }
 
 function removeFavQuote(idx) {
   const favs = getFavQuotes();
   favs.splice(idx, 1);
-  Store.set(QUOTE_FAVS_KEY, favs);
+  localStorage.setItem(QUOTE_FAVS_KEY, JSON.stringify(favs));
   renderFavQuotes();
 }
 
 function blockQuote(text) {
-  const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
+  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
   if (!blocked.includes(text)) {
     blocked.push(text);
-    Store.set(QUOTE_BLOCKED_KEY, blocked);
+    localStorage.setItem(QUOTE_BLOCKED_KEY, JSON.stringify(blocked));
   }
 }
 
@@ -329,39 +321,29 @@ function renderFavQuotes() {
 }
 
 // ── Post check-in message ─────────────────────────────────────────────────
-async function showCheckinMessage() {
+function showCheckinMessage() {
   const el     = document.getElementById('checkinMsg');
   const textEl = document.getElementById('checkinMsgText');
   const srcEl  = document.getElementById('checkinMsgSource');
   if (!el || !textEl) return;
 
   el.classList.add('visible');
-  textEl.textContent = '...';
 
-  const context = buildContext();
-  let text = null, source = 'daily reminder';
-
-  const aiText = await generateAIQuote(context + '. This message follows their check-in save, so acknowledge the act of checking in.');
-  if (aiText) {
-    text   = aiText;
-    source = 'generated for you';
-  } else {
-    // Post-checkin specific offline messages
-    const checkinQuotes = [
-      "Check-in logged. That's the whole thing.",
-      "Saved. That record exists now because you made it.",
-      "Logged. Tomorrow's you has this data.",
-      "Done. You showed up for yourself today.",
-      "Check-in complete. One more data point in your favour.",
-    ];
-    text = checkinQuotes[Math.floor(Math.random() * checkinQuotes.length)];
-  }
+  const checkinQuotes = [
+    "Check-in logged. That's the whole thing.",
+    "Saved. That record exists now because you made it.",
+    "Logged. Tomorrow's you has this data.",
+    "Done. You showed up for yourself today.",
+    "Check-in complete. One more data point in your favour.",
+  ];
+  const today = new Date();
+  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+  const text = checkinQuotes[seed % checkinQuotes.length];
 
   textEl.textContent = text;
-  if (srcEl) srcEl.textContent = source;
+  if (srcEl) srcEl.textContent = 'daily reminder';
   announce('Check-in message: ' + text);
 
-  // Store for like button
   el.dataset.msgText = text;
   setTimeout(() => el.classList.remove('visible'), 8000);
 }

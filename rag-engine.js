@@ -116,13 +116,17 @@ window.RAGEngine = (() => {
     const ctxTags  = contextTags(context);
     const available = QUOTES.filter(q => !blocked.includes(q.text));
     if (!available.length) {
-      const pick = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+      const today = new Date();
+      const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+      const pick = QUOTES[seed % QUOTES.length];
       return { text: pick.text, source: pick.source, method: 'tag' };
     }
-    // Sort by score + small random jitter to avoid always returning same quote
+    // Sort by score, date-seeded tiebreaker for stability within the day
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
     const scored = available
-      .map(q => ({ q, score: tagScore(q, ctxTags) + Math.random() * 0.6 }))
-      .sort((a, b) => b.score - a.score);
+      .map((q, i) => ({ q, score: tagScore(q, ctxTags), idx: i }))
+      .sort((a, b) => b.score - a.score || ((a.idx + seed) % available.length) - ((b.idx + seed) % available.length));
 
     const best = scored[0].q;
     return { text: best.text, source: best.source, method: 'tag' };
@@ -204,5 +208,5 @@ window.RAGEngine = (() => {
     window.addEventListener('load', () => setTimeout(loadModel, 2500));
   }
 
-  return { getQuote };
+  return { getQuote, getQuoteSync: tagGetQuote };
 })();

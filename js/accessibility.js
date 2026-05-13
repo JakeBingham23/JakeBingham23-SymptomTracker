@@ -197,7 +197,18 @@ function syncNotifPrefsUI() {
   });
 }
 
-// announce() is defined in core.js
+function announce(msg, assertive) {
+  const id = assertive ? 'ariaAlert' : 'ariaStatus';
+  const el = document.getElementById(id);
+  if (!el) return;
+  // iOS VoiceOver needs a brief delay between clear and set
+  el.textContent = '';
+  el.setAttribute('aria-hidden', 'true');
+  setTimeout(() => {
+    el.setAttribute('aria-hidden', 'false');
+    el.textContent = msg;
+  }, 50);
+}
 
 function updateTask(containerId, idx, field, val) {
   const list = containerId === 'settingsCritical' ? CRITICAL : DAILY;
@@ -217,166 +228,38 @@ function addTask(type) {
   renderSettingsPanel();
 }
 
-// ── Category-aware symptom management ────────────────────────────────────
-
-function addSymptomToCategory(catId, name) {
-  const cat = SYMPTOM_CATS.find(c => c.id === catId);
-  if (!cat || !name) return;
-  const val = name.trim().toLowerCase();
-  if (!val || cat.symptoms.includes(val)) return;
-  cat.symptoms.push(val);
-  cfg.symptomCats = SYMPTOM_CATS;
-  saveConfig(cfg);
-  renderSymptomCatSettings();
-  render();
-}
-
-function removeSymptomFromCategory(catId, name) {
-  const cat = SYMPTOM_CATS.find(c => c.id === catId);
-  if (!cat) return;
-  cat.symptoms = cat.symptoms.filter(s => s !== name);
-  cfg.symptomCats = SYMPTOM_CATS;
-  saveConfig(cfg);
-  renderSymptomCatSettings();
-  render();
-}
-
-function addCategory() {
-  const inp = document.getElementById('newCatInput');
-  if (!inp) return;
-  const label = inp.value.trim();
-  if (!label) return;
-  const id = 'cat_' + Date.now();
-  SYMPTOM_CATS.push({ id, label: label.toLowerCase(), color: 'var(--accent)', symptoms: [] });
-  cfg.symptomCats = SYMPTOM_CATS;
-  saveConfig(cfg);
-  inp.value = '';
-  renderSymptomCatSettings();
-}
-
-function removeCategory(catId) {
-  const idx = SYMPTOM_CATS.findIndex(c => c.id === catId);
-  if (idx === -1) return;
-  SYMPTOM_CATS.splice(idx, 1);
-  cfg.symptomCats = SYMPTOM_CATS;
-  saveConfig(cfg);
-  renderSymptomCatSettings();
-  render();
-}
-
-function moveCategoryUp(catId) {
-  const idx = SYMPTOM_CATS.findIndex(c => c.id === catId);
-  if (idx <= 0) return;
-  [SYMPTOM_CATS[idx-1], SYMPTOM_CATS[idx]] = [SYMPTOM_CATS[idx], SYMPTOM_CATS[idx-1]];
-  cfg.symptomCats = SYMPTOM_CATS;
-  saveConfig(cfg);
-  renderSymptomCatSettings();
-  render();
-}
-
-function moveCategoryDown(catId) {
-  const idx = SYMPTOM_CATS.findIndex(c => c.id === catId);
-  if (idx === -1 || idx >= SYMPTOM_CATS.length - 1) return;
-  [SYMPTOM_CATS[idx], SYMPTOM_CATS[idx+1]] = [SYMPTOM_CATS[idx+1], SYMPTOM_CATS[idx]];
-  cfg.symptomCats = SYMPTOM_CATS;
-  saveConfig(cfg);
-  renderSymptomCatSettings();
-  render();
-}
-
-function moveSymptomUp(catId, name) {
-  const cat = SYMPTOM_CATS.find(c => c.id === catId);
-  if (!cat) return;
-  const idx = cat.symptoms.indexOf(name);
-  if (idx <= 0) return;
-  [cat.symptoms[idx-1], cat.symptoms[idx]] = [cat.symptoms[idx], cat.symptoms[idx-1]];
-  cfg.symptomCats = SYMPTOM_CATS;
-  saveConfig(cfg);
-  renderSymptomCatSettings();
-  render();
-}
-
-function moveSymptomDown(catId, name) {
-  const cat = SYMPTOM_CATS.find(c => c.id === catId);
-  if (!cat) return;
-  const idx = cat.symptoms.indexOf(name);
-  if (idx === -1 || idx >= cat.symptoms.length - 1) return;
-  [cat.symptoms[idx], cat.symptoms[idx+1]] = [cat.symptoms[idx+1], cat.symptoms[idx]];
-  cfg.symptomCats = SYMPTOM_CATS;
-  saveConfig(cfg);
-  renderSymptomCatSettings();
-  render();
-}
-
-function renderSymptomCatSettings() {
-  const targets = [
-    document.getElementById('settingsSymptoms'),
-    document.getElementById('subSettingsSymptoms'),
-  ].filter(Boolean);
-  if (!targets.length) return;
-
-  const html = SYMPTOM_CATS.map((cat, ci) => `
-    <div class="sym-cat-settings-block" data-cat-id="${escHtml(cat.id)}">
-      <div class="sym-cat-settings-header">
-        <span class="sym-cat-settings-label">${escHtml(cat.label)}</span>
-        <div class="sym-cat-settings-actions">
-          ${ci > 0 ? `<button class="sym-reorder-btn" onclick="moveCategoryUp('${escHtml(cat.id)}')" aria-label="move ${escHtml(cat.label)} up">↑</button>` : ''}
-          ${ci < SYMPTOM_CATS.length-1 ? `<button class="sym-reorder-btn" onclick="moveCategoryDown('${escHtml(cat.id)}')" aria-label="move ${escHtml(cat.label)} down">↓</button>` : ''}
-          <button class="del-btn" onclick="removeCategory('${escHtml(cat.id)}')" aria-label="remove ${escHtml(cat.label)} category">×</button>
-        </div>
-      </div>
-      <div class="sym-edit-grid">
-        ${cat.symptoms.map((s, si) => `
-          <div class="sym-edit-chip">
-            <span>${escHtml(s)}</span>
-            <div class="sym-chip-actions">
-              ${si > 0 ? `<button onclick="moveSymptomUp('${escHtml(cat.id)}', ${JSON.stringify(s)})" aria-label="move ${escHtml(s)} up">↑</button>` : ''}
-              ${si < cat.symptoms.length-1 ? `<button onclick="moveSymptomDown('${escHtml(cat.id)}', ${JSON.stringify(s)})" aria-label="move ${escHtml(s)} down">↓</button>` : ''}
-              <button onclick="removeSymptomFromCategory('${escHtml(cat.id)}', ${JSON.stringify(s)})" aria-label="remove ${escHtml(s)}">×</button>
-            </div>
-          </div>`).join('')}
-      </div>
-      <div class="sym-add-row" style="margin-top:4px">
-        <input type="text" placeholder="add symptom" maxlength="40"
-               id="newSym_${escHtml(cat.id)}"
-               aria-label="new symptom for ${escHtml(cat.label)}"
-               onkeydown="if(event.key==='Enter'){addSymptomToCategory('${escHtml(cat.id)}',this.value);this.value='';}">
-        <button class="add-btn"
-                onclick="addSymptomToCategory('${escHtml(cat.id)}',document.getElementById('newSym_${escHtml(cat.id)}').value);document.getElementById('newSym_${escHtml(cat.id)}').value=''">
-          + add
-        </button>
-      </div>
-    </div>
-  `).join('') + `
-    <div class="sym-add-row" style="margin-top:12px;border-top:0.5px solid var(--border);padding-top:12px">
-      <input type="text" id="newCatInput" placeholder="new category name" maxlength="30"
-             aria-label="New category name"
-             onkeydown="if(event.key==='Enter')addCategory()">
-      <button class="add-btn" onclick="addCategory()">+ category</button>
-    </div>`;
-
-  targets.forEach(t => { t.innerHTML = html; });
-}
-
-// Legacy stubs — keep so old callers don't throw
 function removeSymptom(idx) {
-  // Find which category this flat index maps to and remove
-  let count = 0;
-  for (const cat of SYMPTOM_CATS) {
-    for (let i = 0; i < cat.symptoms.length; i++) {
-      if (count === idx) { removeSymptomFromCategory(cat.id, cat.symptoms[i]); return; }
-      count++;
-    }
+  // Route through category-aware removal (symptoms/config.js)
+  const flat = typeof getFlatSymptoms === 'function' ? getFlatSymptoms() : (SYMPTOMS || []);
+  const name = flat[idx];
+  if (!name) return;
+  const cat = (typeof SYMPTOM_CATEGORIES !== 'undefined' ? SYMPTOM_CATEGORIES : [])
+                .find(c => c.symptoms.includes(name));
+  if (cat && typeof removeSymptomFromCategory === 'function') {
+    removeSymptomFromCategory(cat.id, name);
   }
+  if (typeof renderSettingsPanel   === 'function') renderSettingsPanel();
+  if (typeof renderSymptomSettings === 'function') renderSymptomSettings();
+  if (typeof renderSymptomGrid     === 'function') renderSymptomGrid();
 }
 
 function addSymptom() {
-  // Add to first category by default (legacy flat-add path)
-  const inp = document.getElementById('newSymInput') || document.getElementById('subNewSymInput');
-  if (!inp || !inp.value.trim()) return;
-  const cat = SYMPTOM_CATS[0];
-  if (cat) addSymptomToCategory(cat.id, inp.value);
+  const inp = document.getElementById('newSymInput');
+  if (!inp) return;
+  const val = inp.value.trim().toLowerCase();
+  if (!val) return;
+  // Add to custom → behavioural → first available category
+  const cats = typeof SYMPTOM_CATEGORIES !== 'undefined' ? SYMPTOM_CATEGORIES : [];
+  const targetId = (cats.find(c => c.id === 'custom') ||
+                    cats.find(c => c.id === 'behavioural') ||
+                    cats[0] || {}).id;
+  if (targetId && typeof addSymptomToCategory === 'function') {
+    addSymptomToCategory(targetId, val);
+  }
   inp.value = '';
+  if (typeof renderSettingsPanel   === 'function') renderSettingsPanel();
+  if (typeof renderSymptomSettings === 'function') renderSymptomSettings();
+  if (typeof renderSymptomGrid     === 'function') renderSymptomGrid();
 }
 
 function saveName() {
@@ -594,5 +477,5 @@ function resetBtn(btn) {
   btn.textContent = 'screenshot record';
 }
 
-// render() is defined in core.js
 
+// render() lives in core.js — do not define here

@@ -31,7 +31,7 @@ async function getJournalEntries() {
     }
   } catch(e) {}
   // Fallback: unencrypted installs or pre-migration
-  try { return Store.get(JOURNAL_KEY) || []; }
+  try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || '[]'); }
   catch(e) { return []; }
 }
 
@@ -42,7 +42,7 @@ async function saveJournalEntries(entries) {
       return;
     }
   } catch(e) {}
-  Store.set(JOURNAL_KEY, entries);
+  localStorage.setItem(JOURNAL_KEY, JSON.stringify(entries));
 }
 
 // ── Composer ──────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ function closeJournalComposer() {
   const composer = document.getElementById('journalComposer');
   if (composer) composer.style.display = 'none';
   stopVoiceInput();
-  Store.remove(JOURNAL_DRAFT_KEY);
+  localStorage.removeItem(JOURNAL_DRAFT_KEY);
   _editingEntryId = null;
 }
 
@@ -106,7 +106,7 @@ function autoSaveDraft(text) {
   // Autosave draft
   clearTimeout(_draftTimer);
   _draftTimer = setTimeout(() => {
-    Store.set(JOURNAL_DRAFT_KEY, text);
+    localStorage.setItem(JOURNAL_DRAFT_KEY, text);
   }, 1000);
 }
 

@@ -53,8 +53,6 @@ async function initApp() {
     console.warn('[Security] initApp called while locked — aborting');
     return;
   }
-  // Stamp schema version now that we're unlocked
-  Store.stampVersion();
   // Normal init
   try {
     initOnboarding();
@@ -66,8 +64,6 @@ async function initApp() {
 
 // ── Bootstrap — runs on DOMContentLoaded ─────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Run storage migration before anything reads data
-  Store.migrate();
   // Hide all page content until unlocked
   document.getElementById('page-today')?.classList.remove('active');
   // Show lock screen

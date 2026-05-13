@@ -1,6 +1,17 @@
 // ═════════════════════════════════════════════════════════════════
-// STATE MODULE — Daily Structure Tracker
+// STATE MODULE — Daily Structure Tracker v5
+//
+// OWNS: state object, loadState(), saveState(), saveHistoryEntry(),
+//       screenshot, gallery folder (IDB).
+//
+// DOES NOT OWN: TODAY, CRITICAL, DAILY, SYMPTOMS → core.js
+//               render, saveAll, toggleTask, setMood, toggleSymptom → core.js
+//
+// Load order: after config.js, symptoms/config.js — before core.js
 // ═════════════════════════════════════════════════════════════════
+
+// CRITICAL, DAILY, SYMPTOMS declared in core.js — do not redefine here
+
 
 // ── App state ─────────────────────────────────────────────────────────────
 let state = {
@@ -16,9 +27,9 @@ function getStreakKey() { return 'tracker-med-streak'; }
 
 function loadState() {
   try {
-    const raw = Store.get('tracker-today');
-    if (raw) Object.assign(state, typeof raw === 'object' ? raw : JSON.parse(raw));
-    const streak = Store.get('tracker-med-streak');
+    const raw = localStorage.getItem(getKey(TODAY));
+    if (raw) Object.assign(state, JSON.parse(raw));
+    const streak = localStorage.getItem(getStreakKey());
     if (streak) state.medStreak = parseInt(streak) || 0;
   } catch(e) {}
   render();
@@ -26,160 +37,26 @@ function loadState() {
 
 function saveState() {
   try {
-    Store.set('tracker-today', state);
+    localStorage.setItem(getKey(TODAY), JSON.stringify(state));
     // persist streak against any meds task
     const hasMeds = CRITICAL.some(t => t.id === 'meds');
-    if (hasMeds) Store.set('tracker-med-streak', String(state.medStreak));
+    if (hasMeds) localStorage.setItem(getStreakKey(), String(state.medStreak));
   } catch(e) {}
-}
-
-function toggleTask(id) {
-  state.tasks[id] = !state.tasks[id];
-  const done = state.tasks[id];
-  // Find task name for announcement
-  const task = [...CRITICAL, ...DAILY].find(t => t.id === id);
-  const name = task ? task.name : id;
-  if (id === 'meds') {
-    state.medStreak = done
-      ? (state.medStreak || 0) + 1
-      : Math.max(0, (state.medStreak || 0) - 1);
-    if (done) {
-      announce(name + ' marked done. Medication streak: ' + state.medStreak + ' days.');
-      checkStreakMilestone(state.medStreak);
-    } else {
-      announce(name + ' unmarked. Medication streak reset to ' + state.medStreak + '.');
-    }
-  } else {
-    announce(name + (done ? ' marked done.' : ' unmarked.'));
-  }
-  if (done) {
-    const isNonNeg = CRITICAL.some(t => t.id === id);
-    celebrateTask(id, name, isNonNeg);
-  }
-  saveState();
-  render();
-  // Update aria-pressed on the toggled element
-  const taskEls = document.querySelectorAll('.task');
-  taskEls.forEach(el => {
-    const onclick = el.getAttribute('onclick') || '';
-    if (onclick.includes(id)) {
-      el.setAttribute('aria-pressed', done ? 'true' : 'false');
-    }
-  });
-}
-
-function setMood(type, btn) {
-  const val = btn.textContent;
-  state.mood[type] = val;
-  announce(type + ' set to ' + val + '.');
-  // Update aria-pressed on all buttons in this group
-  const opts = document.querySelectorAll('#' + type + 'Opts .mood-btn');
-  opts.forEach(b => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
-  saveState();
-  render();
-}
-
-// state.symptoms is [{name, severity}] in v2.
-// toggleSymptom handles both old string format and new object format.
-function _normSymptoms() {
-  state.symptoms = (state.symptoms || []).map(s =>
-    typeof s === 'string' ? { name: s, severity: 'moderate' } : s
-  );
-}
-
-function toggleSymptom(name, severity) {
-  _normSymptoms();
-  const i = state.symptoms.findIndex(s => s.name === name);
-  if (i > -1) {
-    state.symptoms.splice(i, 1);
-    announce(name + ' symptom flag removed.');
-  } else {
-    state.symptoms.push({ name, severity: severity || 'moderate' });
-    announce(name + ' symptom flagged: ' + (severity || 'moderate') + '.');
-  }
-  saveState();
-  render();
-}
-
-function setSymptomSeverity(name, severity) {
-  _normSymptoms();
-  const entry = state.symptoms.find(s => s.name === name);
-  if (!entry) {
-    // Not yet flagged — flag it with this severity
-    state.symptoms.push({ name, severity });
-    announce(name + ' flagged as ' + severity + '.');
-  } else {
-    entry.severity = severity;
-    announce(name + ' severity set to ' + severity + '.');
-  }
-  saveState();
-  render();
-}
-
-function isSymptomFlagged(name) {
-  _normSymptoms();
-  return state.symptoms.some(s => s.name === name);
-}
-
-function getSymptomSeverity(name) {
-  _normSymptoms();
-  const entry = state.symptoms.find(s => s.name === name);
-  return entry ? entry.severity : null;
-}
-
-function clearAllSymptoms() {
-  state.symptoms = [];
-  saveState();
-  render();
-  announce('All symptom flags cleared.');
-}
-
-function saveAll() {
-  state.notes = document.getElementById('symptomNotes').value;
-  saveState();
-  saveHistoryEntry();
-  const c = document.getElementById('saveConfirm');
-  c.style.display = 'block';
-  setTimeout(() => { c.style.display = 'none'; }, 2500);
-  const all  = [...CRITICAL, ...DAILY];
-  const done = all.filter(t => state.tasks[t.id]).length;
-  announce('Check-in saved. ' + done + ' of ' + all.length + ' tasks completed today. Mood: ' + (state.mood.mood || 'not set') + '. Energy: ' + (state.mood.energy || 'not set') + '.');
-  checkBadges();
-  renderPointsDisplay();
-  // Show personalised post check-in message
-  showCheckinMessage();
 }
 
 function saveHistoryEntry() {
   const all = [...(CRITICAL||[]), ...(DAILY||[])];
   const done = all.filter(t => state.tasks[t.id]).length;
-  _normSymptoms();
-  // Per-category flag breakdown for stats
-  const catBreakdown = {};
-  (typeof SYMPTOM_CATS !== 'undefined' ? SYMPTOM_CATS : []).forEach(cat => {
-    const catFlags = state.symptoms.filter(s => cat.symptoms.includes(s.name));
-    if (catFlags.length > 0) catBreakdown[cat.id] = catFlags.map(s => ({name:s.name, severity:s.severity}));
-  });
-
-  // Spend for the day (from budget module if available)
-  let todaySpend = 0;
-  try {
-    const spends = Store.get('tracker-spend') || [];
-    todaySpend = spends.filter(s => s.date === TODAY).reduce((sum, s) => sum + (s.amount || 0), 0);
-  } catch(e) {}
-
   const entry = {
     date: TODAY, done, total: all.length,
     mood: state.mood.mood, energy: state.mood.energy,
-    flags: state.symptoms.length,
-    catBreakdown,
-    spend: todaySpend,
+    flags: state.symptoms.length
   };
   try {
-    const existing = Store.get('tracker-history') || [];
+    const existing = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     const filtered = existing.filter(e => e.date !== TODAY);
     filtered.unshift(entry);
-    Store.set('tracker-history', filtered.slice(0, 14));
+    localStorage.setItem('tracker-history', JSON.stringify(filtered.slice(0, 14)));
   } catch(e) {}
 }
 

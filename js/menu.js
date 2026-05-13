@@ -129,15 +129,14 @@ function populateSubPage(name) {
 }
 
 function renderSubpageTasks() {
-  // Sync name field
   const nameEl = document.getElementById('settingsName2');
   if (nameEl) nameEl.value = cfg.name || '';
-  // Reuse existing render functions
-  const critEl = document.getElementById('subTasksCritical');
+  const critEl  = document.getElementById('subTasksCritical');
   const dailyEl = document.getElementById('subTasksDaily');
-  if (typeof renderSymptomCatSettings === 'function') renderSymptomCatSettings();
-  if (critEl)  critEl.innerHTML  = document.getElementById('settingsCritical')?.innerHTML || '';
-  if (dailyEl) dailyEl.innerHTML = document.getElementById('settingsDaily')?.innerHTML    || '';
+  if (critEl)  critEl.innerHTML  = document.getElementById('settingsCritical')?.innerHTML  || '';
+  if (dailyEl) dailyEl.innerHTML = document.getElementById('settingsDaily')?.innerHTML     || '';
+  // Symptom categories — use dedicated renderer into the shared container
+  if (typeof renderSymptomSettings === 'function') renderSymptomSettings();
 }
 
 function saveName2() {
@@ -147,11 +146,16 @@ function saveName2() {
 
 function addSymptomFromSub() {
   const input = document.getElementById('subNewSymInput');
-  if (input) {
-    document.getElementById('newSymInput').value = input.value;
-    addSymptom();
+  if (!input || !input.value.trim()) return;
+  const cats     = typeof SYMPTOM_CATEGORIES !== 'undefined' ? SYMPTOM_CATEGORIES : [];
+  const targetId = (cats.find(c => c.id === 'custom') ||
+                    cats.find(c => c.id === 'behavioural') ||
+                    cats[0] || {}).id;
+  if (targetId && typeof addSymptomToCategory === 'function') {
+    addSymptomToCategory(targetId, input.value);
     input.value = '';
     renderSubpageTasks();
+    if (typeof renderSymptomGrid === 'function') renderSymptomGrid();
   }
 }
 

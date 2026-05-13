@@ -15,8 +15,8 @@ document.addEventListener('keydown', e => {
 });
 
 function initOnboarding() {
-  applyTheme(cfg.theme || 'system');
-  updateNavThemeBtn(cfg.theme || 'system');
+  applyTheme(cfg.theme || 'werkstatt');
+  updateNavThemeBtn(cfg.theme || 'werkstatt');
   updateIntervalPill(cfg.reminderInterval || '30');
   updateWindowTimer();
   renderDailyCard();
@@ -27,6 +27,13 @@ function initOnboarding() {
   syncDNDUI();
   renderDNDWindows();
   renderBucketLimitSettings();
+  // Google Calendar — restore client ID field and UI state
+  const gcalInput = document.getElementById('gcalClientId');
+  if (gcalInput && cfg.gcal?.clientId) gcalInput.value = cfg.gcal.clientId;
+  if (typeof gcalUpdateUI === 'function') gcalUpdateUI();
+  // Accent colour picker
+  const accentPicker = document.getElementById('accentColorPicker');
+  if (accentPicker) accentPicker.value = cfg.accentSeed || '#5b6ab0';
   if (!cfg.name) {
     document.getElementById('onboarding').classList.remove('hidden');
     setTimeout(() => document.getElementById('nameInput').focus(), 100);
@@ -76,10 +83,10 @@ async function switchTab(tab) {
 
 // ── Appointments data ────────────────────────────────────────────────────
 function loadAppts() {
-  try { return Store.get('tracker-appts') || []; } catch(e) { return []; }
+  try { return JSON.parse(localStorage.getItem('tracker-appts') || '[]'); } catch(e) { return []; }
 }
 function saveAppts(appts) {
-  try { Store.set('tracker-appts', appts); } catch(e) {}
+  try { localStorage.setItem('tracker-appts', JSON.stringify(appts)); } catch(e) {}
 }
 
 function openApptModal(id) {
@@ -225,7 +232,7 @@ function scheduleApptReminders(appt) {
 
 // ── Pre-appointment summary ───────────────────────────────────────────────
 function generateSummary(apptTitle) {
-  const history = Store.get('tracker-history') || [];
+  const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
   const last7   = history.slice(0, 7);
   const name    = cfg.name || 'Patient';
   const today   = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
@@ -242,7 +249,7 @@ function generateSummary(apptTitle) {
   const flagCounts = {};
   last7.forEach(e => {
     try {
-      const day = Store.get('tracker-today', e.date) || {};
+      const day = JSON.parse(localStorage.getItem('tracker-' + e.date) || '{}');
       (day.symptoms || []).forEach(s => { flagCounts[s] = (flagCounts[s] || 0) + 1; });
     } catch(_) {}
   });
@@ -351,7 +358,7 @@ function renderHistory() {
   // Render check-in history
   try {
     if (!el) return;
-    const history = Store.get('tracker-history') || [];
+    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     el.innerHTML = history.length === 0
       ? `<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);padding:8px 0">no entries yet — save a check-in on the today tab</div>`
       : history.map(e => `
@@ -379,7 +386,7 @@ function renderStats() {
   renderMonthlySummaryCard();
   renderSpendMoodCorrelation();
   try {
-    const history = Store.get('tracker-history') || [];
+    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     document.getElementById('bigDaysLogged').textContent = history.length;
     if (history.length > 0) {
       const avgDone  = (history.reduce((s,e) => s + (e.done / (e.total || 1)), 0) / history.length * 100).toFixed(0);
@@ -403,45 +410,9 @@ function renderStats() {
   } catch(err) {}
 }
 
-function renderSpendMoodCorrelation() {
-  const el = document.getElementById('spendMoodCorrelation');
-  if (!el) return;
-
-  const history = Store.get('tracker-history') || [];
-  if (history.length === 0) {
-    el.innerHTML = '<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3)">no data yet</div>';
-    return;
-  }
-
-  const moodScore = { dark: -3, low: -2, flat: -1, ok: 0, good: 1, high: 2 };
-  const entries = history
-    .filter(e => e.date && typeof e.spend === 'number')
-    .slice(0, 14)
-    .reverse();
-
-  if (entries.length === 0) {
-    el.innerHTML = '<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3)">log some spending to see correlation</div>';
-    return;
-  }
-
-  const maxSpend = Math.max(...entries.map(e => e.spend || 0), 1);
-
-  el.innerHTML = entries.map(e => {
-    const score   = moodScore[e.mood] ?? 0;
-    const barW    = Math.round(((e.spend || 0) / maxSpend) * 80);
-    const moodCol = score >= 1 ? 'var(--success)' : score === 0 ? 'var(--accent)' : 'var(--danger)';
-    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-family:var(--font-mono);font-size:0.625rem">
-      <span style="color:var(--text3);width:52px;flex-shrink:0">${e.date.slice(5)}</span>
-      <div style="flex:1;background:var(--bg3);border-radius:2px;height:10px;overflow:hidden">
-        <div style="height:100%;width:${barW}%;background:var(--accent);opacity:0.7;border-radius:2px"></div>
-      </div>
-      <span style="color:${moodCol};width:36px;flex-shrink:0;text-align:right">${e.mood || '—'}</span>
-      <span style="color:var(--text3);width:44px;flex-shrink:0;text-align:right">$${(e.spend || 0).toFixed(0)}</span>
-    </div>`;
-  }).join('') + `<p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-top:8px">bar = daily spend · colour = mood</p>`;
-}
+function renderSettingsPanel() {
   document.getElementById('settingsName').value = cfg.name || '';
-  if (typeof updateMenuThemeUI === 'function') updateMenuThemeUI(cfg.theme || 'werkstatt');
+  updateThemePill(cfg.theme || 'werkstatt');
   updateIntervalPill(cfg.reminderInterval || '30');
   // Telegram fields
   const tgTokenEl = document.getElementById('tgToken');
@@ -469,17 +440,56 @@ function renderSpendMoodCorrelation() {
   taskRows(CRITICAL, 'settingsCritical');
   taskRows(DAILY,    'settingsDaily');
 
-  if (typeof renderSymptomCatSettings === 'function') renderSymptomCatSettings();
+  // Symptom category settings — delegated to symptoms/render.js
+  if (typeof renderSymptomSettings === 'function') renderSymptomSettings();
 }
 
-// escHtml() is defined in core.js
+function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;')
+    .replace(/\//g,'&#x2F;');
+}
 
 // Sanitise user input — strips dangerous patterns before storage
-// sanitiseInput() is defined in core.js
+function sanitiseInput(str, maxLen = 200) {
+  if (!str) return '';
+  return String(str)
+    .trim()
+    .slice(0, maxLen)
+    // Strip script tags and event handlers
+    .replace(/<script[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/data\s*:/gi, '');
+}
 
 // Safe number parser — returns 0 for invalid input
 function safeFloat(val, min = 0, max = 999999) {
   const n = parseFloat(val);
   if (isNaN(n)) return 0;
   return Math.max(min, Math.min(max, n));
+}
+
+
+// ── Core app functions (render, saveAll, toggleTask etc) ─────────────────────
+
+// ── Google Calendar settings helpers ──────────────────────────────────────
+function saveGcalClientId() {
+  const el = document.getElementById('gcalClientId');
+  if (!el) return;
+  const id = el.value.trim();
+  cfg.gcal = cfg.gcal || {};
+  cfg.gcal.clientId = id;
+  saveConfig(cfg);
+  if (id) {
+    if (typeof gcalInit === 'function') gcalInit();
+    if (typeof showToast === 'function') showToast('Client ID saved — click connect to authorise');
+  } else {
+    if (typeof showToast === 'function') showToast('Client ID cleared');
+  }
 }
