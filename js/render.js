@@ -469,12 +469,7 @@ function renderSpendMoodCorrelation() {
   taskRows(CRITICAL, 'settingsCritical');
   taskRows(DAILY,    'settingsDaily');
 
-  document.getElementById('settingsSymptoms').innerHTML = SYMPTOMS.map((s, i) => `
-    <div class="sym-edit-chip">
-      <span>${escHtml(s)}</span>
-      <button onclick="removeSymptom(${i})">×</button>
-    </div>
-  `).join('');
+  if (typeof renderSymptomCatSettings === 'function') renderSymptomCatSettings();
 }
 
 // escHtml() is defined in core.js

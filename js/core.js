@@ -144,17 +144,63 @@ function render() {
   renderTaskList(CRITICAL || [], 'criticalTasks', true);
   renderTaskList(DAILY    || [], 'dailyTasks',    false);
 
-  // ── Symptom grid ──────────────────────────────────────────────
+  // ── Symptom grid — categorised ───────────────────────────────
   const symptomGrid = document.getElementById('symptomGrid');
-  if (symptomGrid && typeof SYMPTOMS !== 'undefined') {
-    symptomGrid.innerHTML = (SYMPTOMS || []).map(s => {
-      const active = state.symptoms.includes(s);
-      return `<button class="sym-btn ${active ? 'active' : ''}"
-              role="checkbox"
-              aria-checked="${active}"
-              aria-label="symptom flag: ${escHtml(s)}"
-              onclick="toggleSymptom(${JSON.stringify(s)})">${escHtml(s)}</button>`;
-    }).join('');
+  if (symptomGrid && typeof SYMPTOM_CATS !== 'undefined') {
+    const cats = SYMPTOM_CATS || [];
+    const totalFlagged = state.symptoms.length;
+    symptomGrid.innerHTML = cats.map(cat => {
+      const catFlagged = state.symptoms.filter(
+        s => cat.symptoms.includes(typeof s === 'string' ? s : s.name)
+      ).length;
+      const catId = 'symcat-' + cat.id;
+      return `<div class="sym-category" data-cat="${escHtml(cat.id)}">
+        <button class="sym-cat-header ${catFlagged > 0 ? 'has-flags' : ''}"
+                aria-expanded="true"
+                aria-controls="${catId}"
+                onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true');
+                         document.getElementById('${catId}').classList.toggle('collapsed')"
+                style="--cat-color:${cat.color || 'var(--accent)'}">
+          <span class="sym-cat-label">${escHtml(cat.label)}</span>
+          ${catFlagged > 0
+            ? `<span class="sym-cat-count" aria-label="${catFlagged} flagged">${catFlagged}</span>`
+            : ''}
+          <span class="sym-cat-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div class="sym-cat-body" id="${catId}" role="group" aria-label="${escHtml(cat.label)} symptoms">
+          ${cat.symptoms.map(name => {
+            const flagged  = isSymptomFlagged(name);
+            const severity = getSymptomSeverity(name) || 'moderate';
+            return `<div class="sym-item ${flagged ? 'flagged' : ''}">
+              <button class="sym-btn ${flagged ? 'active' : ''}"
+                      role="checkbox"
+                      aria-checked="${flagged}"
+                      aria-label="${escHtml(name)}"
+                      onclick="toggleSymptom(${JSON.stringify(name)})">${escHtml(name)}</button>
+              ${flagged ? `<div class="sym-severity" role="radiogroup" aria-label="severity of ${escHtml(name)}">
+                <button class="sev-btn ${severity==='mild'?'active':''}"
+                        role="radio" aria-checked="${severity==='mild'}"
+                        aria-label="mild"
+                        onclick="event.stopPropagation();setSymptomSeverity(${JSON.stringify(name)},'mild')">mild</button>
+                <button class="sev-btn ${severity==='moderate'?'active':''}"
+                        role="radio" aria-checked="${severity==='moderate'}"
+                        aria-label="moderate"
+                        onclick="event.stopPropagation();setSymptomSeverity(${JSON.stringify(name)},'moderate')">mod</button>
+                <button class="sev-btn ${severity==='severe'?'active':''}"
+                        role="radio" aria-checked="${severity==='severe'}"
+                        aria-label="severe"
+                        onclick="event.stopPropagation();setSymptomSeverity(${JSON.stringify(name)},'severe')">severe</button>
+              </div>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('') + (totalFlagged > 0
+      ? `<div class="sym-flag-summary" aria-live="polite">
+           ${totalFlagged} flag${totalFlagged > 1 ? 's' : ''} today
+           — <button class="sym-clear-btn" onclick="clearAllSymptoms()" aria-label="clear all symptom flags">clear all</button>
+         </div>`
+      : '');
   }
 
   // ── Mood buttons ──────────────────────────────────────────────

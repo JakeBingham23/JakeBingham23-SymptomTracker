@@ -14,6 +14,35 @@ const DEFAULT_DAILY = [
   { id:'meds2', name:'evening meds', sub:'if applicable' },
   { id:'wind',  name:'wind down',    sub:'phones down' },
 ];
+// Categorised symptom defaults (v2 schema)
+const DEFAULT_SYMPTOM_CATS = [
+  {
+    id: 'cognitive',
+    label: 'cognitive',
+    color: 'var(--accent2)',
+    symptoms: ["dissociation","intrusive thoughts","paranoia","can't initiate","shutdown","brain fog","depersonalisation"]
+  },
+  {
+    id: 'mood',
+    label: 'mood / affect',
+    color: 'var(--danger)',
+    symptoms: ["rage","impulsivity","flat affect","elevated","irritability","dark","euphoric"]
+  },
+  {
+    id: 'physical',
+    label: 'physical',
+    color: 'var(--success)',
+    symptoms: ["sensory overload","insomnia","hypersomnia","appetite gone","appetite excessive","fatigue","pain","headache"]
+  },
+  {
+    id: 'behavioural',
+    label: 'behavioural',
+    color: 'var(--warning)',
+    symptoms: ["isolation","avoidance","compulsive","restlessness","hyperverbal","can't stop","can't start"]
+  },
+];
+
+// Legacy flat list — kept for migration only
 const DEFAULT_SYMPTOMS = [
   "dissociation","intrusive thoughts","paranoia","sensory overload",
   "can't initiate","rage","shutdown","impulsivity",
@@ -38,6 +67,7 @@ let cfg = loadConfig() || {
   critical: DEFAULT_CRITICAL,
   daily: DEFAULT_DAILY,
   symptoms: DEFAULT_SYMPTOMS,
+  symptomCats: DEFAULT_SYMPTOM_CATS,
   reminderInterval: '30',
   tgToken: '',
   tgChatId: '',
@@ -50,6 +80,18 @@ let cfg = loadConfig() || {
 if (!cfg.critical)           cfg.critical  = DEFAULT_CRITICAL;
 if (!cfg.daily)              cfg.daily     = DEFAULT_DAILY;
 if (!cfg.symptoms)           cfg.symptoms  = DEFAULT_SYMPTOMS;
+if (!cfg.symptomCats)        cfg.symptomCats = DEFAULT_SYMPTOM_CATS;
+// Migrate old flat SYMPTOMS into first-seen-in-category structure
+(function migrateSymptomsV2() {
+  if (cfg._symptomsV2) return; // already migrated
+  // If symptomCats is missing entries from DEFAULT_SYMPTOM_CATS, reset to defaults
+  const hasAllCats = DEFAULT_SYMPTOM_CATS.every(dc =>
+    cfg.symptomCats.some(c => c.id === dc.id)
+  );
+  if (!hasAllCats) cfg.symptomCats = DEFAULT_SYMPTOM_CATS;
+  cfg._symptomsV2 = true;
+  saveConfig(cfg);
+})();
 if (!cfg.reminderInterval)   cfg.reminderInterval = '30';
 if (!cfg.tgToken)            cfg.tgToken = '';
 if (!cfg.tgChatId)           cfg.tgChatId = '';
@@ -72,7 +114,8 @@ if (!cfg.vibPatterns) cfg.vibPatterns = {
 // Live arrays (used throughout)
 let CRITICAL  = cfg.critical  || DEFAULT_CRITICAL;
 let DAILY     = cfg.daily     || DEFAULT_DAILY;
-let SYMPTOMS  = cfg.symptoms  || DEFAULT_SYMPTOMS;
+let SYMPTOMS     = cfg.symptoms     || DEFAULT_SYMPTOMS;
+let SYMPTOM_CATS = cfg.symptomCats  || DEFAULT_SYMPTOM_CATS;
 
 // ── Font loading registry ─────────────────────────────────────────────────
 const FONT_SOURCES = {

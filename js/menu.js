@@ -135,10 +135,9 @@ function renderSubpageTasks() {
   // Reuse existing render functions
   const critEl = document.getElementById('subTasksCritical');
   const dailyEl = document.getElementById('subTasksDaily');
-  const symEl  = document.getElementById('subTasksSymptoms');
+  if (typeof renderSymptomCatSettings === 'function') renderSymptomCatSettings();
   if (critEl)  critEl.innerHTML  = document.getElementById('settingsCritical')?.innerHTML || '';
   if (dailyEl) dailyEl.innerHTML = document.getElementById('settingsDaily')?.innerHTML    || '';
-  if (symEl)   symEl.innerHTML   = document.getElementById('settingsSymptoms')?.innerHTML || '';
 }
 
 function saveName2() {

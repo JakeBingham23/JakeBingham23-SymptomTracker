@@ -807,12 +807,10 @@
       <button class="add-btn" onclick="addTask('daily')" aria-label="Add daily structure task">+ add task</button>
       <div class="settings-divider"></div>
       <h3 class="settings-section-title">symptom flags</h3>
-      <div class="sym-edit-grid" id="settingsSymptoms"></div>
-      <div class="sym-add-row">
-        <input type="text" id="newSymInput" placeholder="new symptom" maxlength="30"
-               aria-label="New symptom name">
-        <button class="add-btn" onclick="addSymptom()" aria-label="Add symptom">+ add</button>
-      </div>
+      <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-bottom:10px;line-height:1.7">
+        drag to reorder categories · add or remove symptoms per group
+      </p>
+      <div id="settingsSymptoms"></div>
     </section>
 
     <!-- ── Do Not Disturb ── -->
@@ -1491,11 +1489,10 @@
       <button class="add-btn" onclick="addTask('daily');renderSubpageTasks()">+ add task</button>
       <div class="settings-divider"></div>
       <h3 class="settings-section-title">symptom flags</h3>
-      <div class="sym-edit-grid" id="subTasksSymptoms"></div>
-      <div class="sym-add-row">
-        <input type="text" id="subNewSymInput" placeholder="new symptom" maxlength="30" aria-label="New symptom">
-        <button class="add-btn" onclick="addSymptomFromSub()">+ add</button>
-      </div>
+      <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-bottom:8px;line-height:1.7">
+        drag to reorder · add per category
+      </p>
+      <div id="subSettingsSymptoms"></div>
     </div>
     <button class="btn primary" style="width:100%" onclick="saveSettings();showToast('saved ✓')">save all</button>
   </div>

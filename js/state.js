@@ -79,17 +79,59 @@ function setMood(type, btn) {
   render();
 }
 
-function toggleSymptom(s) {
-  const i = state.symptoms.indexOf(s);
+// state.symptoms is [{name, severity}] in v2.
+// toggleSymptom handles both old string format and new object format.
+function _normSymptoms() {
+  state.symptoms = (state.symptoms || []).map(s =>
+    typeof s === 'string' ? { name: s, severity: 'moderate' } : s
+  );
+}
+
+function toggleSymptom(name, severity) {
+  _normSymptoms();
+  const i = state.symptoms.findIndex(s => s.name === name);
   if (i > -1) {
     state.symptoms.splice(i, 1);
-    announce(s + ' symptom flag removed.');
+    announce(name + ' symptom flag removed.');
   } else {
-    state.symptoms.push(s);
-    announce(s + ' symptom flagged.');
+    state.symptoms.push({ name, severity: severity || 'moderate' });
+    announce(name + ' symptom flagged: ' + (severity || 'moderate') + '.');
   }
   saveState();
   render();
+}
+
+function setSymptomSeverity(name, severity) {
+  _normSymptoms();
+  const entry = state.symptoms.find(s => s.name === name);
+  if (!entry) {
+    // Not yet flagged — flag it with this severity
+    state.symptoms.push({ name, severity });
+    announce(name + ' flagged as ' + severity + '.');
+  } else {
+    entry.severity = severity;
+    announce(name + ' severity set to ' + severity + '.');
+  }
+  saveState();
+  render();
+}
+
+function isSymptomFlagged(name) {
+  _normSymptoms();
+  return state.symptoms.some(s => s.name === name);
+}
+
+function getSymptomSeverity(name) {
+  _normSymptoms();
+  const entry = state.symptoms.find(s => s.name === name);
+  return entry ? entry.severity : null;
+}
+
+function clearAllSymptoms() {
+  state.symptoms = [];
+  saveState();
+  render();
+  announce('All symptom flags cleared.');
 }
 
 function saveAll() {
@@ -111,10 +153,27 @@ function saveAll() {
 function saveHistoryEntry() {
   const all = [...(CRITICAL||[]), ...(DAILY||[])];
   const done = all.filter(t => state.tasks[t.id]).length;
+  _normSymptoms();
+  // Per-category flag breakdown for stats
+  const catBreakdown = {};
+  (typeof SYMPTOM_CATS !== 'undefined' ? SYMPTOM_CATS : []).forEach(cat => {
+    const catFlags = state.symptoms.filter(s => cat.symptoms.includes(s.name));
+    if (catFlags.length > 0) catBreakdown[cat.id] = catFlags.map(s => ({name:s.name, severity:s.severity}));
+  });
+
+  // Spend for the day (from budget module if available)
+  let todaySpend = 0;
+  try {
+    const spends = Store.get('tracker-spend') || [];
+    todaySpend = spends.filter(s => s.date === TODAY).reduce((sum, s) => sum + (s.amount || 0), 0);
+  } catch(e) {}
+
   const entry = {
     date: TODAY, done, total: all.length,
     mood: state.mood.mood, energy: state.mood.energy,
-    flags: state.symptoms.length
+    flags: state.symptoms.length,
+    catBreakdown,
+    spend: todaySpend,
   };
   try {
     const existing = Store.get('tracker-history') || [];
