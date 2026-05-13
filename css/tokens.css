@@ -87,6 +87,18 @@
     --success-bg:rgba(74,158,107,0.1);
     --warning:   #c8a96e;
     --warning-bg:rgba(200,169,110,0.08);
+    /* Symptom category colors (referenced by --cat-color via inline style) */
+    --cat-neuro:   #8fb8d4;
+    --cat-psych:   #c97a7a;
+    --cat-phys:    #6ea96e;
+    --cat-behav:   #c8a96e;
+    --cat-custom:  #b89bc8;
+    /* Pre-computed tinted backgrounds for html2canvas-safe rendering */
+    --cat-neuro-bg:  rgba(143,184,212,0.18);
+    --cat-psych-bg:  rgba(201,122,122,0.18);
+    --cat-phys-bg:   rgba(110,169,110,0.18);
+    --cat-behav-bg:  rgba(200,169,110,0.18);
+    --cat-custom-bg: rgba(184,155,200,0.18);
     /* System fonts — respect Android/iOS accessibility settings */
     --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
@@ -119,6 +131,12 @@
     --success-bg:rgba(46,122,78,0.1);
     --warning:   #9a6f2e;
     --warning-bg:rgba(154,111,46,0.08);
+    /* Symptom category colors — darker for light bg contrast */
+    --cat-neuro:   #4a7a9e;
+    --cat-psych:   #a04848;
+    --cat-phys:    #3a7a3a;
+    --cat-behav:   #9a6f2e;
+    --cat-custom:  #7a5a8e;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
     --shadow:    0 2px 8px rgba(0,0,0,0.12);
     --shadow-lg: 0 4px 20px rgba(0,0,0,0.15);
