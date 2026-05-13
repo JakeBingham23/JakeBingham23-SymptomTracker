@@ -316,6 +316,32 @@ h2.section-label {
   box-shadow: var(--card-shadow);
   position: relative;
   overflow: hidden;
+  padding: var(--sp-5) var(--sp-5);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-4);
+  margin-bottom: 1.5rem;
+}
+.points-total {
+  font-family: var(--font-mono);
+  font-size: 2.5rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.points-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 6px;
+}
+.points-banner > div {
+  position: relative;
+  z-index: 1;
 }
 .points-banner::before {
   content: '';
