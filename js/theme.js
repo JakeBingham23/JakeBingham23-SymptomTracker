@@ -1,3 +1,4 @@
+import { cfg, saveConfig } from './config.js';
 // ═════════════════════════════════════════════════════════════════
 // THEME MODULE — Daily Structure Tracker v5
 // Material You dynamic color layered on Bauhaus aesthetics.
@@ -104,7 +105,7 @@ function detectSystemAccent() {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────
-function applyTheme(theme) {
+export function applyTheme(theme) {
   const root   = document.documentElement;
   const themes = ['werkstatt','breuer','forst','bauhaus','constructivist','suprematist'];
   themes.forEach(t => root.classList.remove('theme-' + t));
@@ -119,12 +120,12 @@ function applyTheme(theme) {
   _updateThemePills(theme);
 }
 
-function setTheme(theme) {
+export function setTheme(theme) {
   cfg.theme = theme; saveConfig(cfg); applyTheme(theme);
   if (typeof announce === 'function') announce('Theme changed to ' + theme + '.');
 }
 
-function toggleTheme() {
+export function toggleTheme() {
   setTheme((cfg.theme || 'werkstatt') === 'breuer' ? 'werkstatt' : 'breuer');
 }
 
@@ -167,4 +168,4 @@ function _updateThemePills(theme) {
 function updateNavThemeBtn(theme) { _updateThemeToggleBtn(theme); }
 
 // Alias — HTML uses toggleLightDark, function was renamed to toggleTheme
-function toggleLightDark() { return toggleTheme(); }
+export function toggleLightDark() { return toggleTheme(); }

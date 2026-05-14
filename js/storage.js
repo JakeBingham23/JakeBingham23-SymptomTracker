@@ -13,7 +13,7 @@
 // so config.js parse-time reads work correctly.
 // ═════════════════════════════════════════════════════════════════
 
-const Store = (() => {
+export const Store = (() => {
   'use strict';
 
   const DB_NAME  = 'tracker-idb';

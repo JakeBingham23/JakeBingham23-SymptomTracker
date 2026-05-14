@@ -1,3 +1,6 @@
+import { Store } from './storage.js';
+import { SecureStore } from './crypto.js';
+import { TODAY, announce, escHtml } from './core.js';
 // ═════════════════════════════════════════════════════════════════
 // JOURNAL MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -50,7 +53,7 @@ let _editingEntryId = null;
 let _draftTimer = null;
 let _voiceRecognition = null;
 
-function newJournalEntry() {
+export function newJournalEntry() {
   _editingEntryId = null;
   openJournalComposer('');
 }
@@ -89,7 +92,7 @@ function openJournalComposer(text, entryId) {
   announce('Journal composer opened. ' + (text ? 'Editing existing entry.' : 'New entry.'));
 }
 
-function closeJournalComposer() {
+export function closeJournalComposer() {
   const composer = document.getElementById('journalComposer');
   if (composer) composer.style.display = 'none';
   stopVoiceInput();
@@ -114,7 +117,7 @@ function countWords(text) {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
 
-async function saveJournalEntry() {
+export async function saveJournalEntry() {
   const textarea = document.getElementById('journalTextarea');
   const text = sanitiseInput(textarea?.value || '', 10000);
   if (!text) { showToast('write something first'); return; }
@@ -149,14 +152,14 @@ async function saveJournalEntry() {
   playSuccess();
 }
 
-async function deleteJournalEntry(id) {
+export async function deleteJournalEntry(id) {
   if (!confirm('Delete this journal entry?')) return;
   await saveJournalEntries((await getJournalEntries()).filter(e => e.id !== id));
   await renderJournalList();
   announce('Journal entry deleted.');
 }
 
-async function editJournalEntry(id) {
+export async function editJournalEntry(id) {
   const entry = (await getJournalEntries()).find(e => e.id === id);
   if (!entry) return;
   openJournalComposer(entry.text, id);
@@ -195,7 +198,7 @@ function dismissPrompt() {
 }
 
 // ── Voice input ────────────────────────────────────────────────────────────
-function toggleVoiceInput() {
+export function toggleVoiceInput() {
   if (_voiceRecognition) { stopVoiceInput(); return; }
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -259,12 +262,12 @@ function stopVoiceInput() {
 // ── Render ────────────────────────────────────────────────────────────────
 let _journalFilter = '';
 
-function filterJournalEntries(query) {
+export function filterJournalEntries(query) {
   _journalFilter = query.toLowerCase().trim();
   renderJournalList(); // async — fire and forget is fine here
 }
 
-async function renderJournalList() {
+export async function renderJournalList() {
   const el = document.getElementById('journalList');
   if (!el) return;
 

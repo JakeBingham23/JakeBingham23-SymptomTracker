@@ -1,3 +1,4 @@
+import { Store } from './storage.js';
 // ═════════════════════════════════════════════════════════════════
 // CONFIG MODULE — Daily Structure Tracker v5
 // OWNS: cfg object, task/symptom defaults, saveConfig/loadConfig, fonts
@@ -5,33 +6,33 @@
 // Load order: 2nd (after crypto.js)
 // ═════════════════════════════════════════════════════════════════
 
-const DEFAULT_CRITICAL = [
+export const DEFAULT_CRITICAL = [
   { id:'meds',   name:'take meds',     sub:'non-negotiable. no excuses.' },
   { id:'shower', name:'shower',        sub:'yes, this one counts too' },
   { id:'eat1',   name:'eat something', sub:'first meal' },
 ];
-const DEFAULT_DAILY = [
+export const DEFAULT_DAILY = [
   { id:'water', name:'drink water',  sub:'not just coffee' },
   { id:'eat2',  name:'second meal',  sub:'' },
   { id:'meds2', name:'evening meds', sub:'if applicable' },
   { id:'wind',  name:'wind down',    sub:'phones down' },
 ];
-const DEFAULT_SYMPTOMS = [
+export const DEFAULT_SYMPTOMS = [
   'dissociation','intrusive thoughts','paranoia','sensory overload',
   "can't initiate",'rage','shutdown','impulsivity',
   'insomnia','hypersomnia','appetite gone','appetite excessive'
 ];
 
 // ── Persistence ───────────────────────────────────────────────────────────
-function loadConfig() {
+export function loadConfig() {
   try { const r = localStorage.getItem('tracker-config'); if (r) return JSON.parse(r); } catch(e) {}
   return null;
 }
-function saveConfig(c) {
+export function saveConfig(c) {
   try { localStorage.setItem('tracker-config', JSON.stringify(c)); } catch(e) {}
 }
 
-let cfg = loadConfig() || {
+export let cfg = loadConfig() || {
   name:'', critical:DEFAULT_CRITICAL, daily:DEFAULT_DAILY, symptoms:DEFAULT_SYMPTOMS,
   symptomCategories:null, reminderInterval:'30', tgToken:'', tgChatId:'',
   windowCloseTime:'', taskDeadlines:{}, customTimers:[],
@@ -89,7 +90,7 @@ if (!cfg.font) cfg.font = cfg.a11y?.font || 'default';
 // ── Font sources — all served from reliable CDNs ───────────────────────────
 // cdnfonts.com removed — unreliable. OpenDyslexic now via jsDelivr (npm mirror).
 // Atkinson Hyperlegible Next (2023 update) used over original.
-const FONT_SOURCES = {
+export const FONT_SOURCES = {
   jost:         'https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap',
   ibmplexmono:  'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap',
   atkinson:     'https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap',
@@ -101,7 +102,7 @@ const FONT_SOURCES = {
 // ── Accessibility presets ────────────────────────────────────────────────────
 // Each preset sets multiple properties at once for a coherent reading experience.
 // Stored under cfg.a11yPreset. Individual overrides still work on top.
-const A11Y_PRESETS = {
+export const A11Y_PRESETS = {
   default: {
     font: 'default', textSize: 'normal', lineSpacing: 'normal',
     letterSpacing: 'normal', highContrast: false, largeTouchTargets: false,
@@ -124,7 +125,7 @@ const A11Y_PRESETS = {
 };
 const _loadedFonts = new Set();
 
-async function loadFontIfNeeded(font) {
+export async function loadFontIfNeeded(font) {
   if (!FONT_SOURCES[font] || _loadedFonts.has(font)) return;
   return new Promise(resolve => {
     const link = document.createElement('link');
@@ -135,7 +136,7 @@ async function loadFontIfNeeded(font) {
   });
 }
 
-async function applyFont(font) {
+export async function applyFont(font) {
   if (font && FONT_SOURCES[font]) {
     // Show loading state on picker button
     const activeBtn = document.querySelector('[id^="fontOpt"]:not([id$="Default"]).active,' +
@@ -148,27 +149,27 @@ async function applyFont(font) {
   updateFontUI(font || 'default');
 }
 
-function applyLineSpacing(spacing) {
+export function applyLineSpacing(spacing) {
   const root = document.documentElement;
   root.removeAttribute('data-line-spacing');
   if (spacing && spacing !== 'normal') root.setAttribute('data-line-spacing', spacing);
   cfg.lineSpacing = spacing; cfg.a11y = cfg.a11y || {}; cfg.a11y.lineSpacing = spacing;
 }
 
-function applyLetterSpacing(spacing) {
+export function applyLetterSpacing(spacing) {
   const root = document.documentElement;
   root.removeAttribute('data-letter-spacing');
   if (spacing && spacing !== 'normal') root.setAttribute('data-letter-spacing', spacing);
   cfg.letterSpacing = spacing; cfg.a11y = cfg.a11y || {}; cfg.a11y.letterSpacing = spacing;
 }
 
-async function setFont(font) {
+export async function setFont(font) {
   cfg.font = font; cfg.a11y = cfg.a11y || {}; cfg.a11y.font = font;
   saveConfig(cfg); await applyFont(font);
   if (typeof announce === 'function') announce('Font changed to ' + (font === 'default' ? 'system default' : font) + '.');
 }
 
-async function applyA11yPreset(presetName) {
+export async function applyA11yPreset(presetName) {
   const preset = A11Y_PRESETS[presetName];
   if (!preset) return;
   cfg.a11yPreset = presetName;
@@ -191,7 +192,7 @@ async function applyA11yPreset(presetName) {
   });
 }
 
-function updateFontUI(font) {
+export function updateFontUI(font) {
   const f = font || 'default';
   ['default','jost','ibmplexmono','atkinson','lexend','inclusive','opendyslexic','comic','mono'].forEach(k => {
     const key = k.charAt(0).toUpperCase() + k.slice(1);

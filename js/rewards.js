@@ -1,3 +1,7 @@
+import { cfg, CRITICAL, DAILY } from './config.js';
+import { Store } from './storage.js';
+import { state } from './state-obj.js';
+import { TODAY, announce } from './core.js';
 // ═════════════════════════════════════════════════════════════════
 // REWARDS MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -14,8 +18,8 @@ const TASK_POINTS  = 10;   // per task completion
 const STREAK_BONUS = 5;    // extra per day for streak continuation
 const ALL_DONE_BONUS = 25; // bonus for all non-negotiables
 
-function getPoints()  { try { return Store.get(POINTS_KEY) || 0; } catch(e) { return 0; } }
-function addPoints(n) {
+export function getPoints()  { try { return Store.get(POINTS_KEY) || 0; } catch(e) { return 0; } }
+export function addPoints(n) {
   const total = getPoints() + n;
   Store.set(POINTS_KEY, total);
   return total;
@@ -64,7 +68,7 @@ function earnBadge(id) {
   return true;
 }
 
-function checkBadges() {
+export function checkBadges() {
   const streak = state.medStreak || 0;
   const points = getPoints();
   const all    = [...CRITICAL, ...DAILY];
@@ -205,7 +209,7 @@ function showMilestone(emoji, title, msg, bonusPoints, hapticType, days) {
   }, 100);
 }
 
-function closeMilestone() {
+export function closeMilestone() {
   document.getElementById('milestoneOverlay').classList.add('hidden');
   announce('Celebration closed.');
 }
@@ -321,7 +325,7 @@ function renderMonthlySummaryCard() {
 }
 
 // ── Badges render ─────────────────────────────────────────────────────────
-function renderBadges() {
+export function renderBadges() {
   const el     = document.getElementById('badgesGrid');
   if (!el) return;
   const earned = getBadges();
@@ -339,7 +343,7 @@ function renderBadges() {
 }
 
 // ── Points display ────────────────────────────────────────────────────────
-function renderPointsDisplay(announce_) {
+export function renderPointsDisplay(announce_) {
   const el    = document.getElementById('totalPointsDisplay');
   const mult  = document.getElementById('pointsMultiplier');
   const total = getPoints();

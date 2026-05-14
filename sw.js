@@ -3,7 +3,7 @@
 // Real sw.js — replaces the blob URL hack
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME    = 'tracker-v5.9';
+const CACHE_NAME    = 'tracker-v6.0';
 const CACHE_STATIC  = [
   './',
   './index.html',
@@ -17,6 +17,8 @@ const CACHE_STATIC  = [
   './js/crypto.js',
   './js/config.js',
   './js/state.js',
+  './js/app.js',
+  './js/state-obj.js',
   './js/storage.js',
   './js/core.js',
   './js/render.js',

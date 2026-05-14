@@ -1,3 +1,7 @@
+import { cfg, saveConfig, CRITICAL, DAILY } from './config.js';
+import { Store } from './storage.js';
+import { SecureStore } from './crypto.js';
+import { announce, escHtml } from './core.js';
 // ═════════════════════════════════════════════════════════════════
 // BACKUP MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -70,7 +74,7 @@ function restoreAllData(data) {
   }
 }
 
-function exportBackup() {
+export function exportBackup() {
   try {
     const data     = collectAllData();
     const json     = JSON.stringify(data, null, 2);
@@ -157,18 +161,18 @@ function showEncryptSection() {
   setTimeout(() => document.getElementById('encryptPassphrase')?.focus(), 100);
 }
 
-function hideEncrypt() {
+export function hideEncrypt() {
   const el = document.getElementById('encryptSection');
   if (el) el.style.display = 'none';
   const pw = document.getElementById('encryptPassphrase');
   if (pw) pw.value = '';
 }
 
-async function exportEncryptedBackup() {
+export async function exportEncryptedBackup() {
   showEncryptSection();
 }
 
-async function doEncryptedExport() {
+export async function doEncryptedExport() {
   const passphrase = document.getElementById('encryptPassphrase')?.value?.trim();
   if (!passphrase || passphrase.length < 4) {
     backupStatus('passphrase must be at least 4 characters', 'var(--danger)');
@@ -205,7 +209,7 @@ async function doEncryptedExport() {
 }
 
 // ── Import handles both encrypted and plain backups ───────────────────────
-async function importBackup(input) {
+export async function importBackup(input) {
   const file = input.files[0];
   if (!file) return;
   input.value = '';
@@ -332,7 +336,7 @@ function showQRConfig() {
 }
 
 // ── CSV Export ───────────────────────────────────────────────────────────
-function exportCSV() {
+export function exportCSV() {
   try {
     const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
     if (history.length === 0) {

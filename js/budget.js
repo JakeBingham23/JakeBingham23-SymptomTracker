@@ -1,3 +1,7 @@
+import { cfg, saveConfig } from './config.js';
+import { Store } from './storage.js';
+import { announce } from './core.js';
+import { showToast } from './toast.js';
 // ═════════════════════════════════════════════════════════════════
 // BUDGET MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -25,7 +29,7 @@ function saveSpends(spends) {
   Store.set(SPEND_KEY, spends);
 }
 
-function saveMonthlyBudget() {
+export function saveMonthlyBudget() {
   const val = parseFloat(document.getElementById('monthlyBudgetSettings')?.value || document.getElementById('monthlyBudget')?.value || '0');
   const c = getBudgetConfig();
   c.monthly = val;
@@ -35,13 +39,13 @@ function saveMonthlyBudget() {
   showToast('budget saved ✓');
 }
 
-function filterSpendByBucket(bucket) {
+export function filterSpendByBucket(bucket) {
   const sel = document.getElementById('bucketFilter');
   if (sel) sel.value = bucket;
   renderBudgetTab();
 }
 
-function renderBudgetTab() {
+export function renderBudgetTab() {
   renderBucketCards();
   renderDopamineList();
   renderDailyCard();

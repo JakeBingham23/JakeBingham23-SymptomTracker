@@ -2,7 +2,7 @@
 // CRYPTO MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
 
-const SecureStore = (() => {
+export const SecureStore = (() => {
   // ── Constants ─────────────────────────────────────────────────────────
   const DB_NAME      = 'tracker-secure';
   const DB_VERSION   = 1;

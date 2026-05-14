@@ -1,3 +1,8 @@
+import { state } from './state-obj.js';
+import { saveState, saveHistoryEntry } from './state.js';
+import { cfg, CRITICAL, DAILY, SYMPTOMS, SYMPTOM_CATS, saveConfig } from './config.js';
+import { Store } from './storage.js';
+
 // ═════════════════════════════════════════════════════════════════
 // CORE MODULE — Daily Structure Tracker v5
 //
@@ -13,13 +18,13 @@
 //             before symptoms/render.js, render.js
 // ═════════════════════════════════════════════════════════════════
 
-const TODAY   = new Date().toISOString().split('T')[0];
+export const TODAY   = new Date().toISOString().split('T')[0];
 let CRITICAL  = cfg.critical || DEFAULT_CRITICAL;
 let DAILY     = cfg.daily    || DEFAULT_DAILY;
 let SYMPTOMS  = cfg.symptoms || DEFAULT_SYMPTOMS;
 
 // ── render() ─────────────────────────────────────────────────────────────
-function render() {
+export function render() {
   const dateEl = document.getElementById('dateDisplay');
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', {
     weekday:'short', year:'numeric', month:'short', day:'numeric'
@@ -148,7 +153,7 @@ function saveAll() {
 }
 
 // ── toggleTask() ──────────────────────────────────────────────────────────
-function toggleTask(id) {
+export function toggleTask(id) {
   state.tasks[id] = !state.tasks[id];
   const done = state.tasks[id];
   const task = [...CRITICAL, ...DAILY].find(t => t.id === id);
@@ -176,7 +181,7 @@ function toggleTask(id) {
 }
 
 // ── setMood() ─────────────────────────────────────────────────────────────
-function setMood(type, btn) {
+export function setMood(type, btn) {
   const val = btn.textContent;
   state.mood[type] = val;
   if (typeof announce === 'function') announce(type + ' set to ' + val + '.');
@@ -187,7 +192,7 @@ function setMood(type, btn) {
 }
 
 // ── toggleSymptom() ───────────────────────────────────────────────────────
-function toggleSymptom(s) {
+export function toggleSymptom(s) {
   const i = state.symptoms.indexOf(s);
   if (i > -1) {
     state.symptoms.splice(i, 1);

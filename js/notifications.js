@@ -1,3 +1,6 @@
+import { cfg } from './config.js';
+import { state } from './state-obj.js';
+import { CRITICAL, announce, render, saveAll } from './core.js';
 // ═════════════════════════════════════════════════════════════════
 // NOTIFICATIONS MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════

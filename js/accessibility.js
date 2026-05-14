@@ -1,10 +1,14 @@
+import { cfg, saveConfig, CRITICAL, DAILY, SYMPTOM_CATS } from './config.js';
+import { render, announce, escHtml } from './core.js';
+import { state } from './state-obj.js';
+import { Store } from './storage.js';
 // ═════════════════════════════════════════════════════════════════
 // ACCESSIBILITY MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
 
 // ── Low vision / accessibility system ────────────────────────────────────
 
-function applyTextSize(size) {
+export function applyTextSize(size) {
   // Apply to <html> so rem units cascade from it
   const html = document.documentElement;
   html.removeAttribute('data-text-size');
@@ -12,7 +16,7 @@ function applyTextSize(size) {
   updateTextSizeUI(size || 'normal');
 }
 
-function setTextSize(size) {
+export function setTextSize(size) {
   cfg.a11y = cfg.a11y || {};
   cfg.a11y.textSize = size;
   saveConfig(cfg);
@@ -62,7 +66,7 @@ function applyHighContrast(on) {
   if (settEl) settEl.checked = !!on;
 }
 
-function setHighContrast(on) {
+export function setHighContrast(on) {
   cfg.a11y = cfg.a11y || {};
   cfg.a11y.highContrast = on;
   saveConfig(cfg);
@@ -85,7 +89,7 @@ function applyReduceMotion(on) {
   if (settEl) settEl.checked = !!on;
 }
 
-function toggleReduceMotion(val) {
+export function toggleReduceMotion(val) {
   const on = typeof val === 'boolean' ? val : !(cfg.a11y || {}).reduceMotion;
   cfg.a11y = cfg.a11y || {};
   cfg.a11y.reduceMotion = on;
@@ -94,7 +98,7 @@ function toggleReduceMotion(val) {
   announce('Reduce motion ' + (on ? 'enabled' : 'disabled') + '.');
 }
 
-function setLargeTouchTargets(on) {
+export function setLargeTouchTargets(on) {
   cfg.a11y = cfg.a11y || {};
   cfg.a11y.largeTouchTargets = on;
   saveConfig(cfg);
@@ -210,18 +214,18 @@ function announce(msg, assertive) {
   }, 50);
 }
 
-function updateTask(containerId, idx, field, val) {
+export function updateTask(containerId, idx, field, val) {
   const list = containerId === 'settingsCritical' ? CRITICAL : DAILY;
   list[idx][field] = val.trim();
 }
 
-function removeTask(containerId, idx) {
+export function removeTask(containerId, idx) {
   const list = containerId === 'settingsCritical' ? CRITICAL : DAILY;
   list.splice(idx, 1);
   renderSettingsPanel();
 }
 
-function addTask(type) {
+export function addTask(type) {
   const id = 'task_' + Date.now();
   if (type === 'critical') CRITICAL.push({ id, name: 'new task', sub: '' });
   else DAILY.push({ id, name: 'new task', sub: '' });
@@ -262,7 +266,7 @@ function addSymptom() {
   if (typeof renderSymptomGrid     === 'function') renderSymptomGrid();
 }
 
-function saveName() {
+export function saveName() {
   const name = document.getElementById('settingsName').value.trim();
   if (!name) {
     announce('Please enter a name first.', true);
@@ -276,7 +280,7 @@ function saveName() {
   showToast('name saved ✓');
 }
 
-function saveSettings() {
+export function saveSettings() {
   // Flush any typed-but-not-changed inputs from settings panel
   document.querySelectorAll('#settingsCritical input[type=text]').forEach((inp, i) => {
     const field = inp.classList.contains('sub-input') ? null : 'name';

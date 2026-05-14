@@ -1,3 +1,6 @@
+import { cfg, saveConfig, CRITICAL } from './config.js';
+import { state } from './state-obj.js';
+import { TODAY, announce, escHtml } from './core.js';
 // ═════════════════════════════════════════════════════════════════
 // TIMERS MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -128,7 +131,7 @@ function renderCustomTimersWidget() {
   }).join('');
 }
 
-function addCustomTimer() {
+export function addCustomTimer() {
   const name = document.getElementById('newTimerName').value.trim();
   const mins = parseInt(document.getElementById('newTimerMins').value, 10);
   if (!name || !mins || mins < 1) return;
@@ -159,20 +162,20 @@ function deleteCustomTimer(id) {
 }
 
 // ── Settings panel timer helpers ──────────────────────────────────────────
-function saveWindowTime() {
+export function saveWindowTime() {
   cfg.windowCloseTime = document.getElementById('windowCloseTime').value;
   saveConfig(cfg);
   updateWindowTimer();
 }
 
-function clearWindowTime() {
+export function clearWindowTime() {
   cfg.windowCloseTime = '';
   document.getElementById('windowCloseTime').value = '';
   saveConfig(cfg);
   updateWindowTimer();
 }
 
-function renderTaskDeadlineSettings() {
+export function renderTaskDeadlineSettings() {
   const el = document.getElementById('taskDeadlineSettings');
   if (!el) return;
   el.innerHTML = CRITICAL.map(t => `
@@ -186,7 +189,7 @@ function renderTaskDeadlineSettings() {
   `).join('');
 }
 
-function setTaskDeadline(taskId, timeVal) {
+export function setTaskDeadline(taskId, timeVal) {
   cfg.taskDeadlines[taskId] = timeVal;
   saveConfig(cfg);
   render();

@@ -1,3 +1,7 @@
+import { loadState } from './state.js';
+import { render, announce } from './core.js';
+import { Store } from './storage.js';
+import { SecureStore } from './crypto.js';
 // ═════════════════════════════════════════════════════════════════
 // SECURITY MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -48,7 +52,7 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('DOMContentLoaded', _resetIdleTimer);
 
 // ── App init gate — nothing renders until unlocked ────────────────────────
-async function initApp() {
+export async function initApp() {
   if (!SecureStore.isUnlocked()) {
     console.warn('[Security] initApp called while locked — aborting');
     return;

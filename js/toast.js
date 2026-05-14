@@ -9,7 +9,7 @@
 // Replaces the old showToast() inline implementation.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const Toast = (() => {
+export const Toast = (() => {
   const DURATION   = 4000;
   const ANIM_OUT   = 350;
 
@@ -92,6 +92,6 @@ const Toast = (() => {
 })();
 
 // Drop-in replacement for old showToast() calls throughout the app
-function showToast(message, type = 'default') {
+export function showToast(message, type = 'default') {
   return Toast.show(message, type);
 }

@@ -1,3 +1,5 @@
+import { TODAY } from './core.js';
+import { announce } from './core.js';
 // ═════════════════════════════════════════════════════════════════
 // SCREENSHOT MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════

@@ -1,3 +1,7 @@
+import { cfg, CRITICAL, DAILY } from './config.js';
+import { state } from './state-obj.js';
+import { Store } from './storage.js';
+import { announce } from './core.js';
 // ═════════════════════════════════════════════════════════════════
 // RENDER MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -46,7 +50,7 @@ function initOnboarding() {
   }
 }
 
-function completeOnboarding() {
+export function completeOnboarding() {
   const name = document.getElementById('nameInput').value.trim();
   if (!name) { document.getElementById('nameInput').focus(); return; }
   cfg.name = name;
@@ -62,7 +66,7 @@ function applyName(name) {
 
 // ── Settings panel ────────────────────────────────────────────────────────
 // ── Tab navigation ────────────────────────────────────────────────────────
-async function switchTab(tab) {
+export async function switchTab(tab) {
   const tabNames = { today: 'Today', history: 'Log and appointments', stats: 'Stats', budget: 'Budget', journal: 'Journal' };
   ['today','history','stats','budget','journal'].forEach(t => {
     const tabEl  = document.getElementById('tab-' + t);
@@ -82,14 +86,14 @@ async function switchTab(tab) {
 }
 
 // ── Appointments data ────────────────────────────────────────────────────
-function loadAppts() {
+export function loadAppts() {
   try { return Store.get('tracker-appts') || []; } catch(e) { return []; }
 }
-function saveAppts(appts) {
+export function saveAppts(appts) {
   try { Store.set('tracker-appts', appts); } catch(e) {}
 }
 
-function openApptModal(id) {
+export function openApptModal(id) {
   const overlay = document.getElementById('apptModalOverlay');
   document.getElementById('apptModalTitle').textContent = id ? '// edit appointment' : '// new appointment';
   document.getElementById('apptEditId').value = id || '';
@@ -119,14 +123,14 @@ function openApptModal(id) {
   }, 100);
 }
 
-function closeApptModal() {
+export function closeApptModal() {
   document.getElementById('apptModalOverlay').classList.add('hidden');
   // Return focus to the trigger element
   const addBtn = document.querySelector('button[onclick="openApptModal()"]');
   if (addBtn) addBtn.focus();
 }
 
-function saveAppt() {
+export function saveAppt() {
   const title    = document.getElementById('apptTitle').value.trim();
   const datetime = document.getElementById('apptDateTime').value;
   if (!title || !datetime) { showToast('title and date/time required'); return; }
@@ -297,11 +301,11 @@ function showSummary(apptId) {
   earnBadge('appointment');
 }
 
-function closeSummaryModal() {
+export function closeSummaryModal() {
   document.getElementById('summaryModalOverlay').classList.add('hidden');
 }
 
-async function shareSummary() {
+export async function shareSummary() {
   const text = document.getElementById('summaryText').textContent;
   if (navigator.share) {
     try {
@@ -319,7 +323,7 @@ async function shareSummary() {
 }
 
 // ── renderHistory — now includes appointments ─────────────────────────────
-function renderHistory() {
+export function renderHistory() {
   const el     = document.getElementById('historyList');
   const dateEl = document.getElementById('historyDateDisplay');
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', {
@@ -377,7 +381,7 @@ function renderHistory() {
   } catch(e) { el.textContent = 'error loading history'; }
 }
 
-function renderStats() {
+export function renderStats() {
   document.getElementById('bigStreak').textContent = state.medStreak || 0;
   renderPointsDisplay(true);  // announces to screen readers
   renderBadges();

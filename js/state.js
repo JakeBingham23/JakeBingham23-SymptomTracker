@@ -1,3 +1,4 @@
+import { state, getKey, getStreakKey } from './state-obj.js';
 // ═════════════════════════════════════════════════════════════════
 // STATE MODULE — Daily Structure Tracker v5
 //
@@ -14,28 +15,20 @@
 
 
 // ── App state ─────────────────────────────────────────────────────────────
-let state = {
-  tasks: {},
-  mood: { energy: '', mood: '' },
-  symptoms: [],
-  notes: '',
-  medStreak: 0
-};
+// state imported from state-obj.js
 
-function getKey(date) { return 'tracker-' + date; }
-function getStreakKey() { return 'tracker-med-streak'; }
 
-function loadState() {
+export function loadState() {
   try {
     const raw = Store.get(getKey(TODAY));
     if (raw && typeof raw === 'object') Object.assign(state, raw);
     const streak = Store.get(getStreakKey());
     if (streak) state.medStreak = parseInt(streak) || 0;
   } catch(e) {}
-  render();
+  // caller calls render() after loadState
 }
 
-function saveState() {
+export function saveState() {
   try {
     Store.set(getKey(TODAY), state);
     // persist streak against any meds task
@@ -44,7 +37,7 @@ function saveState() {
   } catch(e) {}
 }
 
-function saveHistoryEntry() {
+export function saveHistoryEntry() {
   const all = [...(CRITICAL||[]), ...(DAILY||[])];
   const done = all.filter(t => state.tasks[t.id]).length;
   const entry = {

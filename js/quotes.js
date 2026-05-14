@@ -1,3 +1,7 @@
+import { cfg, saveConfig } from './config.js';
+import { Store } from './storage.js';
+import { state } from './state-obj.js';
+import { TODAY, announce, escHtml } from './core.js';
 // ═════════════════════════════════════════════════════════════════
 // QUOTES MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -76,7 +80,7 @@ const OFFLINE_QUOTES = {
   ]
 };
 
-function getOfflineQuote(state) {
+export function getOfflineQuote(state) {
   const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
   let pool = OFFLINE_QUOTES[state] || OFFLINE_QUOTES.generic;
   const available = pool.filter(q => !blocked.includes(q));
@@ -228,12 +232,12 @@ function showQuote(text, source, liked) {
   }
 }
 
-function refreshQuote() {
+export function refreshQuote() {
   loadQuoteOfDay(true);
   announce('Refreshing your daily message.');
 }
 
-function likeQuote() {
+export function likeQuote() {
   try {
     const cached = Store.get(QUOTE_KEY);
     if (!cached) return;
@@ -247,7 +251,7 @@ function likeQuote() {
 }
 
 // ── API key + quote prefs ─────────────────────────────────────────────────
-function saveApiKey() {
+export function saveApiKey() {
   const key = document.getElementById('anthropicKey')?.value?.trim();
   if (!key) { apiKeyStatus('enter a key first', 'var(--danger)'); return; }
   if (!key.startsWith('sk-ant-')) { apiKeyStatus('key should start with sk-ant-', 'var(--warning)'); return; }
@@ -297,7 +301,7 @@ function removeFavQuote(idx) {
   renderFavQuotes();
 }
 
-function blockQuote(text) {
+export function blockQuote(text) {
   const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
   if (!blocked.includes(text)) {
     blocked.push(text);
@@ -321,7 +325,7 @@ function renderFavQuotes() {
 }
 
 // ── Post check-in message ─────────────────────────────────────────────────
-function showCheckinMessage() {
+export function showCheckinMessage() {
   const el     = document.getElementById('checkinMsg');
   const textEl = document.getElementById('checkinMsgText');
   const srcEl  = document.getElementById('checkinMsgSource');
@@ -348,7 +352,7 @@ function showCheckinMessage() {
   setTimeout(() => el.classList.remove('visible'), 8000);
 }
 
-function likeCheckinMsg() {
+export function likeCheckinMsg() {
   const el = document.getElementById('checkinMsg');
   const text = el?.dataset?.msgText;
   if (text) {

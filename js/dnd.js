@@ -1,3 +1,5 @@
+import { Store } from './storage.js';
+import { announce } from './core.js';
 // ═════════════════════════════════════════════════════════════════
 // DND MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -5,7 +7,7 @@
 // ── Do Not Disturb ─────────────────────────────────────────────────────────
 const DND_KEY = 'tracker-dnd';
 
-function getDNDConfig() {
+export function getDNDConfig() {
   try { return Store.get(DND_KEY) || {
     enabled: false,
     days: [true,true,true,true,true,true,true],
@@ -13,11 +15,11 @@ function getDNDConfig() {
   }; } catch(e) { return { enabled:false, days:[true,true,true,true,true,true,true], windows:[] }; }
 }
 
-function saveDNDConfig(dnd) {
+export function saveDNDConfig(dnd) {
   Store.set(DND_KEY, dnd);
 }
 
-function isDNDActive() {
+export function isDNDActive() {
   const dnd = getDNDConfig();
   if (!dnd.enabled && dnd.windows.length === 0) return false;
 
@@ -42,14 +44,14 @@ function isDNDActive() {
   });
 }
 
-function saveDND() {
+export function saveDND() {
   const dnd = getDNDConfig();
   dnd.enabled = document.getElementById('dndEnabled')?.checked || false;
   saveDNDConfig(dnd);
   announce('Do not disturb ' + (dnd.enabled ? 'enabled.' : 'disabled.'));
 }
 
-function toggleDNDDay(day) {
+export function toggleDNDDay(day) {
   const dnd = getDNDConfig();
   dnd.days[day] = !dnd.days[day];
   saveDNDConfig(dnd);
@@ -59,14 +61,14 @@ function toggleDNDDay(day) {
   announce(days[day] + ' quiet hours ' + (dnd.days[day] ? 'enabled' : 'disabled') + '.');
 }
 
-function addDNDWindow() {
+export function addDNDWindow() {
   const dnd = getDNDConfig();
   dnd.windows.push({ id: 'dndw_' + Date.now(), start: '22:00', end: '08:00' });
   saveDNDConfig(dnd);
   renderDNDWindows();
 }
 
-function removeDNDWindow(id) {
+export function removeDNDWindow(id) {
   const dnd = getDNDConfig();
   dnd.windows = dnd.windows.filter(w => w.id !== id);
   saveDNDConfig(dnd);

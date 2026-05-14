@@ -1,3 +1,4 @@
+import { cfg } from './config.js';
 // ═════════════════════════════════════════════════════════════════
 // AUDIO MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -100,7 +101,7 @@ async function playCustomAudio(type, volume) {
   return true;
 }
 
-async function playAlertSound(type) {
+export async function playAlertSound(type) {
   const prefs  = cfg.notifPrefs || {};
   const tone   = prefs[type + 'Snd'] || 'none';
   const volume = prefs[type + 'Vol'] ?? 80;
@@ -112,7 +113,7 @@ async function playAlertSound(type) {
   if (tone === 'custom') { await playCustomAudio(type, volume); }
 }
 
-function setAudioTone(type, tone) {
+export function setAudioTone(type, tone) {
   if (!cfg.notifPrefs) cfg.notifPrefs = {};
   cfg.notifPrefs[type + 'Snd'] = tone;
   saveConfig(cfg);
@@ -136,7 +137,7 @@ async function uploadCustomSound(type, input) {
   setTimeout(() => playAlertSound(type), 300);
 }
 
-async function previewTone(type) {
+export async function previewTone(type) {
   await playAlertSound(type);
   announce('Previewing ' + type + ' sound.');
 }
@@ -187,7 +188,7 @@ const HAPTIC = {
   points:       [30, 20, 60],                          // light confirm
 };
 
-function hap(type) {
+export function hap(type) {
   const reduceMotion = (cfg.a11y || {}).reduceMotion;
   if (navigator.vibrate && !reduceMotion) {
     navigator.vibrate(HAPTIC[type] || HAPTIC.task);
@@ -195,7 +196,7 @@ function hap(type) {
 }
 
 // Task completion — ascending 5-note chime
-function playSuccess() {
+export function playSuccess() {
   try {
     const ctx = getAudioCtx();
     const now = ctx.currentTime;

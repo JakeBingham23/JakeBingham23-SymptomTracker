@@ -1,3 +1,6 @@
+import { cfg, CRITICAL, DAILY, SYMPTOM_CATS } from './config.js';
+import { announce, escHtml, render } from './core.js';
+import { state } from './state-obj.js';
 // ═════════════════════════════════════════════════════════════════
 // MENU MODULE — Daily Structure Tracker
 // ═════════════════════════════════════════════════════════════════
@@ -5,7 +8,7 @@
 // ── Hamburger menu ───────────────────────────────────────────────────────
 let _menuPrevFocus = null;
 
-function openMenu() {
+export function openMenu() {
   _menuPrevFocus = document.activeElement;
   const overlay = document.getElementById('menuOverlay');
   if (!overlay) return;
@@ -18,14 +21,14 @@ function openMenu() {
   announce('Menu opened.');
 }
 
-function closeMenu() {
+export function closeMenu() {
   const overlay = document.getElementById('menuOverlay');
   if (overlay) overlay.classList.add('hidden');
   if (_menuPrevFocus) _menuPrevFocus.focus();
   announce('Menu closed.');
 }
 
-function syncMenuUI() {
+export function syncMenuUI() {
   const theme = cfg.theme || 'werkstatt';
   const font  = cfg.font || cfg.a11y?.font || 'default';
   const size  = cfg.textSize || cfg.a11y?.textSize || 'normal';
@@ -73,7 +76,7 @@ function syncMenuUI() {
 // ── Menu sub-page navigation ─────────────────────────────────────────────
 let _activeSubPage = null;
 
-function openMenuSubPage(name) {
+export function openMenuSubPage(name) {
   const el = document.getElementById('subpage-' + name);
   if (!el) return;
   _activeSubPage = name;
@@ -94,7 +97,7 @@ function openMenuSubPage(name) {
   announce(name + ' settings opened.');
 }
 
-function closeMenuSubPage(name) {
+export function closeMenuSubPage(name) {
   const el = document.getElementById('subpage-' + name);
   if (!el) return;
 
@@ -128,7 +131,7 @@ function populateSubPage(name) {
   }
 }
 
-function renderSubpageTasks() {
+export function renderSubpageTasks() {
   const nameEl = document.getElementById('settingsName2');
   if (nameEl) nameEl.value = cfg.name || '';
   const critEl  = document.getElementById('subTasksCritical');
@@ -139,7 +142,7 @@ function renderSubpageTasks() {
   if (typeof renderSymptomSettings === 'function') renderSymptomSettings();
 }
 
-function saveName2() {
+export function saveName2() {
   const val = document.getElementById('settingsName2')?.value?.trim();
   if (val) { cfg.name = val; saveConfig(cfg); applyName(val); announce('Name saved: ' + val); showToast('name saved ✓'); }
 }
@@ -394,7 +397,7 @@ function renderDailyCard() {
 }
 
 // ── Dopamine / want list ──────────────────────────────────────────────────
-function renderDopamineList() {
+export function renderDopamineList() {
   const el = document.getElementById('dopamineList');
   if (!el) return;
   const list = getDopamineList ? getDopamineList() : [];
@@ -440,7 +443,7 @@ document.addEventListener('keydown', e => {
 // openDopamineModal — placeholder until want-list modal is built
 // Called from Budget tab "+ add want" button. Logs a stub message
 // rather than throwing a ReferenceError on every tap.
-function openDopamineModal(itemId) {
+export function openDopamineModal(itemId) {
   if (typeof showToast === 'function') {
     showToast('want list editor coming soon', 'info');
   } else if (typeof announce === 'function') {

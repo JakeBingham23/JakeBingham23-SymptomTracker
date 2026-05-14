@@ -1,9 +1,11 @@
+import { SecureStore } from './crypto.js';
+import { announce, escHtml } from './core.js';
 // ═══════════════════════════════════════════════════════════════════════════
 // LOCKSCREEN MODULE — PIN + WebAuthn UI Controller
 // Daily Structure Tracker
 // ═══════════════════════════════════════════════════════════════════════════
 
-const lockScreen = (() => {
+export const lockScreen = (() => {
   const MAX_PIN_LEN = 6;
   const MIN_PIN_LEN = 4;
   let _mode         = null; // 'setup-first' | 'setup-confirm' | 'unlock'
