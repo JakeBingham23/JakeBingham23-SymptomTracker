@@ -751,51 +751,159 @@
         <h2 id="seg-accessibility" style="color:var(--text2)">accessibility</h2>
       </div>
 
-      <div style="margin-bottom:10px">
-        <div style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">text size</div>
-        <div class="theme-pill" role="radiogroup" aria-label="Text size">
-          <button class="theme-opt" id="textSizeSmall"  onclick="setTextSize('small')"  role="radio" aria-checked="false">S</button>
-          <button class="theme-opt active" id="textSizeNormal" onclick="setTextSize('normal')" role="radio" aria-checked="true">A</button>
-          <button class="theme-opt" id="textSizeLarge"  onclick="setTextSize('large')"  role="radio" aria-checked="false">A+</button>
-          <button class="theme-opt" id="textSizeXL"     onclick="setTextSize('xl')"     role="radio" aria-checked="false">A++</button>
+      <!-- ── Reading presets ── -->
+      <div style="margin-bottom:var(--sp-4)">
+        <div class="a11y-section-label">reading presets</div>
+        <p style="font-family:var(--font-mono);font-size:0.5625rem;color:var(--text3);margin-bottom:var(--sp-3);line-height:1.7">
+          One tap adjusts font, size, spacing and contrast together.
+        </p>
+        <div class="a11y-preset-grid" role="group" aria-label="Accessibility presets">
+          <button class="a11y-preset-card active" data-a11y-preset="default"
+                  onclick="applyA11yPreset('default')" aria-pressed="true">
+            <span class="a11y-preset-name">default</span>
+            <span class="a11y-preset-preview" style="font-family:system-ui,sans-serif">Aa 1 2</span>
+            <span class="a11y-preset-desc">system defaults</span>
+          </button>
+          <button class="a11y-preset-card" data-a11y-preset="dyslexia"
+                  onclick="applyA11yPreset('dyslexia')" aria-pressed="false">
+            <span class="a11y-preset-name">dyslexia</span>
+            <span class="a11y-preset-preview" style="font-family:'OpenDyslexic',sans-serif">Aa 1 2</span>
+            <span class="a11y-preset-desc">OpenDyslexic · wider spacing · large</span>
+          </button>
+          <button class="a11y-preset-card" data-a11y-preset="lowvision"
+                  onclick="applyA11yPreset('lowvision')" aria-pressed="false">
+            <span class="a11y-preset-name">low vision</span>
+            <span class="a11y-preset-preview" style="font-family:'Atkinson Hyperlegible Next',sans-serif">Aa 1 2</span>
+            <span class="a11y-preset-desc">Atkinson · XL · high contrast</span>
+          </button>
+          <button class="a11y-preset-card" data-a11y-preset="cognitive"
+                  onclick="applyA11yPreset('cognitive')" aria-pressed="false">
+            <span class="a11y-preset-name">cognitive</span>
+            <span class="a11y-preset-preview" style="font-family:'Lexend',sans-serif">Aa 1 2</span>
+            <span class="a11y-preset-desc">Lexend · relaxed spacing · large</span>
+          </button>
         </div>
       </div>
 
-      <div class="notif-toggle-row">
-        <div class="notif-toggle-label">
-          larger touch targets
-          <span>increases tap area to 56px minimum</span>
-        </div>
-        <label class="toggle-switch" aria-label="Enable larger touch targets">
-          <input type="checkbox" id="largeTouchTargets"
-                 onchange="setLargeTouchTargets(this.checked)">
-          <span class="toggle-track"></span>
-        </label>
-      </div>
+      <!-- ── Custom controls ── -->
+      <details class="a11y-custom-details">
+        <summary class="a11y-custom-summary" aria-expanded="false">custom controls</summary>
+        <div class="a11y-custom-body">
 
-      <div class="notif-toggle-row">
-        <div class="notif-toggle-label">
-          reduce motion
-          <span>disables animations and confetti</span>
-        </div>
-        <label class="toggle-switch" aria-label="Reduce motion">
-          <input type="checkbox" id="settingsReduceMotion"
-                 onchange="toggleReduceMotion(this.checked)">
-          <span class="toggle-track"></span>
-        </label>
-      </div>
+          <!-- Font face -->
+          <div class="a11y-control-row">
+            <span class="a11y-control-label">font</span>
+            <div class="a11y-font-grid" role="radiogroup" aria-label="Font choice">
+              <button class="a11y-font-card active" id="fontOptDefault"
+                      onclick="setFont('default')" role="radio" aria-checked="true">
+                <span style="font-family:system-ui,sans-serif;font-size:1.1rem">Ag</span>
+                <span>system</span>
+              </button>
+              <button class="a11y-font-card" id="fontOptAtkinson"
+                      onclick="setFont('atkinson')" role="radio" aria-checked="false">
+                <span style="font-family:'Atkinson Hyperlegible Next',sans-serif;font-size:1.1rem">Ag</span>
+                <span>atkinson</span>
+              </button>
+              <button class="a11y-font-card" id="fontOptOpendyslexic"
+                      onclick="setFont('opendyslexic')" role="radio" aria-checked="false">
+                <span style="font-family:'OpenDyslexic',sans-serif;font-size:1.1rem">Ag</span>
+                <span>opendyslexic</span>
+              </button>
+              <button class="a11y-font-card" id="fontOptLexend"
+                      onclick="setFont('lexend')" role="radio" aria-checked="false">
+                <span style="font-family:'Lexend',sans-serif;font-size:1.1rem">Ag</span>
+                <span>lexend</span>
+              </button>
+              <button class="a11y-font-card" id="fontOptInclusive"
+                      onclick="setFont('inclusive')" role="radio" aria-checked="false">
+                <span style="font-family:'Inclusive Sans',sans-serif;font-size:1.1rem">Ag</span>
+                <span>inclusive</span>
+              </button>
+              <button class="a11y-font-card" id="fontOptJost"
+                      onclick="setFont('jost')" role="radio" aria-checked="false">
+                <span style="font-family:'Jost',sans-serif;font-size:1.1rem">Ag</span>
+                <span>jost</span>
+              </button>
+              <button class="a11y-font-card" id="fontOptComic"
+                      onclick="setFont('comic')" role="radio" aria-checked="false">
+                <span style="font-family:'Comic Sans MS',cursive;font-size:1.1rem">Ag</span>
+                <span>comic sans</span>
+              </button>
+              <button class="a11y-font-card" id="fontOptIbmplexmono"
+                      onclick="setFont('ibmplexmono')" role="radio" aria-checked="false">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:1.1rem">Ag</span>
+                <span>ibm mono</span>
+              </button>
+            </div>
+          </div>
 
-      <div class="notif-toggle-row">
-        <div class="notif-toggle-label">
-          high contrast
-          <span>stronger colours for low vision</span>
+          <!-- Text size -->
+          <div class="a11y-control-row">
+            <span class="a11y-control-label">size</span>
+            <div class="theme-pill" role="radiogroup" aria-label="Text size">
+              <button class="theme-opt" id="textSizeSmall"  onclick="setTextSize('small')"  role="radio" aria-checked="false">S</button>
+              <button class="theme-opt active" id="textSizeNormal" onclick="setTextSize('normal')" role="radio" aria-checked="true">A</button>
+              <button class="theme-opt" id="textSizeLarge"  onclick="setTextSize('large')"  role="radio" aria-checked="false">A+</button>
+              <button class="theme-opt" id="textSizeXL"     onclick="setTextSize('xl')"     role="radio" aria-checked="false">A++</button>
+            </div>
+          </div>
+
+          <!-- Line spacing -->
+          <div class="a11y-control-row">
+            <span class="a11y-control-label">line spacing</span>
+            <div class="theme-pill" role="radiogroup" aria-label="Line spacing">
+              <button class="theme-opt active" id="lineSpacingNormal"  onclick="applyLineSpacing('normal');saveConfig(cfg)"  role="radio" aria-checked="true">normal</button>
+              <button class="theme-opt" id="lineSpacingRelaxed" onclick="applyLineSpacing('relaxed');saveConfig(cfg)" role="radio" aria-checked="false">relaxed</button>
+              <button class="theme-opt" id="lineSpacingSpacious" onclick="applyLineSpacing('spacious');saveConfig(cfg)" role="radio" aria-checked="false">spacious</button>
+            </div>
+          </div>
+
+          <!-- Letter spacing -->
+          <div class="a11y-control-row">
+            <span class="a11y-control-label">letter spacing</span>
+            <div class="theme-pill" role="radiogroup" aria-label="Letter spacing">
+              <button class="theme-opt active" id="letterSpacingNormal" onclick="applyLetterSpacing('normal');saveConfig(cfg)"  role="radio" aria-checked="true">normal</button>
+              <button class="theme-opt" id="letterSpacingWide" onclick="applyLetterSpacing('wide');saveConfig(cfg)" role="radio" aria-checked="false">wide</button>
+              <button class="theme-opt" id="letterSpacingWider" onclick="applyLetterSpacing('wider');saveConfig(cfg)" role="radio" aria-checked="false">wider</button>
+            </div>
+          </div>
+
+          <!-- Toggles -->
+          <div class="notif-toggle-row" style="margin-top:var(--sp-3)">
+            <div class="notif-toggle-label">
+              larger touch targets
+              <span>increases tap area to 56px minimum</span>
+            </div>
+            <label class="toggle-switch" aria-label="Enable larger touch targets">
+              <input type="checkbox" id="largeTouchTargets" onchange="setLargeTouchTargets(this.checked)">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-label">
+              reduce motion
+              <span>disables animations and confetti</span>
+            </div>
+            <label class="toggle-switch" aria-label="Reduce motion">
+              <input type="checkbox" id="settingsReduceMotion" onchange="toggleReduceMotion(this.checked)">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-label">
+              high contrast
+              <span>stronger colours for low vision</span>
+            </div>
+            <label class="toggle-switch" aria-label="High contrast mode">
+              <input type="checkbox" id="settingsHighContrast" onchange="setHighContrast(this.checked)">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+
         </div>
-        <label class="toggle-switch" aria-label="High contrast mode">
-          <input type="checkbox" id="settingsHighContrast"
-                 onchange="setHighContrast(this.checked)">
-          <span class="toggle-track"></span>
-        </label>
-      </div>
+      </details>
     </section>
 
     <!-- ── Tasks ── -->

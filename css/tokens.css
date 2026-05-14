@@ -232,3 +232,76 @@
   :root[data-font="mono"] {
     --font-body: var(--font-mono);
   }
+/* ═══════════════════════════════════════════════════════════════
+   ACCESSIBILITY SYSTEM v2
+   Line spacing and letter spacing CSS variables.
+   Font size handled by html[data-text-size] above.
+═══════════════════════════════════════════════════════════════ */
+
+/* Line spacing */
+:root[data-line-spacing="relaxed"] {
+  --line-height-body: 1.85;
+  --line-height-ui:   1.6;
+}
+:root[data-line-spacing="spacious"] {
+  --line-height-body: 2.2;
+  --line-height-ui:   1.8;
+}
+
+/* Letter spacing */
+:root[data-letter-spacing="wide"] {
+  --letter-spacing-body: 0.04em;
+  --letter-spacing-ui:   0.06em;
+}
+:root[data-letter-spacing="wider"] {
+  --letter-spacing-body: 0.09em;
+  --letter-spacing-ui:   0.12em;
+}
+
+/* Apply spacing variables to text elements */
+:root[data-line-spacing] body,
+:root[data-line-spacing] p,
+:root[data-line-spacing] .task-name,
+:root[data-line-spacing] .task-sub,
+:root[data-line-spacing] textarea,
+:root[data-line-spacing] .journal-body {
+  line-height: var(--line-height-body, inherit);
+}
+
+:root[data-letter-spacing] body,
+:root[data-letter-spacing] button,
+:root[data-letter-spacing] input,
+:root[data-letter-spacing] textarea,
+:root[data-letter-spacing] .task-name,
+:root[data-letter-spacing] .badge-name,
+:root[data-letter-spacing] .sym-btn {
+  letter-spacing: var(--letter-spacing-body, inherit);
+}
+
+/* Atkinson Hyperlegible Next (2023) */
+:root[data-font="atkinson"] {
+  --font-body: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font-mono: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', ui-monospace, monospace;
+}
+
+/* Lexend — designed to reduce visual stress */
+:root[data-font="lexend"] {
+  --font-body: 'Lexend', system-ui, sans-serif;
+  --font-mono: 'Lexend', ui-monospace, monospace;
+  letter-spacing: 0.01em;
+}
+
+/* Inclusive Sans */
+:root[data-font="inclusive"] {
+  --font-body: 'Inclusive Sans', system-ui, sans-serif;
+  --font-mono: 'Inclusive Sans', ui-monospace, monospace;
+}
+
+/* OpenDyslexic — override with correct npm font name */
+:root[data-font="opendyslexic"] {
+  --font-body: 'OpenDyslexic', system-ui, sans-serif;
+  --font-mono: 'OpenDyslexic', ui-monospace, monospace;
+  letter-spacing: 0.02em;
+  line-height: 1.85;
+  word-spacing: 0.1em;
+}
