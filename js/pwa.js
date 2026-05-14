@@ -39,3 +39,75 @@
 // Registration happens in index.html after all scripts load.
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── SW update notification ────────────────────────────────────────────────
+// When a new SW activates it broadcasts SW_ACTIVATED.
+// Show a non-intrusive toast with a reload button.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (!e.data || e.data.type !== 'SW_ACTIVATED') return;
+
+    const version = e.data.version || '';
+    const banner  = document.createElement('div');
+    banner.id = 'swUpdateBanner';
+    banner.setAttribute('role', 'status');
+    banner.setAttribute('aria-live', 'polite');
+    banner.style.cssText = [
+      'position:fixed', 'bottom:80px', 'left:50%',
+      'transform:translateX(-50%)',
+      'background:var(--bg3)',
+      'border:0.5px solid var(--accent)',
+      'border-radius:var(--radius)',
+      'padding:10px 16px',
+      'font-family:var(--font-mono)',
+      'font-size:0.6875rem',
+      'color:var(--text)',
+      'display:flex', 'align-items:center', 'gap:12px',
+      'box-shadow:var(--shadow)',
+      'z-index:99998',
+      'white-space:nowrap',
+    ].join(';');
+
+    banner.innerHTML = `
+      <span>⟳ app updated</span>
+      <button onclick="window.location.reload()"
+              style="background:var(--accent);color:var(--bg);border:none;
+                     border-radius:var(--radius);padding:4px 12px;
+                     font-family:var(--font-mono);font-size:0.625rem;
+                     cursor:pointer;font-weight:600"
+              aria-label="Reload to apply update">
+        reload
+      </button>
+      <button onclick="this.parentElement.remove()"
+              style="background:none;border:none;color:var(--text3);
+                     font-family:var(--font-mono);font-size:0.75rem;
+                     cursor:pointer;padding:0 4px"
+              aria-label="Dismiss update notification">×</button>`;
+
+    // Remove any existing banner before adding new
+    document.getElementById('swUpdateBanner')?.remove();
+    document.body.appendChild(banner);
+
+    // Auto-dismiss after 30 seconds if ignored
+    setTimeout(() => banner.remove(), 30000);
+  });
+
+  // Also check for waiting SW on page load — handles the case where
+  // SW updated while the app was closed
+  navigator.serviceWorker.ready.then(reg => {
+    if (reg.waiting) {
+      // New SW already waiting — tell it to activate now
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      if (!newSW) return;
+      newSW.addEventListener('statechange', () => {
+        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+          // New SW installed, old one still active — activate immediately
+          newSW.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+    });
+  });
+}

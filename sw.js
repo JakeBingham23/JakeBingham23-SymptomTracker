@@ -3,7 +3,7 @@
 // Real sw.js — replaces the blob URL hack
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME    = 'tracker-v5.8';
+const CACHE_NAME    = 'tracker-v5.9';
 const CACHE_STATIC  = [
   './',
   './index.html',
@@ -74,30 +74,57 @@ self.addEventListener('activate', e => {
         keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
       ))
       .then(() => self.clients.claim())
+      .then(() => {
+        // Broadcast version to all clients — triggers update toast in app
+        return self.clients.matchAll({ includeUncontrolled: true })
+          .then(clients => clients.forEach(c =>
+            c.postMessage({ type: 'SW_ACTIVATED', version: CACHE_NAME })
+          ));
+      })
   );
 });
 
-// ── Fetch: cache-first with network fallback ──────────────────────────────
+// ── Fetch strategy ────────────────────────────────────────────────────────
+// HTML + JS: network-first — always get fresh code, fall back to cache
+// CSS + images: stale-while-revalidate — fast load, update in background
+// Everything else: cache-first
 self.addEventListener('fetch', e => {
-  // Skip non-GET and cross-origin requests
   if (e.request.method !== 'GET') return;
   if (!e.request.url.startsWith(self.location.origin)) return;
 
+  const url = new URL(e.request.url);
+  const isHTML = e.request.destination === 'document' || url.pathname.endsWith('.html');
+  const isJS   = url.pathname.endsWith('.js');
+
+  if (isHTML || isJS) {
+    // Network-first: always fetch fresh, fall back to cache if offline
+    e.respondWith(
+      fetch(e.request)
+        .then(response => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for CSS, images, fonts
   e.respondWith(
-    caches.match(e.request)
-      .then(cached => {
-        if (cached) return cached;
-        return fetch(e.request)
-          .then(response => {
-            // Cache successful responses
-            if (response && response.status === 200 && response.type === 'basic') {
-              const clone = response.clone();
-              caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-            }
-            return response;
-          })
-          .catch(() => cached); // Return stale if network fails
+    caches.open(CACHE_NAME).then(cache =>
+      cache.match(e.request).then(cached => {
+        const network = fetch(e.request).then(response => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            cache.put(e.request, response.clone());
+          }
+          return response;
+        }).catch(() => cached);
+        return cached || network;
       })
+    )
   );
 });
 
