@@ -96,50 +96,6 @@ function exportBackup() {
   }
 }
 
-async function importBackup(input) {
-  const file = input.files[0];
-  if (!file) return;
-  input.value = ''; // reset so same file can be picked again
-
-  try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-
-    // Confirm before overwriting
-    const confirmed = confirm(
-      'This will replace ALL your current data with the backup from ' +
-      (data.exported ? new Date(data.exported).toLocaleDateString() : 'unknown date') +
-      '\n\nThis cannot be undone. Continue?'
-    );
-    if (!confirmed) return;
-
-    restoreAllData(data);
-
-    // Reload config and state
-    const newCfg = loadConfig();
-    if (newCfg) {
-      Object.assign(cfg, newCfg);
-      CRITICAL  = cfg.critical  || DEFAULT_CRITICAL;
-      DAILY     = cfg.daily     || DEFAULT_DAILY;
-      SYMPTOMS  = cfg.symptoms  || DEFAULT_SYMPTOMS;
-    }
-    loadState();
-    applyA11yPrefs();
-    applyTheme(cfg.theme || 'system');
-    applyName(cfg.name);
-    render();
-    renderSettingsPanel();
-
-    backupStatus('backup restored ✓ — all data loaded', 'var(--success)');
-    announce('Backup restored successfully. All data has been loaded.', true);
-    hap('allDone');
-    playSuccess();
-  } catch(e) {
-    backupStatus('import failed: ' + e.message, 'var(--danger)');
-    announce('Import failed: ' + e.message, true);
-  }
-}
-
 function backupStatus(msg, color) {
   const el = document.getElementById('backupStatus');
   if (el) { el.textContent = msg; el.style.color = color || 'var(--text2)'; }

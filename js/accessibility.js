@@ -450,26 +450,8 @@ function showImageTab(dataUrl, filename) {
   }, 150);
 }
 
-function showToast(msg) {
-  announce(msg);
-  let toast = document.getElementById('appToast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'appToast';
-    toast.style.cssText = `
-      position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
-      background:var(--bg3); border:0.5px solid var(--border2);
-      color:var(--text); font-family:var(--font-mono); font-size:0.75rem;
-      padding:10px 18px; border-radius:20px; z-index:999;
-      white-space:nowrap; box-shadow:0 4px 16px rgba(0,0,0,0.4);
-      opacity:0; transition:opacity 0.2s;
-    `;
-    document.body.appendChild(toast);
-  }
-  toast.textContent = msg;
-  toast.style.opacity = '1';
-  setTimeout(() => { toast.style.opacity = '0'; }, 3500);
-}
+// showToast() is defined in toast.js (newer Toast module).
+// Removed older duplicate from accessibility.js.
 
 function resetBtn(btn) {
   if (!btn) return;

@@ -165,3 +165,6 @@ function _updateThemePills(theme) {
 
 // ── Backwards-compat alias used by older callers ──────────────────────────
 function updateNavThemeBtn(theme) { _updateThemeToggleBtn(theme); }
+
+// Alias — HTML uses toggleLightDark, function was renamed to toggleTheme
+function toggleLightDark() { return toggleTheme(); }

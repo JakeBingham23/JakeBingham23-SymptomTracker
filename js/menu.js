@@ -436,3 +436,15 @@ document.addEventListener('keydown', e => {
     if (spendEl && !spendEl.classList.contains('hidden')) { closeSpendModal(); return; }
   }
 });
+
+// openDopamineModal — placeholder until want-list modal is built
+// Called from Budget tab "+ add want" button. Logs a stub message
+// rather than throwing a ReferenceError on every tap.
+function openDopamineModal(itemId) {
+  if (typeof showToast === 'function') {
+    showToast('want list editor coming soon', 'info');
+  } else if (typeof announce === 'function') {
+    announce('Want list editor not yet available.');
+  }
+  console.log('[Dopamine] openDopamineModal called with id:', itemId);
+}

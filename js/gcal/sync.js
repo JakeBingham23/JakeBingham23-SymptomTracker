@@ -33,12 +33,9 @@ async function gcalRequest(method, path, body) {
 // ── Local appointment storage ─────────────────────────────────────────────
 // Appointments are stored separately from the daily state object so they
 // survive across days and can be synced independently.
-function loadAppts() {
-  try { return JSON.parse(localStorage.getItem('tracker-appointments') || '[]'); } catch(e) { return []; }
-}
-function saveAppts(appts) {
-  try { localStorage.setItem('tracker-appointments', JSON.stringify(appts)); } catch(e) {}
-}
+// loadAppts() and saveAppts() are defined in render.js.
+// Removed local copies that used wrong storage key ('tracker-appointments').
+// The shared key is 'tracker-appts'.
 
 // ── Converters ────────────────────────────────────────────────────────────
 function apptToGcalEvent(appt) {
