@@ -183,7 +183,7 @@ function showMilestone(emoji, title, msg, bonusPoints, hapticType, days) {
   const total = bonusPoints ? addPoints(bonusPoints) : getPoints();
   const pointsMsg = bonusPoints ? '+' + bonusPoints + ' points! Total: ' + total.toLocaleString() : '';
   document.getElementById('milestonePointsEl').textContent = pointsMsg;
-  document.getElementById('milestoneOverlay').classList.remove('hidden');
+  if (typeof openModal === 'function') openModal(document.getElementById('milestoneOverlay'), document.activeElement); else document.getElementById('milestoneOverlay').classList.remove('hidden');
 
   // Visual — respects reduce motion
   fireConfetti(3000);

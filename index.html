@@ -76,7 +76,7 @@
       your data is encrypted with this PIN.<br>
       if you forget it, your data cannot be recovered.
     </p>
-    <div id="setupPINDots" class="pin-dots" aria-label="PIN entry" aria-live="polite"></div>
+    <div id="setupPINDots" class="pin-dots" aria-label="PIN entry progress" aria-live="polite" aria-atomic="true"></div>
     <div id="setupPINError" class="pin-error" role="alert" aria-live="assertive"></div>
     <div class="pin-pad" role="group" aria-label="Number pad" id="setupPINPad"></div>
     <p id="setupStep" style="font-size:0.5625rem;color:var(--text3);margin-top:1.5rem"></p>
@@ -104,7 +104,7 @@
       fingerprint / face unlock
     </button>
 
-    <div id="unlockPINDots" class="pin-dots" aria-label="PIN entry" aria-live="polite"></div>
+    <div id="unlockPINDots" class="pin-dots" aria-label="PIN entry progress" aria-live="polite" aria-atomic="true"></div>
     <div id="unlockPINError" class="pin-error" role="alert" aria-live="assertive"></div>
     <div class="pin-pad" role="group" aria-label="Number pad" id="unlockPINPad"></div>
 
@@ -132,7 +132,7 @@
      role="dialog" aria-modal="true" aria-labelledby="milestoneTitleEl">
   <div class="milestone-card">
     <div class="milestone-emoji" id="milestoneEmoji" aria-hidden="true">🎉</div>
-    <div class="milestone-title" id="milestoneTitleEl"></div>
+    <div class="milestone-title" id="milestoneTitleEl" data-autofocus="true"></div>
     <div class="milestone-msg"   id="milestoneMsgEl"></div>
     <div class="milestone-points" id="milestonePointsEl" aria-live="polite"></div>
     <button class="btn primary" style="min-width:160px;margin-top:1.5rem"
@@ -197,7 +197,7 @@
      role="dialog" aria-modal="true" aria-labelledby="menuOverlayTitle">
   <div class="menu-overlay-inner">
     <div class="menu-overlay-header">
-      <h2 id="menuOverlayTitle">// menu</h2>
+      <h2 id="menuOverlayTitle" data-autofocus="true">// menu</h2>
       <button class="menu-close-btn" onclick="closeMenu()"
               aria-label="Close menu">✕</button>
     </div>
@@ -544,7 +544,7 @@
 <!-- Appointment form modal -->
 <div class="appt-modal-overlay hidden" id="apptModalOverlay" role="dialog" aria-modal="true" aria-labelledby="apptModalTitle">
   <div class="appt-modal">
-    <h3 id="apptModalTitle">// new appointment</h3>
+    <h3 id="apptModalTitle" data-autofocus="true">// new appointment</h3>
     <input type="hidden" id="apptEditId">
 
     <div class="appt-field">
@@ -1755,7 +1755,7 @@
 <div class="pin-modal-overlay hidden" id="recoveryCodeOverlay"
      role="dialog" aria-modal="true" aria-labelledby="recoveryCodeTitle">
   <div class="appt-modal">
-    <h3 id="recoveryCodeTitle">// your recovery code</h3>
+    <h3 id="recoveryCodeTitle" data-autofocus="true">// your recovery code</h3>
     <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:var(--sp-3);line-height:1.8">
       Write this down somewhere safe. If you forget your PIN, this is the only way to reset the app.<br>
       <strong style="color:var(--danger)">It will never be shown again.</strong>
@@ -1782,7 +1782,7 @@
 <div class="pin-modal-overlay hidden" id="forgotPINOverlay"
      role="dialog" aria-modal="true" aria-labelledby="forgotPINTitle">
   <div class="appt-modal">
-    <h3 id="forgotPINTitle">// reset PIN</h3>
+    <h3 id="forgotPINTitle" data-autofocus="true">// reset PIN</h3>
     <p style="font-family:var(--font-mono);font-size:0.625rem;color:var(--text3);margin-bottom:var(--sp-3);line-height:1.8">
       Enter your recovery code to wipe the app and set a new PIN.<br>
       <strong style="color:var(--danger)">Your data will be erased.</strong> Restore from backup after.
@@ -1862,6 +1862,7 @@
 <script src="./js/render.js"></script>
 <script src="./js/lockscreen.js"></script>
 <script src="./js/security.js"></script>
+<script src="./js/a11y-sr.js"></script>
 <script src="./js/pwa.js"></script>
 <script src="./rag-engine.js" defer></script>
 
