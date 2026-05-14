@@ -77,7 +77,7 @@ const OFFLINE_QUOTES = {
 };
 
 function getOfflineQuote(state) {
-  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
+  const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
   let pool = OFFLINE_QUOTES[state] || OFFLINE_QUOTES.generic;
   const available = pool.filter(q => !blocked.includes(q));
   if (available.length === 0) return pool[0];
@@ -166,7 +166,7 @@ function loadQuoteOfDay(forceRefresh) {
   // Check cache (regenerate once per day or on force)
   if (!forceRefresh) {
     try {
-      const cached = JSON.parse(localStorage.getItem(QUOTE_KEY) || 'null');
+      const cached = Store.get(QUOTE_KEY);
       if (cached && cached.date === TODAY) {
         showQuote(cached.text, cached.source, cached.liked);
         return;
@@ -177,7 +177,7 @@ function loadQuoteOfDay(forceRefresh) {
   // Hide spinner immediately — no async wait
   if (loading) loading.style.display = 'none';
 
-  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
+  const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
   let text = null, source = 'daily reminder';
 
   // Try RAG tag-based scoring (synchronous, no model load)
@@ -193,7 +193,7 @@ function loadQuoteOfDay(forceRefresh) {
   }
 
   // Cache it
-  localStorage.setItem(QUOTE_KEY, JSON.stringify({ date: TODAY, text, source, liked: false }));
+  Store.set(QUOTE_KEY, { date: TODAY, text, source, liked: false });
   showQuote(text, source, false);
   announce('Daily message: ' + text);
 }
@@ -235,11 +235,11 @@ function refreshQuote() {
 
 function likeQuote() {
   try {
-    const cached = JSON.parse(localStorage.getItem(QUOTE_KEY) || 'null');
+    const cached = Store.get(QUOTE_KEY);
     if (!cached) return;
     const wasLiked = cached.liked;
     cached.liked = !wasLiked;
-    localStorage.setItem(QUOTE_KEY, JSON.stringify(cached));
+    Store.set(QUOTE_KEY, cached);
     if (!wasLiked) saveFavQuote(cached.text);
     showQuote(cached.text, cached.source, cached.liked);
     announce(cached.liked ? 'Quote saved to favourites.' : 'Quote removed from favourites.');
@@ -279,29 +279,29 @@ function syncQuoteSettingsUI() {
 
 // ── Favourites ────────────────────────────────────────────────────────────
 function getFavQuotes() {
-  try { return JSON.parse(localStorage.getItem(QUOTE_FAVS_KEY) || '[]'); } catch(e) { return []; }
+  try { return Store.get(QUOTE_FAVS_KEY) || []; } catch(e) { return []; }
 }
 
 function saveFavQuote(text) {
   const favs = getFavQuotes();
   if (!favs.includes(text)) {
     favs.unshift(text);
-    localStorage.setItem(QUOTE_FAVS_KEY, JSON.stringify(favs.slice(0, 50)));
+    Store.set(QUOTE_FAVS_KEY, favs.slice(0, 50));
   }
 }
 
 function removeFavQuote(idx) {
   const favs = getFavQuotes();
   favs.splice(idx, 1);
-  localStorage.setItem(QUOTE_FAVS_KEY, JSON.stringify(favs));
+  Store.set(QUOTE_FAVS_KEY, favs);
   renderFavQuotes();
 }
 
 function blockQuote(text) {
-  const blocked = JSON.parse(localStorage.getItem(QUOTE_BLOCKED_KEY) || '[]');
+  const blocked = Store.get(QUOTE_BLOCKED_KEY) || [];
   if (!blocked.includes(text)) {
     blocked.push(text);
-    localStorage.setItem(QUOTE_BLOCKED_KEY, JSON.stringify(blocked));
+    Store.set(QUOTE_BLOCKED_KEY, blocked);
   }
 }
 

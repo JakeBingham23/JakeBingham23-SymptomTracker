@@ -1,178 +1,259 @@
 // ═════════════════════════════════════════════════════════════════
-// STORAGE — Daily Structure Tracker
-// Single source of truth for all persistence.
-// No other module touches localStorage or sessionStorage directly.
+// STORAGE v2 — Daily Structure Tracker
+// IndexedDB backend with synchronous in-memory read cache.
 //
-// API:
-//   Store.get(key)           → parsed value or default
-//   Store.set(key, value)    → serialise + write
-//   Store.remove(key)        → delete
-//   Store.getSession(key)    → sessionStorage read (API keys)
-//   Store.setSession(key, v) → sessionStorage write
-//   Store.keys()             → all registered keys
-//   Store.migrate()          → run schema migrations on load
+// DESIGN — write-behind cache:
+//   Store.get(key)      → sync from cache (localStorage fallback pre-init)
+//   Store.set(key, val) → sync cache update + async IDB write
+//   Store.getAsync(key) → Promise<val> guaranteed fresh from IDB
+//   Store.init()        → opens IDB, migrates localStorage→IDB, loads cache
 //
-// All keys are registered in REGISTRY below.
-// Unregistered keys cause a console.warn — nothing breaks, but
-// it surfaces drift early.
+// After Store.init() all reads come from the in-memory cache which
+// was populated from IDB. Before init(), falls back to localStorage
+// so config.js parse-time reads work correctly.
 // ═════════════════════════════════════════════════════════════════
 
 const Store = (() => {
   'use strict';
 
-  // ── Schema version ────────────────────────────────────────────
-  const CURRENT_SCHEMA = 1;
-  const SCHEMA_KEY     = 'tracker-schema-version';
+  const DB_NAME  = 'tracker-idb';
+  const DB_VER   = 1;
+  const STORE_KV = 'kv';
 
-  // ── Key registry ──────────────────────────────────────────────
-  // type: 'json' | 'string' | 'number'
-  // def:  default value if key is missing or unparseable
-  // sensitive: true = copy to SecureStore on migration (journal only)
+  const _cache = new Map();
+  let   _db    = null;
+  let   _ready = false;
+  let   _initP = null;
+
+  // ── Key registry ─────────────────────────────────────────────
   const REGISTRY = {
-    // ── Config & identity ───────────────────────────────────────
-    'tracker-config':          { type: 'json',   def: null },
-    'tracker-schema-version':  { type: 'number', def: 0    },
-
-    // ── Daily state (keyed by date at runtime) ──────────────────
-    // Dynamic key: 'tracker-' + TODAY — handled via dayKey()
-    'tracker-med-streak':      { type: 'string', def: '0'  },
-    'tracker-history':         { type: 'json',   def: []   },
-
-    // ── Journal (sensitive — also encrypted in SecureStore) ─────
-    'tracker-journal':         { type: 'json',   def: [],  sensitive: true },
-    'tracker-journal-draft':   { type: 'string', def: ''   },
-
-    // ── Appointments ────────────────────────────────────────────
-    'tracker-appts':           { type: 'json',   def: []   },
-
-    // ── Budget & spending ────────────────────────────────────────
-    'tracker-budget':          { type: 'json',   def: { monthly: 0 } },
-    'tracker-spend':           { type: 'json',   def: []   },
-
-    // ── Rewards ─────────────────────────────────────────────────
-    'tracker-points':          { type: 'json',   def: 0    },
-    'tracker-badges':          { type: 'json',   def: {}   },
-    'tracker-weekly-summary':  { type: 'json',   def: null },
-    'tracker-monthly-summary': { type: 'json',   def: null },
-
-    // ── Quotes & messages ────────────────────────────────────────
-    'tracker-quote-today':     { type: 'json',   def: null },
-    'tracker-quote-favs':      { type: 'json',   def: []   },
-    'tracker-quote-blocked':   { type: 'json',   def: []   },
-
-    // ── DND config ───────────────────────────────────────────────
-    'tracker-dnd':             { type: 'json',   def: null },
-
-    // ── Session-only (never persisted to localStorage) ───────────
-    // Accessed via getSession/setSession:
-    // 'tracker-anthropic-key' → sessionStorage only
+    'tracker-config':          { def: null },
+    'tracker-schema-version':  { def: 0    },
+    'tracker-med-streak':      { def: '0'  },
+    'tracker-history':         { def: []   },
+    'tracker-journal':         { def: []   },
+    'tracker-journal-draft':   { def: ''   },
+    'tracker-appts':           { def: []   },
+    'tracker-appointments':    { def: []   },
+    'tracker-budget':          { def: { monthly: 0 } },
+    'tracker-spend':           { def: []   },
+    'tracker-points':          { def: 0    },
+    'tracker-badges':          { def: {}   },
+    'tracker-weekly-summary':  { def: null },
+    'tracker-monthly-summary': { def: null },
+    'tracker-quote-today':     { def: null },
+    'tracker-quote-favs':      { def: []   },
+    'tracker-quote-blocked':   { def: []   },
+    'tracker-dnd':             { def: null },
   };
 
-  // ── Day-keyed state ────────────────────────────────────────────
-  // Returns key for today's daily check-in state
   function dayKey(date) {
-    return 'tracker-' + (date || TODAY);
+    const d = date || (typeof TODAY !== 'undefined' ? TODAY
+      : new Date().toISOString().split('T')[0]);
+    return 'tracker-' + d;
   }
 
-  // ── Core read ─────────────────────────────────────────────────
-  function get(key, date) {
-    // Day-state special case
-    const storageKey = (key === 'tracker-today') ? dayKey(date) : key;
+  function _def(key) {
+    if (REGISTRY[key]) return REGISTRY[key].def;
+    if (/^tracker-\d{4}-\d{2}-\d{2}$/.test(key)) return {};
+    return null;
+  }
 
-    const reg = REGISTRY[storageKey];
-    if (!reg && !storageKey.match(/^tracker-\d{4}-\d{2}-\d{2}$/)) {
-      console.warn('[Store] Unregistered key:', storageKey);
-    }
+  function _parse(raw) {
+    if (raw === null || raw === undefined) return null;
+    if (typeof raw !== 'string') return raw;
+    try { return JSON.parse(raw); } catch(e) { return raw; }
+  }
 
+  function _openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_KV)) {
+          db.createObjectStore(STORE_KV, { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = e => resolve(e.target.result);
+      req.onerror   = e => reject(e.target.error);
+    });
+  }
+
+  function _loadAll(db) {
+    return new Promise((resolve, reject) => {
+      const req = db.transaction(STORE_KV, 'readonly')
+                    .objectStore(STORE_KV).getAll();
+      req.onsuccess = () => {
+        for (const row of req.result) _cache.set(row.key, row.value);
+        resolve();
+      };
+      req.onerror = e => reject(e.target.error);
+    });
+  }
+
+  function _idbWrite(key, value) {
+    if (!_db) return;
     try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw === null) return reg ? reg.def : null;
-      if (!reg || reg.type === 'json') return JSON.parse(raw);
-      if (reg.type === 'number') return Number(raw);
-      return raw; // string
+      _db.transaction(STORE_KV, 'readwrite')
+         .objectStore(STORE_KV)
+         .put({ key, value, updated: Date.now() });
     } catch(e) {
-      console.warn('[Store] Parse error for key:', storageKey, e.message);
-      return reg ? reg.def : null;
+      console.warn('[Store] IDB write failed:', key, e.message);
     }
   }
 
-  // ── Core write ────────────────────────────────────────────────
-  function set(key, value, date) {
-    const storageKey = (key === 'tracker-today') ? dayKey(date) : key;
+  function _idbDelete(key) {
+    if (!_db) return;
     try {
-      const serialised = typeof value === 'string' ? value : JSON.stringify(value);
-      localStorage.setItem(storageKey, serialised);
-      return true;
-    } catch(e) {
-      console.error('[Store] Write failed for key:', storageKey, e.message);
-      return false;
+      _db.transaction(STORE_KV, 'readwrite')
+         .objectStore(STORE_KV).delete(key);
+    } catch(e) {}
+  }
+
+  async function _migrate(db) {
+    const MARKER = '__idb-migrated-v2';
+    const already = await new Promise(res => {
+      const req = db.transaction(STORE_KV, 'readonly')
+                    .objectStore(STORE_KV).get(MARKER);
+      req.onsuccess = () => res(!!req.result);
+      req.onerror   = () => res(false);
+    });
+    if (already) return;
+
+    const tx    = db.transaction(STORE_KV, 'readwrite');
+    const store = tx.objectStore(STORE_KV);
+    let   n     = 0;
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('tracker-')) continue;
+      try {
+        const val = _parse(localStorage.getItem(key));
+        store.put({ key, value: val, updated: Date.now() });
+        _cache.set(key, val);
+        n++;
+      } catch(e) {}
     }
+
+    store.put({ key: MARKER, value: true, updated: Date.now() });
+    console.log('[Store] Migrated', n, 'keys localStorage → IDB');
   }
 
-  // ── Remove ────────────────────────────────────────────────────
-  function remove(key, date) {
-    const storageKey = (key === 'tracker-today') ? dayKey(date) : key;
-    try { localStorage.removeItem(storageKey); } catch(e) {}
+  // ── PUBLIC API ────────────────────────────────────────────────
+
+  function init() {
+    if (_initP) return _initP;
+    _initP = (async () => {
+      try {
+        _db = await _openDB();
+        await _migrate(_db);
+        await _loadAll(_db);
+        _ready = true;
+        console.log('[Store] Ready. Cache:', _cache.size, 'keys.');
+      } catch(e) {
+        console.warn('[Store] IDB unavailable, using localStorage fallback:', e.message);
+        _ready = true;
+      }
+    })();
+    return _initP;
   }
 
-  // ── Session storage (API keys only) ──────────────────────────
+  function get(key) {
+    const k = key === 'tracker-today' ? dayKey() : key;
+    if (_cache.has(k)) return _cache.get(k);
+    // Pre-init fallback
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw !== null) {
+        const val = _parse(raw);
+        _cache.set(k, val);
+        return val;
+      }
+    } catch(e) {}
+    return _def(k);
+  }
+
+  function set(key, value) {
+    const k = key === 'tracker-today' ? dayKey() : key;
+    _cache.set(k, value);
+    _idbWrite(k, value);
+    // Mirror config to localStorage for parse-time bootstrap
+    if (k === 'tracker-config') {
+      try { localStorage.setItem(k, JSON.stringify(value)); } catch(e) {}
+    }
+    return true;
+  }
+
+  function remove(key) {
+    const k = key === 'tracker-today' ? dayKey() : key;
+    _cache.delete(k);
+    _idbDelete(k);
+    try { localStorage.removeItem(k); } catch(e) {}
+  }
+
+  function getAsync(key) {
+    const k = key === 'tracker-today' ? dayKey() : key;
+    if (!_db) return Promise.resolve(get(k));
+    return new Promise(resolve => {
+      try {
+        const req = _db.transaction(STORE_KV, 'readonly')
+                       .objectStore(STORE_KV).get(k);
+        req.onsuccess = () => {
+          const val = req.result ? req.result.value : _def(k);
+          _cache.set(k, val);
+          resolve(val);
+        };
+        req.onerror = () => resolve(get(k));
+      } catch(e) { resolve(get(k)); }
+    });
+  }
+
+  function getAll() {
+    if (!_db) return Promise.resolve(Object.fromEntries(_cache));
+    return new Promise(resolve => {
+      const req = _db.transaction(STORE_KV, 'readonly')
+                     .objectStore(STORE_KV).getAll();
+      req.onsuccess = () => {
+        const out = {};
+        for (const row of req.result) out[row.key] = row.value;
+        resolve(out);
+      };
+      req.onerror = () => resolve(Object.fromEntries(_cache));
+    });
+  }
+
   function getSession(key) {
     try { return sessionStorage.getItem(key); } catch(e) { return null; }
   }
-
   function setSession(key, value) {
-    try { sessionStorage.setItem(key, value); return true; } catch(e) { return false; }
+    try {
+      sessionStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+      return true;
+    } catch(e) { return false; }
   }
-
   function removeSession(key) {
     try { sessionStorage.removeItem(key); } catch(e) {}
   }
 
-  // ── Key list ─────────────────────────────────────────────────
-  function keys() { return Object.keys(REGISTRY); }
-
-  // ── Schema migration ─────────────────────────────────────────
-  // Runs once on app init before anything reads storage.
-  // Returns the version migrated to.
-  function migrate() {
-    let version = 0;
-    try { version = Number(localStorage.getItem(SCHEMA_KEY)) || 0; } catch(e) {}
-
-    if (version >= CURRENT_SCHEMA) return version;
-
-    // ── v0 → v1: nothing to migrate structurally ────────────────
-    // The old "wipe localStorage" migration in crypto.js has been fixed.
-    // This migration just sets the version marker so future migrations
-    // have a clean baseline.
-    if (version < 1) {
-      // Ensure tracker-config is present (recover from old bad migration)
-      // crypto.js _restoreLocalStorage handles the heavy lifting;
-      // here we just stamp the version after unlock if not already set.
-      // Note: this runs at parse time, before unlock, so we can only
-      // do things that don't require SecureStore.
-      console.log('[Store] Schema at v0, will stamp v1 after first write');
+  async function estimateSize() {
+    if (navigator.storage && navigator.storage.estimate) {
+      const { usage, quota } = await navigator.storage.estimate();
+      return {
+        usedMB:  (usage  / 1048576).toFixed(1),
+        quotaMB: (quota  / 1048576).toFixed(0),
+        pct:     ((usage / quota)  * 100).toFixed(1),
+      };
     }
-
-    return version;
+    return null;
   }
 
-  // Stamp schema version — called after successful unlock in security.js
-  function stampVersion() {
-    try { localStorage.setItem(SCHEMA_KEY, String(CURRENT_SCHEMA)); } catch(e) {}
-  }
+  function keys()    { return Object.keys(REGISTRY); }
+  function isReady() { return _ready; }
 
-  // ── Public API ────────────────────────────────────────────────
   return {
-    get,
-    set,
-    remove,
-    getSession,
-    setSession,
-    removeSession,
-    keys,
-    migrate,
-    stampVersion,
-    dayKey,
+    init, get, set, remove, getAsync, getAll,
+    getSession, setSession, removeSession,
+    keys, isReady, dayKey, estimateSize,
     REGISTRY,
   };
 })();

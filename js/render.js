@@ -83,10 +83,10 @@ async function switchTab(tab) {
 
 // ── Appointments data ────────────────────────────────────────────────────
 function loadAppts() {
-  try { return JSON.parse(localStorage.getItem('tracker-appts') || '[]'); } catch(e) { return []; }
+  try { return Store.get('tracker-appts') || []; } catch(e) { return []; }
 }
 function saveAppts(appts) {
-  try { localStorage.setItem('tracker-appts', JSON.stringify(appts)); } catch(e) {}
+  try { Store.set('tracker-appts', appts); } catch(e) {}
 }
 
 function openApptModal(id) {
@@ -232,7 +232,7 @@ function scheduleApptReminders(appt) {
 
 // ── Pre-appointment summary ───────────────────────────────────────────────
 function generateSummary(apptTitle) {
-  const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+  const history = JSON.parse(JSON.stringify(Store.get('tracker-history') || []));
   const last7   = history.slice(0, 7);
   const name    = cfg.name || 'Patient';
   const today   = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
@@ -249,7 +249,7 @@ function generateSummary(apptTitle) {
   const flagCounts = {};
   last7.forEach(e => {
     try {
-      const day = JSON.parse(localStorage.getItem('tracker-' + e.date) || '{}');
+      const day = Store.get('tracker-' + e.date) || {};
       (day.symptoms || []).forEach(s => { flagCounts[s] = (flagCounts[s] || 0) + 1; });
     } catch(_) {}
   });
@@ -358,7 +358,7 @@ function renderHistory() {
   // Render check-in history
   try {
     if (!el) return;
-    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+    const history = JSON.parse(JSON.stringify(Store.get('tracker-history') || []));
     el.innerHTML = history.length === 0
       ? `<div style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text3);padding:8px 0">no entries yet — save a check-in on the today tab</div>`
       : history.map(e => `
@@ -386,7 +386,7 @@ function renderStats() {
   renderMonthlySummaryCard();
   renderSpendMoodCorrelation();
   try {
-    const history = JSON.parse(localStorage.getItem('tracker-history') || '[]');
+    const history = JSON.parse(JSON.stringify(Store.get('tracker-history') || []));
     document.getElementById('bigDaysLogged').textContent = history.length;
     if (history.length > 0) {
       const avgDone  = (history.reduce((s,e) => s + (e.done / (e.total || 1)), 0) / history.length * 100).toFixed(0);

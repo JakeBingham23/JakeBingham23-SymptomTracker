@@ -53,6 +53,10 @@ async function initApp() {
     console.warn('[Security] initApp called while locked — aborting');
     return;
   }
+  // Initialise IDB store — migrates localStorage data on first run
+  try { await Store.init(); } catch(e) {
+    console.warn('[Store] init failed, continuing with localStorage:', e.message);
+  }
   // Normal init
   try {
     initOnboarding();
