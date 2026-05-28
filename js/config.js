@@ -64,14 +64,14 @@ if (!cfg.letterSpacing)      cfg.letterSpacing = 'normal';
   if (cfg.lineSpacing   && cfg.lineSpacing   !== 'normal') root.setAttribute('data-line-spacing',   cfg.lineSpacing);
   if (cfg.letterSpacing && cfg.letterSpacing !== 'normal') root.setAttribute('data-letter-spacing', cfg.letterSpacing);
   if (cfg.a11yPreset) {
-    document.addEventListener('DOMContentLoaded', () => {
+    { const _dcl = () => {
       document.querySelectorAll('[data-a11y-preset]').forEach(el => {
         const match = el.getAttribute('data-a11y-preset') === cfg.a11yPreset;
         el.classList.toggle('active', match);
         el.setAttribute('aria-pressed', String(match));
       });
     });
-  }
+  } document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', _restorePreset) : _restorePreset(); }
 })();
 if (!cfg.notifPrefs)        cfg.notifPrefs        = {
   taskBrowser:true, taskTelegram:true, taskVib:'gentle',

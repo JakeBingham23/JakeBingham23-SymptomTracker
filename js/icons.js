@@ -289,4 +289,4 @@ const Icons = (() => {
 })();
 
 // Apply icons after DOM ready
-document.addEventListener('DOMContentLoaded', () => Icons.applyAll());
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => Icons.applyAll()); } else { Icons.applyAll(); }

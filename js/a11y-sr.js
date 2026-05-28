@@ -73,7 +73,7 @@ function openModal(el, opener) {
   // Hide siblings from AT so VoiceOver doesn't read behind the modal
   document.querySelectorAll('body > *:not([aria-live])').forEach(sib => {
     if (sib !== el && !sib.dataset.modalShield) sib.setAttribute('aria-hidden', 'true');
-  });
+  }; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _run); else _run(); }
   const cleanup = trapFocus(el);
   _modalStack.push({ el, cleanup, opener: opener || document.activeElement });
 }
@@ -137,7 +137,7 @@ function _drainQueue() {
 
 // Patch the global announce() to route through the queue
 // (announce is defined in core.js — we override it here after load)
-document.addEventListener('DOMContentLoaded', () => {
+{ const _dcl = () => {
   if (typeof window.announce === 'function') {
     const _origAnnounce = window.announce;
     window.announce = function(msg, assertive) {
@@ -223,7 +223,7 @@ function initPINKeyboard() {
 
 // ── Focus moves to page heading on tab switch ────────────────────
 // Patch switchTab to move AT focus to the new panel's heading.
-document.addEventListener('DOMContentLoaded', () => {
+{ const _dcl = () => {
   const _origSwitchTab = window.switchTab;
   if (typeof _origSwitchTab === 'function') {
     window.switchTab = async function(tab) {
@@ -245,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Init on load ─────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+{ const _dcl = () => {
   initTabKeyboard();
   initPINKeyboard();
 });

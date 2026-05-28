@@ -110,6 +110,6 @@ function gcalUpdateUI() {
       new Date(cfg.gcal.lastSync).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+{ const _dcl = () => {
   if (cfg.gcal?.clientId) gcalInit();
 });

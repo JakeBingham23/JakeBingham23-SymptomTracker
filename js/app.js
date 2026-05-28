@@ -202,3 +202,25 @@ Object.assign(window, {
 });
 
 console.log('[App] v6.0 modules loaded.');
+
+
+// ── Bootstrap ────────────────────────────────────────────────
+// Called after ALL modules are imported and window globals assigned.
+// Replaces DOMContentLoaded listeners in individual modules which
+// miss the event when module loading is deferred.
+function _bootstrap() {
+  try { if (typeof Store !== 'undefined') Store.migrate(); } catch(e) {}
+  if (typeof lockScreen !== 'undefined') {
+    lockScreen.show();
+  } else {
+    console.error('[App] lockScreen not defined — check import');
+  }
+}
+
+// ES modules are deferred. DOMContentLoaded may already have fired.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _bootstrap);
+} else {
+  _bootstrap();
+}
+
