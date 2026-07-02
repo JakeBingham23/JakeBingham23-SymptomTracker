@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="app-version" content="6.0.1">
+  <meta name="app-version" content="5.9">
   <meta name="theme-color" content="#0c0c0c">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1737,7 +1737,7 @@
 </div>
 
 <div class="footer" style="text-align:center;padding:1rem;font-family:var(--font-mono);font-size:0.625rem;color:var(--text3)">
-  daily structure tracker &mdash; v6.0.1 &mdash; add to home screen to install
+  daily structure tracker &mdash; v5.9 &mdash; add to home screen to install
 </div>
 
 <!-- Screenshot preview modal -->
@@ -1821,8 +1821,79 @@
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder@1.3.3"
         crossorigin="anonymous" defer></script>
 
-<!-- v6.0: single ES module entry point replaces all script tags -->
-<script type="module" src="./js/app.js"></script>
+<!-- App modules — load order: crypto → config → state → everything else -->
+<!-- ═══════════════════════════════════════════════════════════════
+     LOAD ORDER — do not reorder without updating this comment
+     1.  crypto.js           → encryption helpers (no deps)
+     2.  config.js           → cfg, defaults, font loading
+     3.  symptoms/config.js  → SYMPTOM_CATEGORIES (needs: config)
+     4.  state.js            → state object, load/save (needs: config, symptoms/config)
+     5.  core.js             → TODAY · CRITICAL · render · saveAll · toggleTask  ← SACRED
+     6.  symptoms/render.js  → renderSymptomGrid (needs: core, symptoms/config)
+     7.  theme.js            → applyTheme, M3 palette (needs: config)
+     8.  gcal/auth.js        → OAuth, gcalConnect (needs: config)
+     9.  gcal/sync.js        → two-way sync (needs: gcal/auth)
+     ─── feature modules below — no ordering constraints among themselves ───
+     ═══════════════════════════════════════════════════════════════ -->
+<script src="./js/crypto.js"></script>
+<script src="./js/storage.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/symptoms/config.js"></script>
+<script src="./js/state.js"></script>
+<script src="./js/core.js"></script>
+<script src="./js/symptoms/render.js"></script>
+<script src="./js/theme.js"></script>
+<script src="./js/gcal/auth.js"></script>
+<script src="./js/gcal/sync.js"></script>
+<script src="./js/accessibility.js"></script>
+<script src="./js/toast.js"></script>
+<script src="./js/icons.js"></script>
+<script src="./js/audio.js"></script>
+<script src="./js/notifications.js"></script>
+<script src="./js/dnd.js"></script>
+<script src="./js/rewards.js"></script>
+<script src="./js/quotes.js"></script>
+<script src="./js/backup.js"></script>
+<script src="./js/budget.js"></script>
+<script src="./js/journal.js"></script>
+<script src="./js/timers.js"></script>
+<script src="./js/menu.js"></script>
+<script src="./js/screenshot.js"></script>
+<script src="./js/checkin-render.js"></script>
+<script src="./js/render.js"></script>
+<script src="./js/lockscreen.js"></script>
+<script src="./js/security.js"></script>
+<script src="./js/a11y-sr.js"></script>
+<script src="./js/pwa.js"></script>
+<script src="./rag-engine.js" defer></script>
+
+<!-- Service worker registration -->
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('./sw.js', { scope: './' })
+    .then(reg => {
+      console.log('[SW] Registered:', reg.scope);
+      // Check for updates
+      reg.addEventListener('updatefound', () => {
+        const worker = reg.installing;
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version available — notify user
+            if (typeof showToast === 'function') {
+              showToast('Update available — refresh to get the latest version', 'info');
+            }
+          }
+        });
+      });
+    })
+    .catch(err => console.warn('[SW] Registration failed:', err));
+
+  // Handle controller change (new SW activated)
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
+</script>
 
 </body>
 </html>
